@@ -1,0 +1,210 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.625rem;
+  /* Updated color scheme using the provided palette */
+  --mint-green: #bee9e8;
+  --moonstone: #62b6cb;
+  --indigo-dye: #1b4965;
+  --columbia-blue: #cae9ff;
+  --picton-blue: #5fa8d3;
+  
+  --background: #ffffff;
+  --foreground: #1b4965;
+  --card: #ffffff;
+  --card-foreground: #1b4965;
+  --popover: #ffffff;
+  --popover-foreground: #1b4965;
+  --primary: #1b4965;
+  --primary-foreground: #ffffff;
+  --secondary: #5fa8d3;
+  --secondary-foreground: #1b4965;
+  --muted: #f8fafc;
+  --muted-foreground: #5fa8d3;
+  --accent: #bee9e8;
+  --accent-foreground: #1b4965;
+  --destructive: #ef4444;
+  --border: #cae9ff;
+  --input: #cae9ff;
+  --ring: #5fa8d3;
+  --chart-1: #62b6cb;
+  --chart-2: #1b4965;
+  --chart-3: #5fa8d3;
+  --chart-4: #bee9e8;
+  --chart-5: #cae9ff;
+  --sidebar: #f8fafc;
+  --sidebar-foreground: #1b4965;
+  --sidebar-primary: #1b4965;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #bee9e8;
+  --sidebar-accent-foreground: #1b4965;
+  --sidebar-border: #cae9ff;
+  --sidebar-ring: #5fa8d3;
+}
+
+.dark {
+  --background: #0f2a3b;
+  --foreground: #f8fafc;
+  --card: #1b4965;
+  --card-foreground: #f8fafc;
+  --popover: #1b4965;
+  --popover-foreground: #f8fafc;
+  --primary: #5fa8d3;
+  --primary-foreground: #0f2a3b;
+  --secondary: #62b6cb;
+  --secondary-foreground: #0f2a3b;
+  --muted: #1b4965;
+  --muted-foreground: #cae9ff;
+  --accent: #bee9e8;
+  --accent-foreground: #0f2a3b;
+  --destructive: #ff4747;
+  --border: rgba(202, 233, 255, 0.1);
+  --input: rgba(202, 233, 255, 0.2);
+  --ring: #62b6cb;
+  --chart-1: #62b6cb;
+  --chart-2: #5fa8d3;
+  --chart-3: #bee9e8;
+  --chart-4: #cae9ff;
+  --chart-5: #1b4965;
+  --sidebar: #1b4965;
+  --sidebar-foreground: #f8fafc;
+  --sidebar-primary: #5fa8d3;
+  --sidebar-primary-foreground: #0f2a3b;
+  --sidebar-accent: #bee9e8;
+  --sidebar-accent-foreground: #0f2a3b;
+  --sidebar-border: rgba(202, 233, 255, 0.1);
+  --sidebar-ring: #62b6cb;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom utility classes for the new color palette */
+.bg-mint-green {
+  background-color: var(--mint-green);
+}
+.bg-moonstone {
+  background-color: var(--moonstone);
+}
+.bg-indigo-dye {
+  background-color: var(--indigo-dye);
+}
+.bg-columbia-blue {
+  background-color: var(--columbia-blue);
+}
+.bg-picton-blue {
+  background-color: var(--picton-blue);
+}
+.text-mint-green {
+  color: var(--mint-green);
+}
+.text-moonstone {
+  color: var(--moonstone);
+}
+.text-indigo-dye {
+  color: var(--indigo-dye);
+}
+.text-columbia-blue {
+  color: var(--columbia-blue);
+}
+.text-picton-blue {
+  color: var(--picton-blue);
+}
+
+/* 3D Card Flip Animation */
+.perspective {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.my-rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Border triangle for play button */
+.border-l-12 {
+  border-left-width: 12px;
+}
+
+/* Animation utilities */
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.hover\:shadow-glow:hover {
+  box-shadow: 0 0 15px rgba(95, 168, 211, 0.5);
+}
+
+.transition-transform {
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}

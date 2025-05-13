@@ -1,0 +1,12 @@
+mkdir src\components
+mkdir src\components\layout
+mkdir src\components\ui
+mkdir src\components\quiz
+mkdir src\components\flashcards
+mkdir src\components\media
+mkdir src\components\admin
+mkdir src\lib
+mkdir src\hooks
+mkdir src\context
+mkdir src\models
+mkdir src\utils 
