@@ -14,6 +14,7 @@ import {
 import { User, Menu, X, Building, BookOpen, FileText, BarChart3 } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export function Navbar() {
   const { data: session, status } = useSession();
@@ -49,15 +50,20 @@ export function Navbar() {
         </div>
 
         {/* Mobile menu button */}
-        <button 
-          className="rounded-md p-2 text-foreground/70 hover:bg-muted md:hidden"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-        >
-          {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        <div className="flex items-center md:hidden">
+          {/* <ThemeToggle /> */}
+          <button 
+            className="rounded-md p-2 text-foreground/70 hover:bg-muted ml-2"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
 
         {/* Desktop auth menu */}
-        <div className="hidden md:block">
+        <div className="hidden md:flex items-center space-x-2">
+          {/* <ThemeToggle /> */}
+          
           {isLoading ? (
             <div className="h-10 w-20 animate-pulse rounded-md bg-muted" />
           ) : isAuthenticated ? (
