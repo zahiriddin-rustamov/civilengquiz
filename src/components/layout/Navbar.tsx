@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { User, Menu, X, Building, BookOpen, FileText, BarChart3 } from 'lucide-react';
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function Navbar() {
   const { data: session, status } = useSession();
@@ -21,8 +22,8 @@ export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <nav className="sticky top-0 z-50 border-b bg-background/80 py-3 backdrop-blur-md">
-      <div className="container mx-auto flex items-center justify-between px-4">
+    <nav className="sticky top-0 z-50 bg-background/80 py-3 backdrop-blur-md">
+      <div className="container mx-auto flex items-center justify-between pb-3 px-4 border-b md:border-0">
         <div className="flex items-center space-x-6">
           <Link href="/" className="flex items-center gap-2 text-xl font-bold text-primary">
             <Building className="h-6 w-6" />
@@ -112,90 +113,123 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Mobile menu */}
-      {isMenuOpen && (
-        <div className="border-t md:hidden">
-          <div className="container mx-auto space-y-2 px-4 py-4">
-            {isAuthenticated ? (
-              <>
-                <div className="grid gap-2">
-                  <Link 
-                    href="/subjects"
-                    className="flex items-center gap-2 rounded-md p-2 hover:bg-muted"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <BookOpen className="h-5 w-5 text-primary" />
-                    <span>Subjects</span>
-                  </Link>
-                  <Link 
-                    href="/flashcards"
-                    className="flex items-center gap-2 rounded-md p-2 hover:bg-muted"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <FileText className="h-5 w-5 text-primary" />
-                    <span>Flashcards</span>
-                  </Link>
-                  <Link 
-                    href="/media"
-                    className="flex items-center gap-2 rounded-md p-2 hover:bg-muted"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <BarChart3 className="h-5 w-5 text-primary" />
-                    <span>Media</span>
-                  </Link>
+      {/* Mobile menu - with animation */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div 
+            className="md:hidden"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+          >
+            <div className="container mx-auto px-4 pt-4 overflow-hidden">
+              {isAuthenticated ? (
+                <motion.div 
+                  className="flex flex-col"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1, duration: 0.2 }}
+                >
+                  {/* Main navigation links */}
+                  <ul className="flex flex-col w-full space-y-1">
+                    <li>
+                      <Link 
+                        href="/subjects"
+                        className="flex w-full items-center gap-3 rounded-md p-2.5 hover:bg-muted"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <BookOpen className="h-5 w-5 text-primary" />
+                        <span className="text-base font-medium">Subjects</span>
+                      </Link>
+                    </li>
+                    <li>
+                      <Link 
+                        href="/flashcards"
+                        className="flex w-full items-center gap-3 rounded-md p-2.5 hover:bg-muted"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <FileText className="h-5 w-5 text-primary" />
+                        <span className="text-base font-medium">Flashcards</span>
+                      </Link>
+                    </li>
+                    <li>
+                      <Link 
+                        href="/media"
+                        className="flex w-full items-center gap-3 rounded-md p-2.5 hover:bg-muted"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <BarChart3 className="h-5 w-5 text-primary" />
+                        <span className="text-base font-medium">Media</span>
+                      </Link>
+                    </li>
+                  </ul>
+
+                  {/* User account links */}
+                  <div className="mt-5 border-t pt-5">
+                    <h3 className="mb-2 text-sm font-medium text-foreground/60">Account</h3>
+                    <ul className="flex flex-col w-full space-y-1">
+                      <li>
+                        <Link 
+                          href="/profile"
+                          className="flex w-full items-center gap-3 rounded-md p-2.5 hover:bg-muted"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          <User className="h-5 w-5 text-primary" />
+                          <span className="text-base font-medium">Profile</span>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link 
+                          href="/progress"
+                          className="flex w-full items-center gap-3 rounded-md p-2.5 hover:bg-muted"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          <BarChart3 className="h-5 w-5 text-primary" />
+                          <span className="text-base font-medium">My Progress</span>
+                        </Link>
+                      </li>
+                      {session?.user?.role === 'admin' && (
+                        <li>
+                          <Link 
+                            href="/admin"
+                            className="flex w-full items-center gap-3 rounded-md p-2.5 hover:bg-muted"
+                            onClick={() => setIsMenuOpen(false)}
+                          >
+                            <Building className="h-5 w-5 text-primary" />
+                            <span className="text-base font-medium">Admin Dashboard</span>
+                          </Link>
+                        </li>
+                      )}
+                      <li>
+                        <button 
+                          onClick={() => {
+                            signOut({ callbackUrl: '/' });
+                            setIsMenuOpen(false);
+                          }} 
+                          className="flex w-full items-center gap-3 rounded-md p-2.5 text-red-600 hover:bg-red-50"
+                        >
+                          <X className="h-5 w-5" />
+                          <span className="text-base font-medium">Sign out</span>
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                </motion.div>
+              ) : (
+                <div className="flex flex-col space-y-2 py-4">
+                  <Button asChild variant="outline" size="lg" onClick={() => setIsMenuOpen(false)}>
+                    <Link href="/login">Login</Link>
+                  </Button>
+                  <Button asChild size="lg" onClick={() => setIsMenuOpen(false)}>
+                    <Link href="/register">Register</Link>
+                  </Button>
                 </div>
-                <div className="mt-4 border-t pt-4">
-                  <Link 
-                    href="/profile"
-                    className="flex items-center gap-2 rounded-md p-2 hover:bg-muted"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <User className="h-5 w-5 text-primary" />
-                    <span>Profile</span>
-                  </Link>
-                  <Link 
-                    href="/progress"
-                    className="flex items-center gap-2 rounded-md p-2 hover:bg-muted"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <BarChart3 className="h-5 w-5 text-primary" />
-                    <span>My Progress</span>
-                  </Link>
-                  {session?.user?.role === 'admin' && (
-                    <Link 
-                      href="/admin"
-                      className="flex items-center gap-2 rounded-md p-2 hover:bg-muted"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <Building className="h-5 w-5 text-primary" />
-                      <span>Admin Dashboard</span>
-                    </Link>
-                  )}
-                  <button 
-                    onClick={() => {
-                      signOut({ callbackUrl: '/' });
-                      setIsMenuOpen(false);
-                    }} 
-                    className="mt-2 flex w-full items-center gap-2 rounded-md p-2 text-red-600 hover:bg-red-50"
-                  >
-                    <X className="h-5 w-5" />
-                    <span>Sign out</span>
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col space-y-2">
-                <Button asChild variant="outline" onClick={() => setIsMenuOpen(false)}>
-                  <Link href="/login">Login</Link>
-                </Button>
-                <Button asChild onClick={() => setIsMenuOpen(false)}>
-                  <Link href="/register">Register</Link>
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 } 

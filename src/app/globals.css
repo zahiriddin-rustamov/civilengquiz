@@ -45,12 +45,12 @@
 
 :root {
   --radius: 0.625rem;
-  /* Updated color scheme using the provided palette */
-  --mint-green: #bee9e8;
-  --moonstone: #62b6cb;
+  /* Updated color scheme with improved contrast */
+  --mint-green: #8ed7c6;
+  --moonstone: #4a9abb;
   --indigo-dye: #1b4965;
-  --columbia-blue: #cae9ff;
-  --picton-blue: #5fa8d3;
+  --columbia-blue: #90c2e7;
+  --picton-blue: #3d85bc;
   
   --background: #ffffff;
   --foreground: #1b4965;
@@ -60,29 +60,29 @@
   --popover-foreground: #1b4965;
   --primary: #1b4965;
   --primary-foreground: #ffffff;
-  --secondary: #5fa8d3;
-  --secondary-foreground: #1b4965;
-  --muted: #f8fafc;
-  --muted-foreground: #5fa8d3;
-  --accent: #bee9e8;
+  --secondary: #3d85bc;
+  --secondary-foreground: #ffffff;
+  --muted: #f1f5f9;
+  --muted-foreground: #4a9abb;
+  --accent: #8ed7c6;
   --accent-foreground: #1b4965;
   --destructive: #ef4444;
-  --border: #cae9ff;
-  --input: #cae9ff;
-  --ring: #5fa8d3;
-  --chart-1: #62b6cb;
+  --border: #c0d8e8;
+  --input: #90c2e7;
+  --ring: #3d85bc;
+  --chart-1: #4a9abb;
   --chart-2: #1b4965;
-  --chart-3: #5fa8d3;
-  --chart-4: #bee9e8;
-  --chart-5: #cae9ff;
-  --sidebar: #f8fafc;
+  --chart-3: #3d85bc;
+  --chart-4: #8ed7c6;
+  --chart-5: #90c2e7;
+  --sidebar: #f1f5f9;
   --sidebar-foreground: #1b4965;
   --sidebar-primary: #1b4965;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #bee9e8;
+  --sidebar-accent: #8ed7c6;
   --sidebar-accent-foreground: #1b4965;
-  --sidebar-border: #cae9ff;
-  --sidebar-ring: #5fa8d3;
+  --sidebar-border: #c0d8e8;
+  --sidebar-ring: #3d85bc;
 }
 
 .dark {
@@ -92,31 +92,31 @@
   --card-foreground: #f8fafc;
   --popover: #1b4965;
   --popover-foreground: #f8fafc;
-  --primary: #5fa8d3;
+  --primary: #3d85bc;
   --primary-foreground: #0f2a3b;
-  --secondary: #62b6cb;
+  --secondary: #4a9abb;
   --secondary-foreground: #0f2a3b;
   --muted: #1b4965;
-  --muted-foreground: #cae9ff;
-  --accent: #bee9e8;
+  --muted-foreground: #90c2e7;
+  --accent: #8ed7c6;
   --accent-foreground: #0f2a3b;
   --destructive: #ff4747;
-  --border: rgba(202, 233, 255, 0.1);
-  --input: rgba(202, 233, 255, 0.2);
-  --ring: #62b6cb;
-  --chart-1: #62b6cb;
-  --chart-2: #5fa8d3;
-  --chart-3: #bee9e8;
-  --chart-4: #cae9ff;
+  --border: rgba(144, 194, 231, 0.2);
+  --input: rgba(144, 194, 231, 0.3);
+  --ring: #4a9abb;
+  --chart-1: #4a9abb;
+  --chart-2: #3d85bc;
+  --chart-3: #8ed7c6;
+  --chart-4: #90c2e7;
   --chart-5: #1b4965;
   --sidebar: #1b4965;
   --sidebar-foreground: #f8fafc;
-  --sidebar-primary: #5fa8d3;
+  --sidebar-primary: #3d85bc;
   --sidebar-primary-foreground: #0f2a3b;
-  --sidebar-accent: #bee9e8;
+  --sidebar-accent: #8ed7c6;
   --sidebar-accent-foreground: #0f2a3b;
-  --sidebar-border: rgba(202, 233, 255, 0.1);
-  --sidebar-ring: #62b6cb;
+  --sidebar-border: rgba(144, 194, 231, 0.2);
+  --sidebar-ring: #4a9abb;
 }
 
 @layer base {
@@ -207,4 +207,87 @@
   transition-property: transform;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
+}
+
+/* Enhanced card interactions for student engagement */
+.card-hover-effect {
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.card-hover-effect:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 15px -3px rgba(95, 168, 211, 0.1), 0 4px 6px -2px rgba(95, 168, 211, 0.05);
+}
+
+/* Pulsing animation for attention-grabbing elements */
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* Button hover effects */
+.btn-hover-effect {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-hover-effect:after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent 30%, rgba(255, 255, 255, 0.2) 50%, transparent 70%);
+  transform: translateX(-100%);
+}
+
+.btn-hover-effect:hover:after {
+  transform: translateX(100%);
+  transition: all 0.7s ease;
+}
+
+/* Subtle animation for icons */
+.animate-icon-hover {
+  transition: all 0.3s ease;
+}
+
+.animate-icon-hover:hover {
+  transform: scale(1.15);
+  filter: brightness(1.1);
+}
+
+/* Interactive card effect for engineering topics */
+.topic-card-effect {
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.topic-card-effect:hover::before {
+  opacity: 1;
+}
+
+.topic-card-effect::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(120deg, var(--picton-blue) 0%, var(--indigo-dye) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: inherit;
+  z-index: -1;
 }
