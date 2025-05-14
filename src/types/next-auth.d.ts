@@ -3,11 +3,12 @@ import 'next-auth';
 declare module 'next-auth' {
   interface Session {
     user: {
-      id?: string;
+      id: string;
       name?: string | null;
       email?: string | null;
       image?: string | null;
-      role?: 'student' | 'admin';
+      role: 'student' | 'admin';
+      isVerified: boolean;
     };
   }
 
@@ -16,5 +17,12 @@ declare module 'next-auth' {
     name: string;
     email: string;
     role: 'student' | 'admin';
+    isVerified: boolean;
+  }
+
+  interface JWT {
+    id: string;
+    role: 'student' | 'admin';
+    isVerified: boolean;
   }
 } 

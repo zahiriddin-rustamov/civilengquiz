@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -28,6 +30,13 @@ export default function RegisterPage() {
     // Validate password strength
     if (password.length < 8) {
       setError('Password must be at least 8 characters long');
+      return;
+    }
+
+    // Validate UAEU student email
+    const uaeuEmailRegex = /^\d+@uaeu\.ac\.ae$/;
+    if (!uaeuEmailRegex.test(email)) {
+      setError('Only UAEU student emails (e.g., 700011111@uaeu.ac.ae) are allowed');
       return;
     }
 
@@ -71,9 +80,10 @@ export default function RegisterPage() {
         </div>
 
         {error && (
-          <div className="rounded-md bg-red-50 p-4 text-sm text-red-600">
-            {error}
-          </div>
+          <Alert variant="destructive" className="border-1 border-red-500">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
@@ -101,10 +111,13 @@ export default function RegisterPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder="700011111@uaeu.ac.ae"
                 required
                 className="mt-1"
               />
+              <p className="mt-1 text-xs text-gray-500">
+                Must be a valid UAEU student email (e.g., 700011111@uaeu.ac.ae)
+              </p>
             </div>
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
