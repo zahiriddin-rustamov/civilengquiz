@@ -19,7 +19,7 @@ export function Footer() {
               <span className="text-lg font-semibold text-primary">CivilEngQuiz</span>
             </div>
             <p className="mb-4 text-sm">
-              An interactive learning platform designed specifically for undergraduate civil 
+              An interactive learning platform designed specifically for UAEU undergraduate civil 
               engineering students to practice and improve their knowledge through quizzes, 
               flashcards and multimedia content.
             </p>
@@ -37,10 +37,10 @@ export function Footer() {
               >
                 <Mail className="h-5 w-5" />
               </Link>
-              <span className="text-xs">© {new Date().getFullYear()} CivilEngQuiz</span>
+              <span className="text-xs">© {new Date().getFullYear()} Zahiriddin Rustamov</span>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-8">
             <div>
               <h3 className="mb-3 text-sm font-medium">Platform</h3>
               <ul className="space-y-2 text-sm">
@@ -77,20 +77,6 @@ export function Footer() {
                     </li>
                   </>
                 )}
-              </ul>
-            </div>
-            <div>
-              <h3 className="mb-3 text-sm font-medium">Support</h3>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <Link href="/faq" className="hover:text-primary">FAQ</Link>
-                </li>
-                <li>
-                  <Link href="/contact" className="hover:text-primary">Contact Us</Link>
-                </li>
-                <li>
-                  <Link href="/privacy" className="hover:text-primary">Privacy Policy</Link>
-                </li>
               </ul>
             </div>
           </div>
