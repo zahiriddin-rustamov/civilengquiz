@@ -31,22 +31,7 @@ export function Navbar() {
             <span>CivilEngQuiz</span>
           </Link>
           
-          {isAuthenticated && (
-            <div className="hidden items-center space-x-6 md:flex">
-              <Link href="/subjects" className="flex items-center gap-1.5 text-foreground/70 transition-colors hover:text-primary">
-                <BookOpen className="h-4 w-4" />
-                <span>Subjects</span>
-              </Link>
-              <Link href="/flashcards" className="flex items-center gap-1.5 text-foreground/70 transition-colors hover:text-primary">
-                <FileText className="h-4 w-4" />
-                <span>Flashcards</span>
-              </Link>
-              <Link href="/media" className="flex items-center gap-1.5 text-foreground/70 transition-colors hover:text-primary">
-                <BarChart3 className="h-4 w-4" />
-                <span>Media</span>
-              </Link>
-            </div>
-          )}
+          {/* Simplified navbar - removed cluttered links */}
         </div>
 
         {/* Mobile menu button */}

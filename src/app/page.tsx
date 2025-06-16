@@ -118,7 +118,7 @@ export default function Home() {
             </h1>
             <div className="flex flex-wrap gap-4">
               <Button asChild size="lg" className="relative overflow-hidden group bg-indigo-dye hover:bg-indigo-dye/90 btn-hover-effect">
-                <Link href={isAuthenticated ? "/subjects" : "/login"} className="flex items-center gap-2">
+                <Link href={isAuthenticated ? "/dashboard" : "/login"} className="flex items-center gap-2">
                   <span>Start Learning</span>
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>

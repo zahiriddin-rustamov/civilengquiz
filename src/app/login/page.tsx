@@ -45,7 +45,7 @@ export default function LoginPage() {
       }
 
       // Redirect to dashboard on successful login
-      router.push('/subjects');
+      router.push('/dashboard');
       router.refresh();
     } catch (error) {
       setError('An error occurred during sign in');
