@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { BookOpen, FileText, Medal, BarChart3, Building, Ruler, HardHat, Calculator, ArrowRight, Check, Clock, BrainCircuit, Lightbulb, Pencil, ChevronRight, Plus, Rocket, Zap } from "lucide-react";
+import { BookOpen, FileText, Medal, BarChart3, Building, Ruler, HardHat, Calculator, ArrowRight, Check, Clock, BrainCircuit, Lightbulb, Pencil, ChevronRight, Plus, Rocket, Zap, Trophy } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
 
@@ -89,26 +89,38 @@ export default function Home() {
       <section className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-picton-blue/10 via-white to-mint-green/20 p-4 pb-2 sm:p-6 md:p-10 sm:mb-2">
         <div className="flex flex-col items-center md:flex-row md:justify-between md:gap-8">
           <div className="max-w-xl space-y-4 sm:space-y-6 z-10 mb-4 sm:mb-8 md:mb-0">
-            <div 
-              className="inline-block rounded-full bg-indigo-dye px-4 py-1.5 text-sm font-medium text-white border border-picton-blue shadow-md hover:scale-105 transition-transform cursor-pointer"
-              onClick={() => {
-                const badge = document.querySelector('.student-badge');
-                if (badge) {
-                  badge.classList.add('animate-ping');
-                  setTimeout(() => {
-                    badge.classList.remove('animate-ping');
-                  }, 300);
-                }
-              }}
-            >
-              <span className="student-badge inline-flex items-center">
-                <HardHat className="mr-1.5 h-4 w-4 text-white" /> 
-                Civil Engineering Students
-                <span className="ml-1.5 relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-mint-green opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+            <div className="flex flex-wrap gap-2 mb-2">
+              <div 
+                className="inline-block rounded-full bg-indigo-dye px-4 py-1.5 text-sm font-medium text-white border border-picton-blue shadow-md hover:scale-105 transition-transform cursor-pointer"
+                onClick={() => {
+                  const badge = document.querySelector('.student-badge');
+                  if (badge) {
+                    badge.classList.add('animate-ping');
+                    setTimeout(() => {
+                      badge.classList.remove('animate-ping');
+                    }, 300);
+                  }
+                }}
+              >
+                <span className="student-badge inline-flex items-center">
+                  <HardHat className="mr-1.5 h-4 w-4 text-white" /> 
+                  Civil Engineering Students
+                  <span className="ml-1.5 relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-mint-green opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                  </span>
                 </span>
-              </span>
+              </div>
+              
+              {/* Gaming Achievement Badges */}
+              <div className="inline-block rounded-full bg-gradient-to-r from-yellow-500 to-orange-600 px-3 py-2 text-xs font-bold text-white shadow-md hover:scale-105 transition-transform cursor-pointer">
+                <Trophy className="inline w-3 h-3 mr-1" />
+                Level Up System
+              </div>
+              <div className="inline-block rounded-full bg-gradient-to-r from-purple-500 to-pink-600 px-3 py-2 text-xs font-bold text-white shadow-md hover:scale-105 transition-transform cursor-pointer">
+                <Zap className="inline w-3 h-3 mr-1" />
+                XP & Badges
+              </div>
             </div>
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
               Master Engineering <span className="text-picton-blue relative inline-block min-w-[180px] sm:min-w-[220px] md:min-w-[280px]" ref={typingRef}>
@@ -168,31 +180,47 @@ export default function Home() {
         <div className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-mint-green/40 blur-3xl"></div>
       </section>
 
-      {/* Quick Stats - Visual Counters */}
+      {/* Quick Stats - Gamified Achievement Cards */}
       <section className="mb-16 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <div className="rounded-xl border-2 border-picton-blue/70 bg-white p-6 text-center flex flex-col items-center transition-all hover:border-picton-blue card-hover-effect">
-          <div className="mb-2 text-4xl font-bold text-indigo-dye flex items-end">
-            300<span className="text-picton-blue text-2xl">+</span>
+        <div className="rounded-xl border-2 border-picton-blue/70 bg-gradient-to-br from-white to-blue-50 p-6 text-center flex flex-col items-center transition-all hover:border-picton-blue hover:shadow-lg hover:-translate-y-1 card-hover-effect group">
+          <div className="mb-2 flex items-center justify-center">
+            <Trophy className="w-6 h-6 text-yellow-500 mr-2 group-hover:animate-bounce" />
+            <div className="text-4xl font-bold text-indigo-dye flex items-end">
+              300<span className="text-picton-blue text-2xl">+</span>
+            </div>
           </div>
-          <p className="text-moonstone">Questions</p>
+          <p className="text-moonstone font-medium">Quiz Challenges</p>
+          <div className="mt-1 text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">Epic Collection</div>
         </div>
-        <div className="rounded-xl border-2 border-picton-blue/70 bg-white p-6 text-center flex flex-col items-center transition-all hover:border-picton-blue card-hover-effect">
-          <div className="mb-2 text-4xl font-bold text-indigo-dye flex items-end">
-            15<span className="text-picton-blue text-2xl">+</span>
+        <div className="rounded-xl border-2 border-picton-blue/70 bg-gradient-to-br from-white to-green-50 p-6 text-center flex flex-col items-center transition-all hover:border-picton-blue hover:shadow-lg hover:-translate-y-1 card-hover-effect group">
+          <div className="mb-2 flex items-center justify-center">
+            <BookOpen className="w-6 h-6 text-green-500 mr-2 group-hover:animate-pulse" />
+            <div className="text-4xl font-bold text-indigo-dye flex items-end">
+              15<span className="text-picton-blue text-2xl">+</span>
+            </div>
           </div>
-          <p className="text-moonstone">Topics</p>
+          <p className="text-moonstone font-medium">Study Worlds</p>
+          <div className="mt-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Unlocked</div>
         </div>
-        <div className="rounded-xl border-2 border-picton-blue/70 bg-white p-6 text-center flex flex-col items-center transition-all hover:border-picton-blue card-hover-effect">
-          <div className="mb-2 text-4xl font-bold text-indigo-dye flex items-end">
-            100<span className="text-picton-blue text-2xl">%</span>
+        <div className="rounded-xl border-2 border-picton-blue/70 bg-gradient-to-br from-white to-purple-50 p-6 text-center flex flex-col items-center transition-all hover:border-picton-blue hover:shadow-lg hover:-translate-y-1 card-hover-effect group">
+          <div className="mb-2 flex items-center justify-center">
+            <Zap className="w-6 h-6 text-purple-500 mr-2 group-hover:animate-spin" />
+            <div className="text-4xl font-bold text-indigo-dye flex items-end">
+              100<span className="text-picton-blue text-2xl">%</span>
+            </div>
           </div>
-          <p className="text-moonstone">Curriculum Aligned</p>
+          <p className="text-moonstone font-medium">Curriculum Match</p>
+          <div className="mt-1 text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">Perfect Score</div>
         </div>
-        <div className="rounded-xl border-2 border-picton-blue/70 bg-white p-6 text-center flex flex-col items-center transition-all hover:border-picton-blue card-hover-effect">
-          <div className="mb-2 text-4xl font-bold text-indigo-dye flex items-end">
-            24<span className="text-picton-blue text-2xl">/7</span>
+        <div className="rounded-xl border-2 border-picton-blue/70 bg-gradient-to-br from-white to-cyan-50 p-6 text-center flex flex-col items-center transition-all hover:border-picton-blue hover:shadow-lg hover:-translate-y-1 card-hover-effect group">
+          <div className="mb-2 flex items-center justify-center">
+            <Clock className="w-6 h-6 text-cyan-500 mr-2 group-hover:animate-bounce" />
+            <div className="text-4xl font-bold text-indigo-dye flex items-end">
+              24<span className="text-picton-blue text-2xl">/7</span>
+            </div>
           </div>
-          <p className="text-moonstone">Access</p>
+          <p className="text-moonstone font-medium">Always Available</p>
+          <div className="mt-1 text-xs bg-cyan-100 text-cyan-700 px-2 py-1 rounded-full">Never Offline</div>
         </div>
       </section>
 
@@ -204,14 +232,26 @@ export default function Home() {
         </div>
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
           {/* Feature 1 - Interactive Quizzes */}
-          <div className="group h-full rounded-xl bg-gradient-to-br from-columbia-blue/30 to-white p-6 shadow-md transition-all hover:shadow-lg hover:border-indigo-dye hover:-translate-y-1 duration-300 border-2 border-picton-blue">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-picton-blue text-white group-hover:bg-indigo-dye transition-all duration-300">
-                <BookOpen className="h-7 w-7" />
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-indigo-dye group-hover:text-picton-blue transition-colors duration-300">Interactive Quizzes</h3>
-                <p className="text-moonstone text-sm">Test your knowledge with different question types</p>
+          <div className="group h-full rounded-xl bg-gradient-to-br from-blue-50 via-white to-cyan-50 p-6 shadow-lg transition-all hover:shadow-xl hover:-translate-y-2 duration-300 border-2 border-blue-200 hover:border-blue-400 relative overflow-hidden">
+            {/* Gaming background pattern */}
+            <div className="absolute top-2 right-2 w-16 h-16 border border-blue-200/30 rounded-full opacity-50"></div>
+            <div className="absolute bottom-2 left-2 w-12 h-12 border border-cyan-200/30 rounded-full opacity-50"></div>
+            
+            {/* Rarity indicator */}
+            <div className="absolute top-3 right-3 w-3 h-3 bg-blue-400 rounded-full animate-pulse"></div>
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 text-white group-hover:from-indigo-600 group-hover:to-blue-700 transition-all duration-300 shadow-lg group-hover:scale-105">
+                  <BookOpen className="h-8 w-8" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-xl font-bold text-indigo-900 group-hover:text-blue-700 transition-colors duration-300">Interactive Quizzes</h3>
+                    <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">Combat</div>
+                  </div>
+                  <p className="text-gray-600 text-sm">Test your knowledge with different question types</p>
+                </div>
               </div>
             </div>
             <div className="space-y-2">
@@ -240,14 +280,26 @@ export default function Home() {
           </div>
           
           {/* Feature 2 - Flashcards */}
-          <div className="group h-full rounded-xl bg-gradient-to-br from-mint-green/30 to-white p-6 shadow-md transition-all hover:shadow-lg hover:border-indigo-dye hover:-translate-y-1 duration-300 border-2 border-picton-blue">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-picton-blue text-white group-hover:bg-indigo-dye transition-all duration-300">
-                <FileText className="h-7 w-7" />
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-indigo-dye group-hover:text-picton-blue transition-colors duration-300">Flashcards</h3>
-                <p className="text-moonstone text-sm">Quizlet-style flashcards to reinforce key concepts</p>
+          <div className="group h-full rounded-xl bg-gradient-to-br from-green-50 via-white to-emerald-50 p-6 shadow-lg transition-all hover:shadow-xl hover:-translate-y-2 duration-300 border-2 border-green-200 hover:border-green-400 relative overflow-hidden">
+            {/* Gaming background pattern */}
+            <div className="absolute top-2 right-2 w-16 h-16 border border-green-200/30 rounded-full opacity-50"></div>
+            <div className="absolute bottom-2 left-2 w-12 h-12 border border-emerald-200/30 rounded-full opacity-50"></div>
+            
+            {/* Rarity indicator */}
+            <div className="absolute top-3 right-3 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 text-white group-hover:from-emerald-600 group-hover:to-green-700 transition-all duration-300 shadow-lg group-hover:scale-105">
+                  <FileText className="h-8 w-8" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-xl font-bold text-indigo-900 group-hover:text-green-700 transition-colors duration-300">Flashcards</h3>
+                    <div className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">Memory</div>
+                  </div>
+                  <p className="text-gray-600 text-sm">Quizlet-style flashcards to reinforce key concepts</p>
+                </div>
               </div>
             </div>
             <div className="mt-4 relative perspective min-h-[200px] md:min-h-[250px] lg:min-h-[300px]">
@@ -280,14 +332,26 @@ export default function Home() {
           </div>
           
           {/* Feature 3 - Interactive Media */}
-          <div className="group h-full rounded-xl bg-gradient-to-br from-moonstone/30 to-white p-6 shadow-md transition-all hover:shadow-lg hover:border-indigo-dye hover:-translate-y-1 duration-300 border-2 border-picton-blue">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-picton-blue text-white group-hover:bg-indigo-dye transition-all duration-300">
-                <BarChart3 className="h-7 w-7" />
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-indigo-dye group-hover:text-picton-blue transition-colors duration-300">Interactive Media</h3>
-                <p className="text-moonstone text-sm">Videos, animations, and simulations to aid learning</p>
+          <div className="group h-full rounded-xl bg-gradient-to-br from-purple-50 via-white to-violet-50 p-6 shadow-lg transition-all hover:shadow-xl hover:-translate-y-2 duration-300 border-2 border-purple-200 hover:border-purple-400 relative overflow-hidden">
+            {/* Gaming background pattern */}
+            <div className="absolute top-2 right-2 w-16 h-16 border border-purple-200/30 rounded-full opacity-50"></div>
+            <div className="absolute bottom-2 left-2 w-12 h-12 border border-violet-200/30 rounded-full opacity-50"></div>
+            
+            {/* Rarity indicator */}
+            <div className="absolute top-3 right-3 w-3 h-3 bg-purple-400 rounded-full animate-pulse"></div>
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 text-white group-hover:from-violet-600 group-hover:to-purple-700 transition-all duration-300 shadow-lg group-hover:scale-105">
+                  <BarChart3 className="h-8 w-8" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-xl font-bold text-indigo-900 group-hover:text-purple-700 transition-colors duration-300">Interactive Media</h3>
+                    <div className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full font-medium">Magic</div>
+                  </div>
+                  <p className="text-gray-600 text-sm">Videos, animations, and simulations to aid learning</p>
+                </div>
               </div>
             </div>
             <div className="mt-4 rounded-lg overflow-hidden shadow-md group-hover:shadow-lg transition-all duration-300">
@@ -322,14 +386,26 @@ export default function Home() {
           </div>
           
           {/* Feature 4 - Progress Tracking - Moved to last position */}
-          <div className="group h-full rounded-xl bg-gradient-to-br from-picton-blue/30 to-white p-6 shadow-md transition-all hover:shadow-lg hover:border-indigo-dye hover:-translate-y-1 duration-300 border-2 border-picton-blue">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-picton-blue text-white group-hover:bg-indigo-dye transition-all duration-300">
-                <Medal className="h-7 w-7" />
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-indigo-dye group-hover:text-picton-blue transition-colors duration-300">Progress Tracking</h3>
-                <p className="text-moonstone text-sm">Track your learning journey and improvements</p>
+          <div className="group h-full rounded-xl bg-gradient-to-br from-yellow-50 via-white to-orange-50 p-6 shadow-lg transition-all hover:shadow-xl hover:-translate-y-2 duration-300 border-2 border-yellow-200 hover:border-yellow-400 relative overflow-hidden">
+            {/* Gaming background pattern */}
+            <div className="absolute top-2 right-2 w-16 h-16 border border-yellow-200/30 rounded-full opacity-50"></div>
+            <div className="absolute bottom-2 left-2 w-12 h-12 border border-orange-200/30 rounded-full opacity-50"></div>
+            
+            {/* Rarity indicator */}
+            <div className="absolute top-3 right-3 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-yellow-500 to-orange-600 text-white group-hover:from-orange-600 group-hover:to-yellow-700 transition-all duration-300 shadow-lg group-hover:scale-105">
+                  <Medal className="h-8 w-8" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-xl font-bold text-indigo-900 group-hover:text-orange-700 transition-colors duration-300">Progress Tracking</h3>
+                    <div className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-medium">Stats</div>
+                  </div>
+                  <p className="text-gray-600 text-sm">Track your learning journey and improvements</p>
+                </div>
               </div>
             </div>
             <div className="mt-4 space-y-3">
@@ -438,11 +514,11 @@ export default function Home() {
               </div>
               
               <h2 className="mb-6 text-4xl font-bold tracking-tight text-white">
-                Ready to Ace Your Exams? 🚀
+                Ready to Level Up Your Engineering Skills? 🎮
               </h2>
               
               <p className="mb-8 text-white/90 text-lg max-w-lg mx-auto">
-                Join thousands of students who are crushing their civil engineering courses with our interactive quizzes!
+                Join thousands of students earning XP, unlocking achievements, and mastering civil engineering through gamified learning!
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
