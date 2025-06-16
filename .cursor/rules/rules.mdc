@@ -1,0 +1,265 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Civil Engineering Quiz Platform - Development Rules
+
+Every time you choose to apply a rule(s), explicitly state the rule(s) in the output. You can abbreviate the rule description to a single word or phrase.
+
+## Project Context
+- Interactive quiz platform for undergraduate civil engineering students
+- **Gamified Learning Experience**: RPG-style progression system with levels, XP, achievements, and skill trees
+- Three content types: Questions (examples: MCQs, T/F, Fill in Blank, Matching, Sequence, Short Answer, Hotspot/Image-Based, Numerical Problems, Diagram Labeling), Flashcards, and Interactive Media
+- Tracking student performance and analytics with gaming elements
+- Admin backend for content management
+- Target audience: Few hundred undergraduate students
+
+## Gamification System
+
+### Core Gaming Elements
+- **Level System**: Students progress through levels (1-∞) with XP requirements
+- **Experience Points (XP)**: Earned through quiz completion, streaks, and achievements
+- **Achievement Badges**: Rarity-based system (Common, Rare, Epic, Legendary)
+- **Daily Streaks**: Consecutive day engagement tracking
+- **Skill Trees**: Subject-based progression with unlock mechanics
+- **Study Worlds**: Themed subject areas with gaming terminology
+
+### Gaming Terminology
+- Use "Worlds" instead of "Subjects" in user-facing content
+- "Quests" for assignments and challenges
+- "Challenges" for daily/special activities
+- "Adventures" for learning journeys
+- "Mastery" levels: Beginner → Learning → Proficient → Mastered
+- "Unlock" mechanics for progressive content access
+
+### Gamified Color System
+**Rarity-Based Colors** (for badges, achievements, progress):
+- **Legendary**: `from-purple-500 to-pink-600 border-purple-400`
+- **Epic**: `from-indigo-500 to-purple-600 border-indigo-400`
+- **Rare**: `from-blue-500 to-cyan-600 border-blue-400`
+- **Common**: `from-gray-500 to-gray-600 border-gray-400`
+
+**Progress-Based Colors**:
+- **Mastered (80%+)**: `from-green-500 to-emerald-600`
+- **Proficient (60-79%)**: `from-blue-500 to-cyan-600`
+- **Learning (40-59%)**: `from-yellow-500 to-orange-600`
+- **Beginner (<40%)**: `from-gray-400 to-gray-500`
+
+**Brand Gaming Palette**:
+- **Primary**: Indigo/Purple gradients (`from-indigo-600 via-purple-600 to-cyan-600`)
+- **Success**: Mint Green for completions
+- **Accent**: Picton Blue for interactive elements
+- **Secondary**: Columbia Blue for supporting elements
+
+### Gaming UI Patterns
+**Card Design System**:
+- All major components use gradient backgrounds
+- Rarity indicators (small colored dots) in card corners
+- Gaming badges with rounded pills and appropriate terminology
+- Background patterns (subtle geometric shapes) for depth
+- Hover effects: lift (`hover:-translate-y-2`) + shadow increase
+
+**Animation Patterns**:
+- **Staggered Animations**: `transition={{ delay: index * 0.1 }}`
+- **Progress Animations**: Smooth XP bar fills and circular progress rings
+- **Hover Effects**: Scale transforms for icons and interactive elements
+- **Attention Elements**: Pulse animations for new achievements/notifications
+
+**Gaming Visual Cues**:
+- **Progress Rings**: SVG circular progress for skill trees
+- **XP Bars**: Animated gradient progress bars
+- **Achievement Popups**: Celebration animations for unlocks
+- **Glow Effects**: Colored shadows for important elements
+- **Particle Effects**: Floating elements and sparkle animations
+
+### User Engagement Mechanics
+**Progression System**:
+- XP earned: Quiz completion (base points + bonus for performance)
+- Streak bonuses: Multipliers for consecutive days
+- Achievement unlocks: Special XP rewards for milestones
+- Subject mastery: Bonus XP for completing skill trees
+
+**Unlock Mechanics**:
+- Sequential subject unlocking based on prerequisites
+- Topic unlocking within subjects based on completion
+- Special content unlocked through achievements
+- Advanced features unlocked at higher levels
+
+**Social Gaming Elements**:
+- Leaderboards (optional, privacy-respecting)
+- Achievement sharing capabilities
+- Progress comparison with anonymized peers
+- Study group challenges and competitions
+
+## Tech Stack
+- Next.js with TypeScript
+- MongoDB (document-based database)
+- AWS S3 (file storage)
+- Tailwind CSS (styling) - **Enhanced with gaming color system**
+- Framer Motion (animations) - **Essential for gaming UX**
+- TanStack Query (data fetching)
+- React Player (video playback)
+- NextAuth.js (authentication)
+- Vercel (unified hosting)
+- Headless UI / ShadCN UI (component library)
+
+## Code Style and Structure
+- Write concise, technical TypeScript code with accurate examples
+- Use functional and declarative programming patterns; avoid classes
+- Prefer iteration and modularization over code duplication
+- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError)
+- Keep components small and focused on specific responsibilities
+- **Gaming Rule**: Always consider the gamification impact when designing new features
+
+## Suggested Project Structure
+```
+/
+├── components/        # Reusable React components
+│   ├── layout/        # Layout components
+│   ├── ui/            # Basic UI components
+│   ├── quiz/          # Quiz specific components
+│   ├── flashcards/    # Flashcard components
+│   ├── media/         # Media display components
+│   ├── dashboard/     # Gaming dashboard components
+│   ├── gamification/  # XP, badges, achievements components
+│   └── admin/         # Admin interface components
+├── pages/             # Next.js pages and API routes
+│   ├── api/           # Backend API endpoints
+│   ├── subjects/      # Subject/World pages
+│   ├── profile/       # Student profile with gaming stats
+│   ├── dashboard/     # Gaming dashboard
+│   └── admin/         # Admin portal
+├── hooks/             # Custom React hooks
+├── lib/               # Core utilities
+├── context/           # React Context providers (including DashboardProvider)
+├── models/            # TypeScript interfaces (including gaming types)
+├── utils/             # Helper functions (including XP calculations)
+├── styles/            # Global styles
+└── public/            # Static assets
+```
+
+## Naming Conventions
+- Use lowercase with dashes for directories (e.g., components/form-wizard)
+- Use PascalCase for component files (e.g., QuizCard.tsx)
+- Use camelCase for utility files (e.g., formatScore.ts)
+- Favor named exports for components and utilities
+
+## TypeScript Usage
+- Use TypeScript for all code; prefer interfaces over types
+- Avoid enums; use const objects with 'as const' assertion
+- Use functional components with explicit props interfaces
+- Define strict types for data models and API responses
+- Use absolute imports with path aliases (@/components, @/lib)
+- Specify explicit return types for non-trivial functions
+
+## State Management
+- Use React Context for global state (authentication, theme)
+- Implement TanStack Query for server state management
+- Use useState and useReducer for local component state
+- Ensure proper cleanup in useEffect hooks
+- Keep state localized to where it's needed
+
+## AWS S3 Integration
+- Use presigned URLs for secure direct uploads
+- Implement proper file type validation
+- Store only references to S3 assets in MongoDB
+- Handle image optimization for different screen sizes
+- Implement proper error handling for upload failures
+
+## MongoDB Usage
+- Structure collections logically (users, subjects, topics, content, attempts)
+- Use proper indexing for frequently queried fields
+- Implement data validation at the application level
+- Use MongoDB aggregation for analytics queries
+- Follow the principle of denormalization where appropriate
+
+## Authentication and Authorization
+- Implement JWT-based authentication with NextAuth.js
+- Define clear role-based access control (student vs admin)
+- Secure API routes with middleware
+- Handle session expiration gracefully
+- Store only necessary user information
+
+## UI and Styling
+- Use Tailwind CSS for styling with consistent design tokens
+- **Gaming Design System**: Implement rarity-based color coding throughout
+- **Gradient Backgrounds**: Use gradients for all major UI components
+- **Gaming Animations**: Implement hover effects, progress animations, and micro-interactions
+- Implement responsive design for all screen sizes
+- Use Headless UI / ShadCN UI for accessible components
+- Use Framer Motion for purposeful animations and gaming feedback
+- **Gaming Visual Hierarchy**: Use shadows, borders, and colors to indicate importance/rarity
+- When adding new ShadCN component, document the installation command
+
+## User Experience (Gaming-Enhanced)
+**Onboarding**:
+- Introduce gaming concepts gradually
+- Show XP and level system early
+- Explain achievement system with first badge unlock
+- Guide through skill tree navigation
+
+**Feedback Systems**:
+- Immediate XP feedback for all actions
+- Achievement unlock celebrations
+- Progress ring animations for visual satisfaction
+- Streak maintenance notifications
+
+**Motivation Mechanics**:
+- Daily goals and challenges
+- Weekly progress summaries
+- Achievement galleries and progress sharing
+- Personalized learning recommendations based on gaming data
+
+## Performance Optimization
+- Implement proper image optimization
+- Use dynamic imports for code splitting
+- Optimize media loading with proper caching strategies
+- Implement pagination for long lists
+- Use Next.js ISR where appropriate for static content
+
+## Error Handling
+- Implement proper error boundaries in React components
+- Provide user-friendly error messages
+- Log errors appropriately for debugging
+- Handle network failures gracefully
+- Include fallback UI for failed content loading
+
+## User Tracking and Analytics
+- Track quiz attempts and results
+- Measure time spent on different content types
+- Record student progress through topics
+- Implement proper analytics dashboard for admins
+- Ensure privacy and data protection compliance
+
+## Testing
+- Write unit tests for utility functions
+- Test components with React Testing Library
+- Implement end-to-end tests for critical flows
+- Test responsive design across different devices
+- Verify accessibility compliance
+
+## Security
+- Sanitize user inputs to prevent injection attacks
+- Implement proper CORS policies
+- Secure API routes with authentication checks
+- Follow AWS S3 security best practices
+- Protect sensitive user data
+
+## Git Usage
+Commit Message Prefixes:
+- "fix:" for bug fixes
+- "feat:" for new features
+- "perf:" for performance improvements
+- "docs:" for documentation changes
+- "style:" for formatting changes
+- "refactor:" for code refactoring
+- "test:" for adding missing tests
+- "chore:" for maintenance tasks
+
+Rules:
+- Use lowercase for commit messages
+- Keep the summary line concise
+- Include description for non-obvious changes
+
+- Reference issue numbers when applicable

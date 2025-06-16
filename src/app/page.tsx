@@ -85,8 +85,8 @@ export default function Home() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Hero Section - More Visual, Less Text */}
-      <section className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-picton-blue/10 via-white to-mint-green/20 p-4 pb-2 sm:p-6 md:p-10 sm:mb-2">
+      {/* Hero Section - Gaming Enhanced */}
+      <section className="relative mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 pb-2 sm:p-6 md:p-10 sm:mb-2">
         <div className="flex flex-col items-center md:flex-row md:justify-between md:gap-8">
           <div className="max-w-xl space-y-4 sm:space-y-6 z-10 mb-4 sm:mb-8 md:mb-0">
             <div className="flex flex-wrap gap-2 mb-2">
@@ -129,55 +129,135 @@ export default function Home() {
               </span>
             </h1>
             <div className="flex flex-wrap gap-4">
-              <Button asChild size="lg" className="relative overflow-hidden group bg-indigo-dye hover:bg-indigo-dye/90 btn-hover-effect">
+              <Button asChild size="lg" className="relative overflow-hidden group bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white btn-hover-effect">
                 <Link href={isAuthenticated ? "/dashboard" : "/login"} className="flex items-center gap-2">
                   <span>Start Learning</span>
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-indigo-dye text-indigo-dye hover:bg-indigo-dye/10 btn-hover-effect">
-                <Link href="/subjects">Browse Topics</Link>
+              <Button asChild variant="outline" size="lg" className="border-purple-500 text-purple-600 hover:bg-purple-50 btn-hover-effect">
+                <Link href="/subjects">Browse Worlds</Link>
               </Button>
             </div>
           </div>
           
-          {/* 3D-looking isometric grid of engineering icons */}
+          {/* Enhanced 3D Isometric Grid of Engineering Icons */}
           <div className="relative w-full md:w-[400px] lg:w-[450px] h-[250px] sm:h-[320px] md:h-[400px] lg:h-[450px] z-10 flex items-center justify-center mt-2 mb-2 sm:mt-0 sm:mb-0 md:mt-0 md:mb-0 md:-ml-6 lg:ml-0">
-            <div className="transform-gpu rotate-12">
-              <div className="grid grid-cols-3 gap-3 md:gap-6 lg:gap-5">
-                {[...Array(9)].map((_, i) => (
-                  <div 
-                    key={i} 
+            <div className="transform-gpu perspective-1000 isometric-grid-container">
+              <div className="grid grid-cols-3 gap-2 md:gap-4 lg:gap-3">
+                {[...Array(9)].map((_, i) => {
+                  const row = Math.floor(i / 3);
+                  const col = i % 3;
+                  const depth = (row + col) * 12;
+                  const icons = [Building, Ruler, Calculator, HardHat, BookOpen, BrainCircuit, Medal, Lightbulb, FileText];
+                  const IconComponent = icons[i];
+                  
+                  return (
+                    <div 
+                      key={i} 
+                      className={`
+                        relative aspect-square w-14 sm:w-16 md:w-18 lg:w-20 rounded-xl flex items-center justify-center
+                        isometric-cube cube-glow
+                        ${i % 3 === 0 ? 'bg-gradient-to-br from-indigo-500 via-indigo-600 to-indigo-800 text-white shadow-indigo-500/60' : 
+                          i % 3 === 1 ? 'bg-gradient-to-br from-purple-500 via-purple-600 to-purple-800 text-white shadow-purple-500/60' : 
+                                        'bg-gradient-to-br from-cyan-400 via-cyan-500 to-cyan-700 text-white shadow-cyan-500/60'}
+                        transform-gpu transition-all duration-700 hover:scale-125 hover:shadow-2xl hover:rotate-12
+                        shadow-xl border border-white/30 backdrop-blur-sm
+                      `}
+                      style={{
+                        transform: `translateZ(${depth}px) translateY(${-depth * 0.4}px) translateX(${depth * 0.2}px)`,
+                        transformStyle: 'preserve-3d',
+                      }}
+                    >
+                      {/* Enhanced 3D Face Effect with Lighting */}
+                      <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 via-transparent to-black/30"></div>
+                      
+                      {/* Right Side Face for 3D Effect */}
+                      <div 
+                        className={`
+                          absolute top-0 left-full w-3 h-full rounded-r-xl
+                          ${i % 3 === 0 ? 'bg-gradient-to-b from-indigo-700 via-indigo-800 to-indigo-900' : 
+                            i % 3 === 1 ? 'bg-gradient-to-b from-purple-700 via-purple-800 to-purple-900' : 
+                                          'bg-gradient-to-b from-cyan-600 via-cyan-700 to-cyan-800'}
+                          shadow-lg
+                        `}
+                        style={{ 
+                          transform: 'rotateY(90deg) translateZ(1.5px)',
+                          transformOrigin: 'left center'
+                        }}
+                      ></div>
+                      
+                      {/* Bottom Face for 3D Effect */}
+                      <div 
+                        className={`
+                          absolute top-full left-0 w-full h-3 rounded-b-xl
+                          ${i % 3 === 0 ? 'bg-gradient-to-r from-indigo-800 via-indigo-900 to-black' : 
+                            i % 3 === 1 ? 'bg-gradient-to-r from-purple-800 via-purple-900 to-black' : 
+                                          'bg-gradient-to-r from-cyan-700 via-cyan-800 to-black'}
+                          shadow-lg
+                        `}
+                        style={{ 
+                          transform: 'rotateX(-90deg) translateZ(1.5px)',
+                          transformOrigin: 'top center'
+                        }}
+                      ></div>
+                      
+                      {/* Icon with Enhanced Styling */}
+                      <IconComponent className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-8 lg:w-8 relative z-20 drop-shadow-lg filter brightness-110" />
+                      
+                      {/* Animated Glow Effect */}
+                      <div className="absolute inset-0 rounded-xl opacity-40 bg-gradient-to-br from-white/20 to-transparent animate-pulse"></div>
+                      
+                      {/* Sparkle Effect on Hover */}
+                      <div className="absolute inset-0 rounded-xl opacity-0 hover:opacity-100 transition-opacity duration-300">
+                        <div className="absolute top-2 right-2 w-1 h-1 bg-white rounded-full animate-ping"></div>
+                        <div className="absolute bottom-3 left-3 w-0.5 h-0.5 bg-white rounded-full animate-ping" style={{ animationDelay: '0.5s' }}></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* Enhanced Floating Particles */}
+              <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                {[...Array(12)].map((_, i) => (
+                  <div
+                    key={i}
                     className={`
-                      aspect-square w-16 sm:w-18 md:w-18 lg:w-24 rounded-lg shadow-lg flex items-center justify-center
-                      ${i % 3 === 0 ? 'bg-indigo-dye text-white' : 
-                        i % 3 === 1 ? 'bg-picton-blue text-white' : 
-                                      'bg-mint-green text-indigo-dye'}
-                      transform-gpu transition-all duration-300 hover:scale-110 hover:shadow-xl animate-icon-hover
+                      absolute rounded-full floating-particle
+                      ${i % 4 === 0 ? 'w-1 h-1 bg-indigo-400/60' :
+                        i % 4 === 1 ? 'w-0.5 h-0.5 bg-purple-400/60' :
+                        i % 4 === 2 ? 'w-1.5 h-1.5 bg-cyan-400/40' :
+                                      'w-0.5 h-0.5 bg-white/60'}
                     `}
                     style={{
-                      transform: `translateZ(${5 + (i * 1.5)}px)`,
+                      left: `${10 + (i * 8)}%`,
+                      top: `${5 + (i * 7)}%`,
+                      animationDelay: `${i * 300}ms`,
+                      animationDuration: `${3 + (i * 0.2)}s`,
                     }}
-                  >
-                    {i === 0 ? <Building className="h-6 w-6 sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-10 lg:w-10" /> : 
-                     i === 1 ? <Ruler className="h-6 w-6 sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-10 lg:w-10" /> :
-                     i === 2 ? <Calculator className="h-6 w-6 sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-10 lg:w-10" /> :
-                     i === 3 ? <HardHat className="h-6 w-6 sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-10 lg:w-10" /> :
-                     i === 4 ? <BookOpen className="h-6 w-6 sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-10 lg:w-10" /> :
-                     i === 5 ? <BrainCircuit className="h-6 w-6 sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-10 lg:w-10" /> :
-                     i === 6 ? <Medal className="h-6 w-6 sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-10 lg:w-10" /> :
-                     i === 7 ? <Lightbulb className="h-6 w-6 sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-10 lg:w-10" /> :
-                               <FileText className="h-6 w-6 sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-10 lg:w-10" />}
-                  </div>
+                  ></div>
                 ))}
               </div>
+              
+              {/* Ambient Light Rays */}
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-0 left-1/4 w-px h-full bg-gradient-to-b from-white/20 via-transparent to-transparent transform rotate-12 animate-pulse"></div>
+                <div className="absolute top-0 right-1/3 w-px h-full bg-gradient-to-b from-purple-300/20 via-transparent to-transparent transform -rotate-12 animate-pulse" style={{ animationDelay: '1s' }}></div>
+              </div>
+            </div>
+            
+            {/* Enhanced Isometric Grid Base Shadow */}
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+              <div className="w-56 h-16 bg-gradient-radial from-black/20 via-black/10 to-transparent rounded-full blur-lg"></div>
+              <div className="absolute inset-0 w-40 h-8 bg-gradient-to-r from-transparent via-purple-500/10 to-transparent rounded-full blur-md"></div>
             </div>
           </div>
         </div>
         
         {/* Abstract background elements */}
-        <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-picton-blue/30 blur-3xl"></div>
-        <div className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-mint-green/40 blur-3xl"></div>
+        <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-purple-400/30 blur-3xl"></div>
+        <div className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-indigo-400/40 blur-3xl"></div>
       </section>
 
       {/* Quick Stats - Gamified Achievement Cards */}
@@ -453,18 +533,23 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Topic Gallery - Interactive Grid of Topics */}
+      {/* Topic Gallery - Study Worlds Grid */}
       <section className="my-20">
         <div className="mb-8 text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-indigo-dye">Engineering Topics</h2>
+          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-100 to-purple-100 px-4 py-2 rounded-full mb-4">
+            <Trophy className="w-5 h-5 text-indigo-600" />
+            <span className="text-sm font-bold text-indigo-700">Study Worlds</span>
+          </div>
+          <h2 className="text-3xl font-bold tracking-tight text-indigo-dye">Choose Your Engineering Adventure</h2>
+          <p className="text-gray-600 mt-2">Each world contains unique challenges and knowledge to master</p>
         </div>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
           {subjects.map((subject, index) => (
             <Link 
               key={index}
               href="/subjects" 
-              className="group relative flex aspect-square flex-col items-center justify-center rounded-xl border-2 border-picton-blue/70 p-4 overflow-hidden
-                        text-white transition-all hover:shadow-lg topic-card-effect"
+              className="group relative flex aspect-square flex-col items-center justify-center rounded-xl border-2 border-indigo-200 hover:border-indigo-400 p-4 overflow-hidden
+                        text-white transition-all hover:shadow-xl hover:-translate-y-1 duration-300"
             >
               {/* Background image with darker overlay by default */}
               <div 
@@ -472,30 +557,65 @@ export default function Home() {
                 style={{ backgroundImage: subject.bg }}
               ></div>
               
-              {/* Gradient overlay - darker by default, lighter on hover */}
-              <div className="absolute inset-0 bg-indigo-dye/70 transition-opacity duration-500 group-hover:bg-indigo-dye/40"></div>
+              {/* Gradient overlay - subtle overlay to maintain image visibility */}
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/40 to-purple-600/40 transition-opacity duration-500 group-hover:from-indigo-500/30 group-hover:to-purple-500/30"></div>
+              
+              {/* Gaming elements */}
+              <div className="absolute top-2 right-2 w-8 h-8 border border-white/20 rounded-full opacity-60"></div>
+              <div className="absolute bottom-2 left-2 w-6 h-6 border border-white/20 rounded-full opacity-60"></div>
+              
+              {/* World level indicator */}
+              <div className="absolute top-2 left-2 bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-full">
+                World {index + 1}
+              </div>
+              
+              {/* Rarity indicator */}
+              <div className="absolute top-2 right-2 w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
               
               {/* Content that scales slightly on hover */}
-              <div className="flex flex-col items-center z-10 transform transition-transform duration-500">
-                <div className="mb-4 transition-colors animate-icon-hover">
+              <div className="flex flex-col items-center z-10 transform transition-transform duration-500 group-hover:scale-105">
+                <div className="mb-4 p-3 bg-white/10 backdrop-blur-sm rounded-xl transition-all duration-300 group-hover:bg-white/20 group-hover:scale-110">
                   {subject.icon}
                 </div>
-                <h3 className="text-center text-sm font-medium">{subject.name}</h3>
+                <h3 className="text-center text-sm font-bold drop-shadow-lg">{subject.name}</h3>
+                <div className="mt-1 text-xs opacity-75">Click to explore</div>
               </div>
             </Link>
           ))}
           
-          {/* View More Card */}
+          {/* View More Card - Exact copy of subject card structure */}
           <Link 
             href="/subjects" 
-            className="group flex aspect-square flex-col items-center justify-center rounded-xl border-2 border-picton-blue/70 bg-gradient-to-br from-mint-green/30 via-white to-picton-blue/20 p-4 
-                      transition-all hover:shadow-lg hover:scale-105 hover:border-indigo-dye"
+            className="group relative flex aspect-square flex-col items-center justify-center rounded-xl border-2 border-indigo-200 hover:border-indigo-400 p-4 overflow-hidden
+                      text-white transition-all hover:shadow-xl hover:-translate-y-1 duration-300"
           >
-            <div className="flex flex-col items-center gap-2">
-              <div className="mb-2 rounded-full bg-picton-blue p-3 text-white transform transition-all duration-300 group-hover:bg-indigo-dye group-hover:scale-110 group-hover:rotate-12 shadow-md">
+            {/* Background gradient - using solid color instead of image */}
+            <div 
+              className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-purple-600 transition-all duration-500 group-hover:scale-110 group-hover:brightness-110"
+            ></div>
+            
+            {/* Gradient overlay - exact copy from subject cards */}
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/40 to-purple-600/40 transition-opacity duration-500 group-hover:from-indigo-500/30 group-hover:to-purple-500/30"></div>
+            
+            {/* Gaming elements - exact copy */}
+            <div className="absolute top-2 right-2 w-8 h-8 border border-white/20 rounded-full opacity-60"></div>
+            <div className="absolute bottom-2 left-2 w-6 h-6 border border-white/20 rounded-full opacity-60"></div>
+            
+            {/* Quest badge - replacing World level indicator */}
+            <div className="absolute top-2 left-2 bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-full">
+              Quest
+            </div>
+            
+            {/* Rarity indicator - exact copy */}
+            <div className="absolute top-2 right-2 w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+            
+            {/* Content that scales slightly on hover - exact copy */}
+            <div className="flex flex-col items-center z-10 transform transition-transform duration-500 group-hover:scale-105">
+              <div className="mb-4 p-3 bg-white/10 backdrop-blur-sm rounded-xl transition-all duration-300 group-hover:bg-white/20 group-hover:scale-110">
                 <Plus className="h-6 w-6" />
               </div>
-              <h3 className="text-center font-medium text-indigo-dye text-base">Explore More Topics</h3>
+              <h3 className="text-center text-sm font-bold drop-shadow-lg">Unlock New Worlds</h3>
+              <div className="mt-1 text-xs opacity-75">Click to explore</div>
             </div>
           </Link>
         </div>
@@ -503,9 +623,9 @@ export default function Home() {
 
       {/* CTA Section - Fun & Eye-catching - Only shown if not logged in */}
       {!isAuthenticated && (
-        <section className="mb-16 overflow-hidden rounded-3xl bg-indigo-dye relative border-2 border-picton-blue shadow-lg">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-picton-blue/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-picton-blue/30 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4"></div>
+        <section className="mb-16 overflow-hidden rounded-3xl bg-gradient-to-br from-purple-600 via-indigo-600 to-purple-700 relative border-2 border-purple-400 shadow-lg">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-purple-400/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-400/30 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4"></div>
           
           <div className="relative p-8 md:p-12">
             <div className="mx-auto max-w-3xl text-center">
