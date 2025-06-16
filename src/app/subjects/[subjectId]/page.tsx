@@ -391,9 +391,9 @@ function TopicCard({ topic, subjectId }: {
   };
 
   return (
-    <div className={`relative overflow-hidden rounded-xl border-2 bg-white shadow-sm transition-all duration-300 ${
+    <div className={`group relative overflow-hidden rounded-xl border-2 bg-white shadow-sm transition-all duration-300 ${
       topic.isUnlocked 
-        ? 'border-gray-200 hover:shadow-lg hover:-translate-y-1' 
+        ? 'border-gray-200 hover:shadow-lg hover:-translate-y-1 hover:border-indigo-300' 
         : 'border-gray-200 opacity-75'
     }`}>
       {/* Lock Overlay */}
@@ -407,26 +407,37 @@ function TopicCard({ topic, subjectId }: {
       )}
 
       <div className="p-6">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <div className="flex items-center space-x-3 mb-2">
-              <h3 className="text-xl font-bold text-gray-800">{topic.name}</h3>
-              {topic.progress === 100 && (
-                <Trophy className="w-5 h-5 text-yellow-500" />
-              )}
+        {/* Header - Now clickable to go to topic overview */}
+        <Link 
+          href={topic.isUnlocked ? `/subjects/${subjectId}/topics/${topic.id}` : '#'}
+          className={`block ${topic.isUnlocked ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+        >
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <div className="flex items-center space-x-3 mb-2">
+                <h3 className={`text-xl font-bold transition-colors ${
+                  topic.isUnlocked 
+                    ? 'text-gray-800 group-hover:text-indigo-600' 
+                    : 'text-gray-800'
+                }`}>
+                  {topic.name}
+                </h3>
+                {topic.progress === 100 && (
+                  <Trophy className="w-5 h-5 text-yellow-500" />
+                )}
+              </div>
+              <p className="text-gray-600 mb-3">{topic.description}</p>
+              <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getDifficultyColor(topic.difficulty)}`}>
+                {topic.difficulty}
+              </div>
             </div>
-            <p className="text-gray-600 mb-3">{topic.description}</p>
-            <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getDifficultyColor(topic.difficulty)}`}>
-              {topic.difficulty}
+            
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <Clock className="w-4 h-4" />
+              <span>{topic.estimatedTime}min</span>
             </div>
           </div>
-          
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
-            <Clock className="w-4 h-4" />
-            <span>{topic.estimatedTime}min</span>
-          </div>
-        </div>
+        </Link>
 
         {/* Progress Bar */}
         {topic.isUnlocked && (
@@ -488,25 +499,41 @@ function TopicCard({ topic, subjectId }: {
           </Link>
         </div>
 
-        {/* XP Reward */}
+        {/* XP Reward and Actions */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <Zap className="w-4 h-4 text-yellow-500" />
             <span>+{topic.xpReward} XP</span>
           </div>
           
-          {topic.isUnlocked && (
-            <div className="flex items-center space-x-1 text-sm">
-              {topic.progress === 100 ? (
-                <CheckCircle className="w-4 h-4 text-green-500" />
-              ) : (
-                <Circle className="w-4 h-4 text-gray-400" />
-              )}
-              <span className="text-gray-600">
-                {topic.progress === 100 ? 'Completed' : 'In Progress'}
-              </span>
-            </div>
-          )}
+          <div className="flex items-center space-x-3">
+            {topic.isUnlocked && (
+              <div className="flex items-center space-x-1 text-sm">
+                {topic.progress === 100 ? (
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                ) : (
+                  <Circle className="w-4 h-4 text-gray-400" />
+                )}
+                <span className="text-gray-600">
+                  {topic.progress === 100 ? 'Completed' : 'In Progress'}
+                </span>
+              </div>
+            )}
+            
+            {/* View Overview Button */}
+            {topic.isUnlocked && (
+              <Button 
+                asChild
+                size="sm"
+                className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-sm"
+              >
+                <Link href={`/subjects/${subjectId}/topics/${topic.id}`}>
+                  <Target className="w-4 h-4 mr-1" />
+                  Overview
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

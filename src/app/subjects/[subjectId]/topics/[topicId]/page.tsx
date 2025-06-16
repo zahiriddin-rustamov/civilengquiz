@@ -380,7 +380,7 @@ export default function TopicOverviewPage() {
                   title="Interactive Questions"
                   description="Test your knowledge with quizzes and practice problems"
                   icon={<FileText className="w-8 h-8" />}
-                  color="from-blue-500 to-cyan-600"
+                  color="from-blue-400 to-blue-500"
                   data={topicData.contentTypes.questions}
                   href={`/subjects/${subjectId}/topics/${topicId}/questions`}
                   isUnlocked={topicData.isUnlocked}
@@ -398,7 +398,7 @@ export default function TopicOverviewPage() {
                   title="Study Flashcards"
                   description="Memorize key concepts with spaced repetition"
                   icon={<BookOpen className="w-8 h-8" />}
-                  color="from-green-500 to-emerald-600"
+                  color="from-emerald-400 to-emerald-500"
                   data={topicData.contentTypes.flashcards}
                   href={`/subjects/${subjectId}/topics/${topicId}/flashcards`}
                   isUnlocked={topicData.isUnlocked}
@@ -416,7 +416,7 @@ export default function TopicOverviewPage() {
                   title="Learning Media"
                   description="Watch videos and explore interactive content"
                   icon={<Play className="w-8 h-8" />}
-                  color="from-purple-500 to-pink-600"
+                  color="from-indigo-400 to-indigo-500"
                   data={topicData.contentTypes.media}
                   href={`/subjects/${subjectId}/topics/${topicId}/media`}
                   isUnlocked={topicData.isUnlocked}
