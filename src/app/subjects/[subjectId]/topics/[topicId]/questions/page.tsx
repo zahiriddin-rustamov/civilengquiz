@@ -246,7 +246,7 @@ export default function QuestionsPage() {
     setQuizCompleted(false);
   };
 
-  const renderQuestion = (question: typeof questionsData.questions[0]) => {
+  const renderQuestion = (question: NonNullable<typeof questionsData>['questions'][0]) => {
     const existingAnswer = answers.find(a => a.questionId === question.id);
     
     switch (question.type) {
