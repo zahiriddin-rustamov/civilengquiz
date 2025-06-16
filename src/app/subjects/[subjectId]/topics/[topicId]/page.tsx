@@ -395,16 +395,18 @@ export default function TopicOverviewPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                <ContentTypeCard
-                  type="flashcards"
-                  title="Study Flashcards"
-                  description="Memorize key concepts with spaced repetition"
-                  icon={<BookOpen className="w-8 h-8" />}
-                  color="from-emerald-400 to-emerald-500"
-                  data={topicData.contentTypes.flashcards}
-                  href={`/subjects/${subjectId}/topics/${topicId}/flashcards`}
-                  isUnlocked={topicData.isUnlocked}
-                />
+                <Link href={topicData.isUnlocked ? `/subjects/${subjectId}/topics/${topicId}/flashcards` : '#'}>
+                  <ContentTypeCard
+                    type="flashcards"
+                    title="Study Flashcards"
+                    description="Memorize key concepts with spaced repetition"
+                    icon={<BookOpen className="w-8 h-8" />}
+                    color="from-emerald-400 to-emerald-500"
+                    data={topicData.contentTypes.flashcards}
+                    href={`/subjects/${subjectId}/topics/${topicId}/flashcards`}
+                    isUnlocked={topicData.isUnlocked}
+                  />
+                </Link>
               </motion.div>
 
               {/* Media Card */}
@@ -413,16 +415,18 @@ export default function TopicOverviewPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                <ContentTypeCard
-                  type="media"
-                  title="Learning Media"
-                  description="Watch videos and explore interactive content"
-                  icon={<Play className="w-8 h-8" />}
-                  color="from-indigo-400 to-indigo-500"
-                  data={topicData.contentTypes.media}
-                  href={`/subjects/${subjectId}/topics/${topicId}/media`}
-                  isUnlocked={topicData.isUnlocked}
-                />
+                <Link href={topicData.isUnlocked ? `/subjects/${subjectId}/topics/${topicId}/media` : '#'}>
+                  <ContentTypeCard
+                    type="media"
+                    title="Learning Media"
+                    description="Watch videos and explore interactive content"
+                    icon={<Play className="w-8 h-8" />}
+                    color="from-indigo-400 to-indigo-500"
+                    data={topicData.contentTypes.media}
+                    href={`/subjects/${subjectId}/topics/${topicId}/media`}
+                    isUnlocked={topicData.isUnlocked}
+                  />
+                </Link>
               </motion.div>
             </div>
           </div>
