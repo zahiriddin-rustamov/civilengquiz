@@ -4,10 +4,10 @@ import { successResponse, errorResponse } from '@/utils/api';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const token = params.token;
+    const { token } = await params;
     
     if (!token) {
       return errorResponse('Invalid verification token', 400);
