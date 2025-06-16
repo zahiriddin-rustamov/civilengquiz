@@ -20,7 +20,6 @@ import {
   Target
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { VideoPlayer } from '@/components/media/VideoPlayer';
 import { InteractiveSimulation } from '@/components/media/InteractiveSimulation';
 import { ImageGallery } from '@/components/media/ImageGallery';
@@ -281,7 +280,6 @@ export default function MediaPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [mediaData, setMediaData] = useState<typeof MOCK_MEDIA_DATA[string][string] | null>(null);
-  const [activeTab, setActiveTab] = useState('videos');
   const [progress, setProgress] = useState<MediaProgress>({
     videoProgress: {},
     simulationProgress: {},
@@ -477,36 +475,31 @@ export default function MediaPage() {
           </div>
         </motion.div>
 
-        {/* Media Content Tabs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-8">
-              <TabsTrigger value="videos" className="flex items-center gap-2">
-                <Play className="w-4 h-4" />
-                Videos ({mediaData.videos.length})
-              </TabsTrigger>
-              <TabsTrigger value="simulations" className="flex items-center gap-2">
-                <Settings className="w-4 h-4" />
-                Simulations ({mediaData.simulations.length})
-              </TabsTrigger>
-              <TabsTrigger value="galleries" className="flex items-center gap-2">
-                <ImageIcon className="w-4 h-4" />
-                Galleries ({mediaData.galleries.length})
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Videos Tab */}
-            <TabsContent value="videos" className="space-y-8">
+        {/* Videos Section */}
+        {mediaData.videos.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-12"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-lg">
+                <Play className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Learning Videos</h2>
+                <p className="text-gray-600">Watch and learn from expert demonstrations</p>
+              </div>
+            </div>
+            
+            <div className="space-y-8">
               {mediaData.videos.map((video, index) => (
                 <motion.div
                   key={video.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
+                  transition={{ delay: 0.3 + index * 0.1 }}
                 >
                   <VideoPlayer
                     video={video}
@@ -516,16 +509,35 @@ export default function MediaPage() {
                   />
                 </motion.div>
               ))}
-            </TabsContent>
+            </div>
+          </motion.div>
+        )}
 
-            {/* Simulations Tab */}
-            <TabsContent value="simulations" className="space-y-8">
+        {/* Simulations Section */}
+        {mediaData.simulations.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="mb-12"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg">
+                <Settings className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Interactive Simulations</h2>
+                <p className="text-gray-600">Experiment with parameters and see real-time results</p>
+              </div>
+            </div>
+            
+            <div className="space-y-8">
               {mediaData.simulations.map((simulation, index) => (
                 <motion.div
                   key={simulation.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
+                  transition={{ delay: 0.5 + index * 0.1 }}
                 >
                   <InteractiveSimulation
                     simulation={simulation}
@@ -534,16 +546,35 @@ export default function MediaPage() {
                   />
                 </motion.div>
               ))}
-            </TabsContent>
+            </div>
+          </motion.div>
+        )}
 
-            {/* Galleries Tab */}
-            <TabsContent value="galleries" className="space-y-8">
+        {/* Galleries Section */}
+        {mediaData.galleries.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="mb-12"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg">
+                <ImageIcon className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Image Galleries</h2>
+                <p className="text-gray-600">Explore visual references and detailed diagrams</p>
+              </div>
+            </div>
+            
+            <div className="space-y-8">
               {mediaData.galleries.map((gallery, index) => (
                 <motion.div
                   key={gallery.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
+                  transition={{ delay: 0.7 + index * 0.1 }}
                 >
                   <ImageGallery
                     gallery={gallery}
@@ -553,9 +584,9 @@ export default function MediaPage() {
                   />
                 </motion.div>
               ))}
-            </TabsContent>
-          </Tabs>
-        </motion.div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Completion Summary */}
         {progressPercentage === 100 && (
