@@ -18,6 +18,14 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Card } from '@/components/ui/card';
 
+interface SimulationResult {
+  value: number | string;
+  unit: string;
+  status: 'success' | 'warning' | 'error' | 'neutral';
+  message: string;
+  success: boolean;
+}
+
 interface InteractiveSimulationProps {
   simulation: {
     id: string;
@@ -47,7 +55,7 @@ export function InteractiveSimulation({
 }: InteractiveSimulationProps) {
   const [isRunning, setIsRunning] = useState(false);
   const [parameters, setParameters] = useState<Record<string, number>>({});
-  const [results, setResults] = useState<any>(null);
+  const [results, setResults] = useState<SimulationResult | null>(null);
   const [interactions, setInteractions] = useState(0);
   const [timeSpent, setTimeSpent] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
@@ -110,7 +118,7 @@ export function InteractiveSimulation({
     setInteractions(prev => prev + 1);
   };
 
-  const calculateResults = () => {
+  const calculateResults = (): SimulationResult => {
     // Mock calculation based on simulation type
     switch (simulation.type) {
       case 'concrete-slump':
@@ -122,11 +130,11 @@ export function InteractiveSimulation({
       case 'soil-compaction':
         return calculateSoilCompaction();
       default:
-        return { value: 0, unit: '', status: 'neutral', message: 'Unknown simulation type' };
+        return { value: 0, unit: '', status: 'neutral', message: 'Unknown simulation type', success: false };
     }
   };
 
-  const calculateConcreteSlump = () => {
+  const calculateConcreteSlump = (): SimulationResult => {
     const waterCement = parameters['Water-Cement Ratio'] || 0.5;
     const aggregateSize = parameters['Aggregate Size'] || 20;
     const temperature = parameters['Temperature'] || 20;
@@ -135,7 +143,7 @@ export function InteractiveSimulation({
     let slump = (waterCement - 0.3) * 200 + (30 - aggregateSize) * 2 + (temperature - 20) * 0.5;
     slump = Math.max(0, Math.min(200, slump));
     
-    let status = 'neutral';
+    let status: SimulationResult['status'] = 'neutral';
     let message = 'Normal workability';
     let success = false;
     
@@ -154,7 +162,7 @@ export function InteractiveSimulation({
     return { value: Math.round(slump), unit: 'mm', status, message, success };
   };
 
-  const calculateBeamLoading = () => {
+  const calculateBeamLoading = (): SimulationResult => {
     const load = parameters['Applied Load'] || 10;
     const beamLength = parameters['Beam Length'] || 3;
     const momentOfInertia = parameters['Moment of Inertia'] || 100;
@@ -163,7 +171,7 @@ export function InteractiveSimulation({
     const deflection = (5 * load * Math.pow(beamLength * 1000, 4)) / (384 * 200000 * momentOfInertia * 1000000);
     const allowableDeflection = (beamLength * 1000) / 250; // L/250 limit
     
-    let status = 'neutral';
+    let status: SimulationResult['status'] = 'neutral';
     let message = 'Within acceptable limits';
     let success = false;
     
@@ -179,7 +187,7 @@ export function InteractiveSimulation({
     return { value: deflection.toFixed(2), unit: 'mm', status, message, success };
   };
 
-  const calculateWaterFlow = () => {
+  const calculateWaterFlow = (): SimulationResult => {
     const diameter = parameters['Pipe Diameter'] || 300;
     const slope = parameters['Slope'] || 0.001;
     const roughness = parameters['Roughness Coefficient'] || 0.013;
@@ -190,7 +198,7 @@ export function InteractiveSimulation({
     const velocity = (1 / roughness) * Math.pow(hydraulicRadius, 2/3) * Math.pow(slope, 0.5);
     const flowRate = area * velocity * 1000; // Convert to L/s
     
-    let status = 'success';
+    let status: SimulationResult['status'] = 'success';
     let message = 'Flow rate calculated successfully';
     let success = true;
     
@@ -205,7 +213,7 @@ export function InteractiveSimulation({
     return { value: flowRate.toFixed(1), unit: 'L/s', status, message, success };
   };
 
-  const calculateSoilCompaction = () => {
+  const calculateSoilCompaction = (): SimulationResult => {
     const moisture = parameters['Moisture Content'] || 15;
     const compactionEffort = parameters['Compaction Effort'] || 100;
     const soilType = parameters['Soil Type'] || 2; // 1=clay, 2=silt, 3=sand
@@ -217,7 +225,7 @@ export function InteractiveSimulation({
     const moistureFactor = 1 - Math.pow((moisture - optimumMoisture) / optimumMoisture, 2);
     const density = maxDensity * moistureFactor * (compactionEffort / 100);
     
-    let status = 'neutral';
+    let status: SimulationResult['status'] = 'neutral';
     let message = 'Compaction achieved';
     let success = false;
     

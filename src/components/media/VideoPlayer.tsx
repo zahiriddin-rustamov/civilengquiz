@@ -52,7 +52,7 @@ export function VideoPlayer({
   const [watchTime, setWatchTime] = useState(0);
   
   const playerRef = useRef<ReactPlayer>(null);
-  const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
