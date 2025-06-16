@@ -115,28 +115,32 @@ Every time you choose to apply a rule(s), explicitly state the rule(s) in the ou
 ## Suggested Project Structure
 ```
 /
-├── components/        # Reusable React components
-│   ├── layout/        # Layout components
-│   ├── ui/            # Basic UI components
-│   ├── quiz/          # Quiz specific components
-│   ├── flashcards/    # Flashcard components
-│   ├── media/         # Media display components
-│   ├── dashboard/     # Gaming dashboard components
-│   ├── gamification/  # XP, badges, achievements components
-│   └── admin/         # Admin interface components
-├── pages/             # Next.js pages and API routes
-│   ├── api/           # Backend API endpoints
-│   ├── subjects/      # Subject/World pages
-│   ├── profile/       # Student profile with gaming stats
-│   ├── dashboard/     # Gaming dashboard
-│   └── admin/         # Admin portal
-├── hooks/             # Custom React hooks
-├── lib/               # Core utilities
-├── context/           # React Context providers (including DashboardProvider)
-├── models/            # TypeScript interfaces (including gaming types)
-├── utils/             # Helper functions (including XP calculations)
-├── styles/            # Global styles
-└── public/            # Static assets
+├── src/
+│   ├── components/        # Reusable React components
+│   │   ├── home/          # Home page sections (Hero, Stats, CTA, etc.)
+│   │   ├── layout/        # Layout components
+│   │   ├── ui/            # Basic UI components (ShadCN)
+│   │   ├── quiz/          # Quiz specific components
+│   │   ├── flashcards/    # Flashcard components
+│   │   ├── media/         # Media display components
+│   │   ├── dashboard/     # Gaming dashboard components
+│   │   ├── gamification/  # XP, badges, achievements components
+│   │   └── admin/         # Admin interface components
+│   ├── app/               # Next.js App Router pages
+│   │   ├── api/           # Backend API endpoints
+│   │   ├── subjects/      # Subject/World pages
+│   │   ├── dashboard/     # Gaming dashboard
+│   │   ├── login/         # Authentication pages
+│   │   ├── register/      # User registration
+│   │   ├── verify/        # Email verification
+│   │   └── admin/         # Admin portal
+│   ├── hooks/             # Custom React hooks
+│   ├── lib/               # Core utilities
+│   ├── context/           # React Context providers (including DashboardProvider)
+│   ├── models/            # TypeScript interfaces (including gaming types)
+│   ├── types/             # TypeScript type definitions
+│   └── utils/             # Helper functions (including XP calculations)
+└── public/                # Static assets
 ```
 
 ## Naming Conventions
