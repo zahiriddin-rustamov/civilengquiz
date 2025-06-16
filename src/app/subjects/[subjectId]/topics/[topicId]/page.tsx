@@ -375,16 +375,18 @@ export default function TopicOverviewPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
               >
-                <ContentTypeCard
-                  type="questions"
-                  title="Interactive Questions"
-                  description="Test your knowledge with quizzes and practice problems"
-                  icon={<FileText className="w-8 h-8" />}
-                  color="from-blue-400 to-blue-500"
-                  data={topicData.contentTypes.questions}
-                  href={`/subjects/${subjectId}/topics/${topicId}/questions`}
-                  isUnlocked={topicData.isUnlocked}
-                />
+                <Link href={topicData.isUnlocked ? `/subjects/${subjectId}/topics/${topicId}/questions` : '#'}>
+                  <ContentTypeCard
+                    type="questions"
+                    title="Interactive Questions"
+                    description="Test your knowledge with quizzes and practice problems"
+                    icon={<FileText className="w-8 h-8" />}
+                    color="from-blue-400 to-blue-500"
+                    data={topicData.contentTypes.questions}
+                    href={`/subjects/${subjectId}/topics/${topicId}/questions`}
+                    isUnlocked={topicData.isUnlocked}
+                  />
+                </Link>
               </motion.div>
 
               {/* Flashcards Card */}
