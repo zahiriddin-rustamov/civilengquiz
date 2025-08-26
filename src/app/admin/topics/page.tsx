@@ -32,7 +32,9 @@ import {
   FileText,
   Clock,
   Zap,
-  BookOpen
+  BookOpen,
+  CreditCard,
+  Play
 } from 'lucide-react';
 import { ITopic, ISubject } from '@/models/database';
 import { Types } from 'mongoose';
@@ -411,6 +413,25 @@ export default function TopicsPage() {
                             <Link href={`/admin/topics/${topic._id}/edit`}>
                               <Edit className="w-4 h-4 mr-2" />
                               Edit
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/questions?topicId=${topic._id}`}>
+                              <FileText className="w-4 h-4 mr-2" />
+                              Manage Questions ({topic.contentCounts.questions})
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/flashcards?topicId=${topic._id}`}>
+                              <CreditCard className="w-4 h-4 mr-2" />
+                              Manage Flashcards ({topic.contentCounts.flashcards})
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/media?topicId=${topic._id}`}>
+                              <Play className="w-4 h-4 mr-2" />
+                              Manage Media ({topic.contentCounts.media})
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
