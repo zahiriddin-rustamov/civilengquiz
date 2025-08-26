@@ -1,0 +1,168 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { cn } from '@/lib/utils';
+import {
+  LayoutDashboard,
+  BookOpen,
+  FileText,
+  CreditCard,
+  Play,
+  Users,
+  BarChart3,
+  Settings,
+  ChevronDown,
+  ChevronRight
+} from 'lucide-react';
+
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children?: NavigationItem[];
+}
+
+const navigation: NavigationItem[] = [
+  {
+    name: 'Dashboard',
+    href: '/admin',
+    icon: LayoutDashboard,
+  },
+  {
+    name: 'Content Management',
+    href: '/admin/content',
+    icon: BookOpen,
+    children: [
+      { name: 'Subjects', href: '/admin/subjects', icon: BookOpen },
+      { name: 'Topics', href: '/admin/topics', icon: FileText },
+      { name: 'Questions', href: '/admin/questions', icon: FileText },
+      { name: 'Flashcards', href: '/admin/flashcards', icon: CreditCard },
+      { name: 'Media', href: '/admin/media', icon: Play },
+    ],
+  },
+  {
+    name: 'User Management',
+    href: '/admin/users',
+    icon: Users,
+  },
+  {
+    name: 'Analytics',
+    href: '/admin/analytics',
+    icon: BarChart3,
+  },
+  {
+    name: 'Settings',
+    href: '/admin/settings',
+    icon: Settings,
+  },
+];
+
+export function AdminSidebar() {
+  const pathname = usePathname();
+  const [expandedItems, setExpandedItems] = useState<string[]>(['/admin/content']);
+
+  const toggleExpanded = (href: string) => {
+    setExpandedItems(prev =>
+      prev.includes(href)
+        ? prev.filter(item => item !== href)
+        : [...prev, href]
+    );
+  };
+
+  const isActive = (href: string) => {
+    if (href === '/admin') {
+      return pathname === href;
+    }
+    return pathname.startsWith(href);
+  };
+
+  const renderNavItem = (item: NavigationItem, depth = 0) => {
+    const hasChildren = item.children && item.children.length > 0;
+    const isExpanded = expandedItems.includes(item.href);
+    const active = isActive(item.href);
+
+    return (
+      <div key={item.href}>
+        <div
+          className={cn(
+            'flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors',
+            depth > 0 && 'ml-4',
+            active
+              ? 'bg-blue-100 text-blue-700'
+              : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+          )}
+        >
+          {hasChildren ? (
+            <button
+              onClick={() => toggleExpanded(item.href)}
+              className="flex items-center flex-1 text-left"
+            >
+              <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
+              {item.name}
+            </button>
+          ) : (
+            <Link href={item.href} className="flex items-center flex-1">
+              <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
+              {item.name}
+            </Link>
+          )}
+          
+          {hasChildren && (
+            <button
+              onClick={() => toggleExpanded(item.href)}
+              className="p-1 hover:bg-gray-200 rounded"
+            >
+              {isExpanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </button>
+          )}
+        </div>
+
+        {hasChildren && isExpanded && (
+          <div className="mt-1 space-y-1">
+            {item.children.map(child => renderNavItem(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex flex-col w-64 bg-white border-r border-gray-200">
+      {/* Logo */}
+      <div className="flex items-center h-16 px-4 border-b border-gray-200">
+        <div className="flex items-center">
+          <div className="flex-shrink-0 w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <BookOpen className="w-5 h-5 text-white" />
+          </div>
+          <div className="ml-3">
+            <h1 className="text-lg font-semibold text-gray-900">Admin Panel</h1>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+        {navigation.map(item => renderNavItem(item))}
+      </nav>
+
+      {/* User Info */}
+      <div className="flex-shrink-0 border-t border-gray-200 p-4">
+        <div className="flex items-center">
+          <div className="flex-shrink-0 w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+            <Users className="w-4 h-4 text-gray-600" />
+          </div>
+          <div className="ml-3">
+            <p className="text-sm font-medium text-gray-700">Administrator</p>
+            <p className="text-xs text-gray-500">Admin Access</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
