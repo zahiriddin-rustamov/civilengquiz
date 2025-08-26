@@ -6,10 +6,11 @@ import { SubjectService } from '@/lib/db-operations';
 // GET /api/subjects/[id] - Get subject by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const subject = await SubjectService.getSubjectById(params.id);
+    const { id } = await params;
+    const subject = await SubjectService.getSubjectById(id);
     
     if (!subject) {
       return NextResponse.json(
@@ -31,7 +32,7 @@ export async function GET(
 // PUT /api/subjects/[id] - Update subject (Admin only)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -43,8 +44,9 @@ export async function PUT(
       );
     }
 
+    const { id } = await params;
     const data = await request.json();
-    const subject = await SubjectService.updateSubject(params.id, data);
+    const subject = await SubjectService.updateSubject(id, data);
     
     if (!subject) {
       return NextResponse.json(
@@ -66,7 +68,7 @@ export async function PUT(
 // DELETE /api/subjects/[id] - Delete subject (Admin only)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -78,7 +80,8 @@ export async function DELETE(
       );
     }
 
-    const deleted = await SubjectService.deleteSubject(params.id);
+    const { id } = await params;
+    const deleted = await SubjectService.deleteSubject(id);
     
     if (!deleted) {
       return NextResponse.json(

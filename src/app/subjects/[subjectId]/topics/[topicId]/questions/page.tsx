@@ -23,6 +23,8 @@ import { TrueFalseQuestion } from '@/components/quiz/TrueFalseQuestion';
 import { FillInBlankQuestion } from '@/components/quiz/FillInBlankQuestion';
 import { NumericalQuestion } from '@/components/quiz/NumericalQuestion';
 import { MatchingQuestion } from '@/components/quiz/MatchingQuestion';
+import { XPNotification } from '@/components/gamification';
+import { useDashboard } from '@/context/DashboardProvider';
 
 // Enhanced questions data type for UI
 interface QuestionsData {
@@ -48,6 +50,7 @@ export default function QuestionsPage() {
   const params = useParams();
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { triggerRefresh } = useDashboard();
   const [questionsData, setQuestionsData] = useState<QuestionsData | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<QuestionAnswer[]>([]);
@@ -55,6 +58,12 @@ export default function QuestionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [startTime] = useState(Date.now());
+  const [xpNotification, setXpNotification] = useState<{
+    xpGained: number;
+    leveledUp: boolean;
+    newLevel?: number;
+    newAchievements: any[];
+  } | null>(null);
 
   const subjectId = params.subjectId as string;
   const topicId = params.topicId as string;
@@ -91,11 +100,12 @@ export default function QuestionsPage() {
         id: q._id.toString(),
         type: q.type,
         data: {
-          ...q.data,
           id: q._id.toString(),
+          text: q.text,
           difficulty: q.difficulty,
           points: q.points,
-          explanation: q.explanation
+          explanation: q.explanation,
+          ...q.data  // Spread the question-specific data (options, correctAnswer, etc.)
         }
       }));
 
@@ -116,7 +126,7 @@ export default function QuestionsPage() {
     }
   };
 
-  const handleAnswer = (questionId: string, answer: any, isCorrect: boolean, points: number) => {
+  const handleAnswer = async (questionId: string, answer: any, isCorrect: boolean, points: number) => {
     const newAnswer: QuestionAnswer = {
       questionId,
       answer,
@@ -133,6 +143,44 @@ export default function QuestionsPage() {
       }
       return [...prev, newAnswer];
     });
+
+    // Update user progress in database
+    try {
+      const response = await fetch('/api/user/progress/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contentId: questionId,
+          contentType: 'question',
+          topicId: topicId,
+          subjectId: subjectId,
+          completed: true,
+          score: isCorrect ? points : 0,
+          timeSpent: Math.round((Date.now() - startTime) / 1000), // seconds
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Show XP notification if XP was gained
+        if (result.xpEarned > 0 || result.leveledUp || result.newAchievements.length > 0) {
+          setXpNotification({
+            xpGained: result.xpEarned,
+            leveledUp: result.leveledUp,
+            newLevel: result.newLevel,
+            newAchievements: result.newAchievements
+          });
+          
+          // Trigger dashboard refresh to show updated XP and achievements
+          triggerRefresh();
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update progress:', error);
+    }
   };
 
   const handleNextQuestion = () => {
@@ -386,6 +434,17 @@ export default function QuestionsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 p-4">
+      {/* XP Notification */}
+      {xpNotification && (
+        <XPNotification
+          xpGained={xpNotification.xpGained}
+          leveledUp={xpNotification.leveledUp}
+          newLevel={xpNotification.newLevel}
+          newAchievements={xpNotification.newAchievements}
+          onComplete={() => setXpNotification(null)}
+        />
+      )}
+      
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">

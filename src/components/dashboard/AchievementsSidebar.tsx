@@ -96,25 +96,33 @@ export function AchievementsSidebar() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Star className="w-4 h-4 text-yellow-500" />
-              <span className="text-sm text-gray-600">This Week</span>
+              <span className="text-sm text-gray-600">Total XP</span>
             </div>
-            <span className="font-semibold text-gray-800">12 XP</span>
+            <span className="font-semibold text-gray-800">{studentProgress.xp}</span>
           </div>
           
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Zap className="w-4 h-4 text-purple-500" />
-              <span className="text-sm text-gray-600">Best Streak</span>
+              <span className="text-sm text-gray-600">Current Streak</span>
             </div>
-            <span className="font-semibold text-gray-800">15 days</span>
+            <span className="font-semibold text-gray-800">{studentProgress.currentStreak} days</span>
           </div>
           
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-blue-500" />
-              <span className="text-sm text-gray-600">Study Time</span>
+              <Trophy className="w-4 h-4 text-blue-500" />
+              <span className="text-sm text-gray-600">Level</span>
             </div>
-            <span className="font-semibold text-gray-800">2.5h</span>
+            <span className="font-semibold text-gray-800">{studentProgress.level}</span>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Clock className="w-4 h-4 text-green-500" />
+              <span className="text-sm text-gray-600">Achievements</span>
+            </div>
+            <span className="font-semibold text-gray-800">{studentProgress.badges.length}</span>
           </div>
         </div>
       </div>

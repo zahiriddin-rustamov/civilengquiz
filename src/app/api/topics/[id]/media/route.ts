@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { MediaService, TopicService } from '@/lib/db-operations';
+import { MediaService, TopicService, SubjectService } from '@/lib/db-operations';
 
 // GET /api/topics/[id]/media - Get all media for a topic
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,8 +18,9 @@ export async function GET(
       );
     }
 
+    const { id } = await params;
     // Verify topic exists
-    const topic = await TopicService.getTopicById(params.id);
+    const topic = await TopicService.getTopicById(id);
     if (!topic) {
       return NextResponse.json(
         { error: 'Topic not found' },
@@ -28,7 +29,10 @@ export async function GET(
     }
 
     // Get media for this topic
-    const mediaItems = await MediaService.getMediaByTopic(params.id);
+    const mediaItems = await MediaService.getMediaByTopic(id);
+
+    // Get subject information
+    const subject = await SubjectService.getSubjectById(topic.subjectId as any);
 
     // Separate media by type
     const videos = mediaItems
@@ -81,7 +85,7 @@ export async function GET(
 
     const response = {
       topicName: topic.name,
-      subjectName: 'Loading...', // Will be fetched by frontend if needed
+      subjectName: subject?.name || 'Unknown Subject',
       totalXP,
       estimatedTime: Math.max(estimatedTime, 10),
       videos,
@@ -102,7 +106,7 @@ export async function GET(
 // POST /api/topics/[id]/media - Create new media (Admin only)
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -114,8 +118,9 @@ export async function POST(
       );
     }
 
+    const { id } = await params;
     // Verify topic exists
-    const topic = await TopicService.getTopicById(params.id);
+    const topic = await TopicService.getTopicById(id);
     if (!topic) {
       return NextResponse.json(
         { error: 'Topic not found' },
@@ -136,7 +141,7 @@ export async function POST(
     }
 
     const media = await MediaService.createMedia({
-      topicId: params.id,
+      topicId: id as any,
       type,
       title,
       description,

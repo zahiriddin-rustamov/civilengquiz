@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { FlashcardService, TopicService } from '@/lib/db-operations';
+import { FlashcardService, TopicService, SubjectService } from '@/lib/db-operations';
 
 // GET /api/topics/[id]/flashcards - Get all flashcards for a topic
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,8 +18,9 @@ export async function GET(
       );
     }
 
+    const { id } = await params;
     // Verify topic exists
-    const topic = await TopicService.getTopicById(params.id);
+    const topic = await TopicService.getTopicById(id);
     if (!topic) {
       return NextResponse.json(
         { error: 'Topic not found' },
@@ -28,7 +29,10 @@ export async function GET(
     }
 
     // Get flashcards for this topic
-    const flashcards = await FlashcardService.getFlashcardsByTopic(params.id);
+    const flashcards = await FlashcardService.getFlashcardsByTopic(id);
+
+    // Get subject information
+    const subject = await SubjectService.getSubjectById(topic.subjectId as any);
 
     // Transform flashcards to match the expected UI format
     const transformedFlashcards = flashcards.map(card => ({
@@ -49,7 +53,7 @@ export async function GET(
 
     const response = {
       topicName: topic.name,
-      subjectName: 'Loading...', // Will be fetched by frontend if needed
+      subjectName: subject?.name || 'Unknown Subject',
       flashcards: transformedFlashcards,
       totalXP,
       estimatedTime
@@ -68,7 +72,7 @@ export async function GET(
 // POST /api/topics/[id]/flashcards - Create new flashcard (Admin only)
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -80,8 +84,9 @@ export async function POST(
       );
     }
 
+    const { id } = await params;
     // Verify topic exists
-    const topic = await TopicService.getTopicById(params.id);
+    const topic = await TopicService.getTopicById(id);
     if (!topic) {
       return NextResponse.json(
         { error: 'Topic not found' },
@@ -102,7 +107,7 @@ export async function POST(
     }
 
     const flashcard = await FlashcardService.createFlashcard({
-      topicId: params.id,
+      topicId: id as any,
       front,
       back,
       imageUrl: data.imageUrl,

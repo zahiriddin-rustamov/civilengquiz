@@ -1,0 +1,127 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+import { ProgressService } from '@/lib/db-operations';
+import { XPService } from '@/lib/xp-service';
+import { initializeUserGamingFields } from '@/lib/user-migration';
+
+interface ProgressUpdateRequest {
+  contentId: string;
+  contentType: 'question' | 'flashcard' | 'media';
+  topicId: string;
+  subjectId: string;
+  completed: boolean;
+  score?: number;
+  timeSpent: number;
+  data?: any; // Additional progress data (e.g., flashcard mastery level)
+}
+
+// POST /api/user/progress/update - Update user progress for content
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+    const body: ProgressUpdateRequest = await request.json();
+    
+    // Initialize gaming fields if they don't exist
+    await initializeUserGamingFields(userId);
+    
+    // Validate required fields
+    if (!body.contentId || !body.contentType || !body.topicId || !body.subjectId) {
+      return NextResponse.json(
+        { error: 'Missing required fields: contentId, contentType, topicId, subjectId' },
+        { status: 400 }
+      );
+    }
+
+    // Validate ObjectId format for MongoDB fields
+    const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+    if (!objectIdRegex.test(body.contentId)) {
+      return NextResponse.json(
+        { error: 'Invalid contentId format. Must be a valid ObjectId (24-character hex string)' },
+        { status: 400 }
+      );
+    }
+    if (!objectIdRegex.test(body.topicId)) {
+      return NextResponse.json(
+        { error: 'Invalid topicId format. Must be a valid ObjectId (24-character hex string)' },
+        { status: 400 }
+      );
+    }
+    if (!objectIdRegex.test(body.subjectId)) {
+      return NextResponse.json(
+        { error: 'Invalid subjectId format. Must be a valid ObjectId (24-character hex string)' },
+        { status: 400 }
+      );
+    }
+
+    // Update user progress
+    let progress;
+    try {
+      progress = await ProgressService.updateUserProgress({
+        userId,
+        subjectId: body.subjectId,
+        topicId: body.topicId,
+        contentId: body.contentId,
+        contentType: body.contentType,
+        completed: body.completed,
+        score: body.score,
+        timeSpent: body.timeSpent,
+        data: body.data
+      });
+    } catch (error) {
+      console.error('Error updating user progress:', error);
+      return NextResponse.json(
+        { error: 'Failed to update user progress. Please check the provided IDs are valid.' },
+        { status: 500 }
+      );
+    }
+
+    // Calculate and award XP if content was completed
+    let xpResult = null;
+    if (body.completed) {
+      const xpEarned = XPService.calculateContentXP(
+        body.contentType,
+        body.score,
+        body.data?.difficulty,
+        body.data
+      );
+
+      if (xpEarned > 0) {
+        xpResult = await XPService.updateUserXP(userId, xpEarned);
+      }
+    }
+
+    // Calculate actual XP earned for display
+    const actualXPEarned = body.completed ? XPService.calculateContentXP(
+      body.contentType,
+      body.score,
+      body.data?.difficulty,
+      body.data
+    ) : 0;
+
+    return NextResponse.json({
+      success: true,
+      progress,
+      xpEarned: actualXPEarned + (xpResult?.newAchievements?.reduce((sum, a) => sum + a.xpReward, 0) || 0),
+      leveledUp: xpResult?.leveledUp || false,
+      newLevel: xpResult?.newLevel || 1,
+      newAchievements: xpResult?.newAchievements || [],
+      message: `Progress updated successfully. ${actualXPEarned > 0 ? `Earned ${actualXPEarned} XP! ${xpResult?.leveledUp ? `Level up to ${xpResult.newLevel}!` : ''}` : ''}`
+    });
+  } catch (error) {
+    console.error('Error updating user progress:', error);
+    return NextResponse.json(
+      { error: 'Failed to update progress' },
+      { status: 500 }
+    );
+  }
+}

@@ -9,6 +9,7 @@ import { SubjectSkillTrees } from '@/components/dashboard/SubjectSkillTrees';
 import { AchievementsSidebar } from '@/components/dashboard/AchievementsSidebar';
 import { ProgressSummary } from '@/components/dashboard/ProgressSummary';
 import { DashboardProvider } from '@/context/DashboardProvider';
+import { XPDebugger } from '@/components/gamification';
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -68,6 +69,9 @@ export default function DashboardPage() {
             <ProgressSummary />
           </div>
         </div>
+        
+        {/* XP Debugger for development */}
+        <XPDebugger />
       </div>
     </DashboardProvider>
   );

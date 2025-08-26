@@ -6,7 +6,7 @@ import { TopicService, QuestionService, FlashcardService, MediaService } from '@
 // GET /api/topics/[id] - Get topic by ID with content counts
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +18,8 @@ export async function GET(
       );
     }
 
-    const topic = await TopicService.getTopicById(params.id);
+    const { id } = await params;
+    const topic = await TopicService.getTopicById(id);
     
     if (!topic) {
       return NextResponse.json(
@@ -29,9 +30,9 @@ export async function GET(
 
     // Get content counts for this topic
     const [questions, flashcards, media] = await Promise.all([
-      QuestionService.getQuestionsByTopic(params.id),
-      FlashcardService.getFlashcardsByTopic(params.id),
-      MediaService.getMediaByTopic(params.id)
+      QuestionService.getQuestionsByTopic(id),
+      FlashcardService.getFlashcardsByTopic(id),
+      MediaService.getMediaByTopic(id)
     ]);
 
     // Enhance topic with content information
@@ -64,7 +65,7 @@ export async function GET(
 // PUT /api/topics/[id] - Update topic (Admin only)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -76,8 +77,9 @@ export async function PUT(
       );
     }
 
+    const { id } = await params;
     const data = await request.json();
-    const topic = await TopicService.updateTopic(params.id, data);
+    const topic = await TopicService.updateTopic(id, data);
     
     if (!topic) {
       return NextResponse.json(
@@ -99,7 +101,7 @@ export async function PUT(
 // DELETE /api/topics/[id] - Delete topic (Admin only)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -111,7 +113,8 @@ export async function DELETE(
       );
     }
 
-    const deleted = await TopicService.deleteTopic(params.id);
+    const { id } = await params;
+    const deleted = await TopicService.deleteTopic(id);
     
     if (!deleted) {
       return NextResponse.json(

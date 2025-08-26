@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { QuestionService, TopicService } from '@/lib/db-operations';
+import { QuestionService, TopicService, SubjectService } from '@/lib/db-operations';
 
 // GET /api/topics/[id]/questions - Get all questions for a topic
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,8 +18,9 @@ export async function GET(
       );
     }
 
+    const { id } = await params;
     // Verify topic exists
-    const topic = await TopicService.getTopicById(params.id);
+    const topic = await TopicService.getTopicById(id);
     if (!topic) {
       return NextResponse.json(
         { error: 'Topic not found' },
@@ -28,7 +29,10 @@ export async function GET(
     }
 
     // Get questions for this topic
-    const questions = await QuestionService.getQuestionsByTopic(params.id);
+    const questions = await QuestionService.getQuestionsByTopic(id);
+
+    // Get subject information
+    const subject = await SubjectService.getSubjectById(topic.subjectId as any);
 
     // Calculate total XP and estimated time
     const totalXP = questions.reduce((sum, q) => sum + q.points, 0);
@@ -36,7 +40,7 @@ export async function GET(
 
     const response = {
       topicName: topic.name,
-      subjectName: 'Loading...', // Will be fetched by frontend if needed
+      subjectName: subject?.name || 'Unknown Subject',
       questions: questions,
       totalXP,
       estimatedTime
@@ -55,7 +59,7 @@ export async function GET(
 // POST /api/topics/[id]/questions - Create new question (Admin only)
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -67,8 +71,9 @@ export async function POST(
       );
     }
 
+    const { id } = await params;
     // Verify topic exists
-    const topic = await TopicService.getTopicById(params.id);
+    const topic = await TopicService.getTopicById(id);
     if (!topic) {
       return NextResponse.json(
         { error: 'Topic not found' },
@@ -89,7 +94,7 @@ export async function POST(
     }
 
     const question = await QuestionService.createQuestion({
-      topicId: params.id,
+      topicId: id as any,
       type,
       text,
       imageUrl: data.imageUrl,

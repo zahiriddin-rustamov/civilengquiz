@@ -208,63 +208,83 @@ export function SubjectSkillTrees() {
                     <div className="p-6 space-y-4">
                       <h5 className="font-semibold text-gray-800 mb-3">Topics & Content</h5>
                       
-                      {/* Mock Topics - Replace with actual topic data */}
+                      {/* Real Topics from Database */}
                       <div className="grid gap-3">
-                        {Array.from({ length: subject.totalTopics }, (_, i) => {
-                          const isCompleted = i < subject.completedTopics;
-                          const isUnlocked = i <= subject.completedTopics;
-                          
-                          return (
-                            <div
-                              key={i}
-                              className={`flex items-center justify-between p-3 rounded-lg border ${
-                                isCompleted 
-                                  ? 'bg-green-50 border-green-200' 
-                                  : isUnlocked 
-                                    ? 'bg-white border-gray-200 hover:border-indigo-300' 
-                                    : 'bg-gray-50 border-gray-200 opacity-60'
-                              }`}
-                            >
-                              <div className="flex items-center space-x-3">
-                                {isCompleted ? (
-                                  <CheckCircle className="w-5 h-5 text-green-600" />
-                                ) : isUnlocked ? (
-                                  <Circle className="w-5 h-5 text-gray-400" />
-                                ) : (
-                                  <Lock className="w-5 h-5 text-gray-400" />
-                                )}
-                                
-                                <div>
-                                  <div className="font-medium text-gray-800">
-                                    Topic {i + 1}: Sample Topic Name
-                                  </div>
-                                  <div className="flex items-center space-x-4 text-xs text-gray-500">
-                                    <span className="flex items-center">
-                                      <BookOpen className="w-3 h-3 mr-1" />
-                                      5 Questions
-                                    </span>
-                                    <span className="flex items-center">
-                                      <FileText className="w-3 h-3 mr-1" />
-                                      3 Flashcards
-                                    </span>
-                                    <span className="flex items-center">
-                                      <Play className="w-3 h-3 mr-1" />
-                                      2 Videos
-                                    </span>
+                        {subject.topics.length > 0 ? (
+                          subject.topics.map((topic, i) => {
+                            const isCompleted = topic.isCompleted;
+                            const isUnlocked = topic.isUnlocked;
+                            
+                            return (
+                              <div
+                                key={topic.id}
+                                className={`flex items-center justify-between p-3 rounded-lg border ${
+                                  isCompleted 
+                                    ? 'bg-green-50 border-green-200' 
+                                    : isUnlocked 
+                                      ? 'bg-white border-gray-200 hover:border-indigo-300' 
+                                      : 'bg-gray-50 border-gray-200 opacity-60'
+                                }`}
+                              >
+                                <div className="flex items-center space-x-3">
+                                  {isCompleted ? (
+                                    <CheckCircle className="w-5 h-5 text-green-600" />
+                                  ) : isUnlocked ? (
+                                    <Circle className="w-5 h-5 text-gray-400" />
+                                  ) : (
+                                    <Lock className="w-5 h-5 text-gray-400" />
+                                  )}
+                                  
+                                  <div>
+                                    <div className="font-medium text-gray-800">
+                                      {topic.name}
+                                    </div>
+                                    <div className="flex items-center space-x-4 text-xs text-gray-500">
+                                      {topic.contentTypes.questions > 0 && (
+                                        <span className="flex items-center">
+                                          <FileText className="w-3 h-3 mr-1" />
+                                          {topic.contentTypes.questions} Questions
+                                        </span>
+                                      )}
+                                      {topic.contentTypes.flashcards > 0 && (
+                                        <span className="flex items-center">
+                                          <BookOpen className="w-3 h-3 mr-1" />
+                                          {topic.contentTypes.flashcards} Flashcards
+                                        </span>
+                                      )}
+                                      {topic.contentTypes.media > 0 && (
+                                        <span className="flex items-center">
+                                          <Play className="w-3 h-3 mr-1" />
+                                          {topic.contentTypes.media} Media
+                                        </span>
+                                      )}
+                                      {topic.bestScore > 0 && (
+                                        <span className="flex items-center text-blue-600">
+                                          <Star className="w-3 h-3 mr-1" />
+                                          {Math.round(topic.bestScore)}%
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
 
-                              {isUnlocked && (
-                                <Link href={`/subjects/${subject.id}/topic-${i + 1}`}>
-                                  <Button size="sm" variant={isCompleted ? "outline" : "default"}>
-                                    {isCompleted ? 'Review' : 'Start'}
-                                  </Button>
-                                </Link>
-                              )}
-                            </div>
-                          );
-                        })}
+                                {isUnlocked && (
+                                  <Link href={`/subjects/${subject.id}/topics/${topic.id}`}>
+                                    <Button size="sm" variant={isCompleted ? "outline" : "default"}>
+                                      {isCompleted ? 'Review' : 'Start'}
+                                    </Button>
+                                  </Link>
+                                )}
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="text-center py-8 text-gray-500">
+                            <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                            <p className="text-sm">No topics available yet</p>
+                            <p className="text-xs">Topics will appear here once they're added to the curriculum</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </motion.div>

@@ -54,6 +54,7 @@ interface DashboardContextType {
   isLoading: boolean;
   refreshProgress: () => Promise<void>;
   updateProgress: (updates: Partial<StudentProgress>) => void;
+  triggerRefresh: () => void;
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
@@ -67,95 +68,44 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     if (!session?.user?.id) return;
 
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/students/${session.user.id}/progress`);
-      // const data = await response.json();
+      setIsLoading(true);
       
-      // Mock data for now
-      const mockProgress: StudentProgress = {
-        level: 12,
-        xp: 2450,
-        xpToNextLevel: 3000,
-        currentStreak: 7,
-        totalQuizzesCompleted: 45,
-        averageScore: 78,
-        badges: [
-          {
-            id: '1',
-            name: 'First Steps',
-            description: 'Completed your first quiz',
-            icon: '🎯',
-            unlockedAt: new Date('2024-01-15'),
-            rarity: 'common'
-          },
-          {
-            id: '2',
-            name: 'Streak Master',
-            description: '7-day study streak',
-            icon: '🔥',
-            unlockedAt: new Date('2024-01-20'),
-            rarity: 'rare'
-          },
-          {
-            id: '3',
-            name: 'Quiz Champion',
-            description: 'Scored 90+ on 5 quizzes',
-            icon: '👑',
-            unlockedAt: new Date('2024-01-22'),
-            rarity: 'epic'
-          }
-        ],
-        subjectProgress: [
-          {
-            id: '1',
-            name: 'Structural Analysis',
-            description: 'Master the fundamentals of structural engineering',
-            icon: '🏗️',
-            totalTopics: 12,
-            completedTopics: 8,
-            averageScore: 85,
-            isUnlocked: true,
-            topics: []
-          },
-          {
-            id: '2',
-            name: 'Concrete Technology',
-            description: 'Learn about concrete properties and applications',
-            icon: '🧱',
-            totalTopics: 10,
-            completedTopics: 5,
-            averageScore: 72,
-            isUnlocked: true,
-            topics: []
-          },
-          {
-            id: '3',
-            name: 'Fluid Mechanics',
-            description: 'Understand fluid behavior and applications',
-            icon: '🌊',
-            totalTopics: 14,
-            completedTopics: 3,
-            averageScore: 68,
-            isUnlocked: true,
-            topics: []
-          },
-          {
-            id: '4',
-            name: 'Soil Mechanics',
-            description: 'Study soil properties and foundation design',
-            icon: '⛰️',
-            totalTopics: 11,
-            completedTopics: 0,
-            averageScore: 0,
-            isUnlocked: false,
-            topics: []
-          }
-        ]
+      // Fetch real user progress from API
+      const response = await fetch('/api/user/progress');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch progress');
+      }
+      
+      const data = await response.json();
+      
+      // Transform API data to match our interface
+      const progress: StudentProgress = {
+        level: data.level,
+        xp: data.xp,
+        xpToNextLevel: Math.max(0, (data.level * 100) - data.xp),
+        currentStreak: data.currentStreak,
+        totalQuizzesCompleted: data.totalQuizzesCompleted,
+        averageScore: data.averageScore,
+        badges: data.badges,
+        subjectProgress: data.subjectProgress
       };
 
-      setStudentProgress(mockProgress);
+      setStudentProgress(progress);
     } catch (error) {
       console.error('Failed to fetch student progress:', error);
+      
+      // Fallback to basic structure if API fails
+      setStudentProgress({
+        level: 1,
+        xp: 0,
+        xpToNextLevel: 100,
+        currentStreak: 0,
+        totalQuizzesCompleted: 0,
+        averageScore: 0,
+        badges: [],
+        subjectProgress: []
+      });
     } finally {
       setIsLoading(false);
     }
@@ -172,6 +122,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const triggerRefresh = () => {
+    if (session?.user?.id) {
+      fetchStudentProgress();
+    }
+  };
+
   useEffect(() => {
     if (session?.user?.id) {
       fetchStudentProgress();
@@ -184,7 +140,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         studentProgress,
         isLoading,
         refreshProgress,
-        updateProgress
+        updateProgress,
+        triggerRefresh
       }}
     >
       {children}

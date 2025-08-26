@@ -1,16 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { TopicService } from '@/lib/db-operations';
+import { TopicService, QuestionService, FlashcardService, MediaService } from '@/lib/db-operations';
 
-// GET /api/subjects/[id]/topics - Get topics for a subject
+// GET /api/subjects/[id]/topics - Get topics for a subject with content counts
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const topics = await TopicService.getTopicsBySubject(params.id);
-    return NextResponse.json(topics);
+    const { id } = await params;
+    const topics = await TopicService.getTopicsBySubject(id);
+    
+    // Enhance topics with content counts
+    const enhancedTopics = await Promise.all(
+      topics.map(async (topic) => {
+        const [questions, flashcards, media] = await Promise.all([
+          QuestionService.getQuestionsByTopic(topic._id.toString()),
+          FlashcardService.getFlashcardsByTopic(topic._id.toString()),
+          MediaService.getMediaByTopic(topic._id.toString())
+        ]);
+
+        return {
+          ...topic,
+          contentCounts: {
+            questions: questions.length,
+            flashcards: flashcards.length,
+            media: media.length
+          }
+        };
+      })
+    );
+    
+    return NextResponse.json(enhancedTopics);
   } catch (error) {
     console.error('Error fetching topics:', error);
     return NextResponse.json(
@@ -23,7 +45,7 @@ export async function GET(
 // POST /api/subjects/[id]/topics - Create new topic (Admin only)
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -35,6 +57,7 @@ export async function POST(
       );
     }
 
+    const { id } = await params;
     const data = await request.json();
     
     // Validate required fields
@@ -51,7 +74,7 @@ export async function POST(
       name,
       description,
       longDescription: data.longDescription,
-      subjectId: params.id,
+      subjectId: id as any,
       order,
       isUnlocked: data.isUnlocked ?? true,
       difficulty,

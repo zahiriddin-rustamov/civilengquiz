@@ -24,17 +24,70 @@ export function ProgressSummary() {
     );
   }
 
+  // Calculate real progress data
+  const totalTopics = studentProgress.subjectProgress.reduce((sum, subject) => sum + subject.totalTopics, 0);
+  const completedTopics = studentProgress.subjectProgress.reduce((sum, subject) => sum + subject.completedTopics, 0);
+  const masteredTopics = studentProgress.subjectProgress.reduce((sum, subject) => {
+    return sum + subject.topics.filter(topic => topic.bestScore >= 80).length;
+  }, 0);
+
   const weeklyGoals = [
-    { label: 'Quizzes Completed', current: 8, target: 10, icon: Target },
-    { label: 'Study Hours', current: 12, target: 15, icon: Clock },
-    { label: 'Topics Mastered', current: 3, target: 5, icon: TrendingUp }
+    { 
+      label: 'Quizzes Completed', 
+      current: studentProgress.totalQuizzesCompleted, 
+      target: Math.max(studentProgress.totalQuizzesCompleted + 5, 10), 
+      icon: Target 
+    },
+    { 
+      label: 'Topics Completed', 
+      current: completedTopics, 
+      target: Math.max(completedTopics + 2, 5), 
+      icon: TrendingUp 
+    },
+    { 
+      label: 'Topics Mastered', 
+      current: masteredTopics, 
+      target: Math.max(masteredTopics + 1, 3), 
+      icon: Clock 
+    }
   ];
 
-  const upcomingDeadlines = [
-    { subject: 'Structural Analysis', task: 'Chapter 5 Quiz', dueDate: '2024-01-28', priority: 'high' },
-    { subject: 'Concrete Technology', task: 'Lab Report', dueDate: '2024-01-30', priority: 'medium' },
-    { subject: 'Fluid Mechanics', task: 'Practice Problems', dueDate: '2024-02-02', priority: 'low' }
-  ];
+  // Generate some motivational suggestions based on progress
+  const suggestions = [];
+  
+  if (studentProgress.currentStreak === 0) {
+    suggestions.push({
+      subject: 'Daily Goal',
+      task: 'Start your study streak today!',
+      dueDate: new Date().toISOString().split('T')[0],
+      priority: 'high'
+    });
+  }
+  
+  // Find subjects with low completion rates
+  const incompleteSubjects = studentProgress.subjectProgress
+    .filter(subject => subject.isUnlocked && (subject.completedTopics / subject.totalTopics) < 0.5)
+    .slice(0, 2);
+    
+  incompleteSubjects.forEach(subject => {
+    suggestions.push({
+      subject: subject.name,
+      task: 'Continue learning topics',
+      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 days from now
+      priority: 'medium'
+    });
+  });
+  
+  if (suggestions.length === 0) {
+    suggestions.push({
+      subject: 'Great Progress!',
+      task: 'Keep up the excellent work',
+      dueDate: new Date().toISOString().split('T')[0],
+      priority: 'low'
+    });
+  }
+  
+  const upcomingDeadlines = suggestions;
 
   return (
     <motion.div
@@ -97,7 +150,7 @@ export function ProgressSummary() {
           <div>
             <h4 className="font-semibold text-gray-700 mb-4 flex items-center">
               <Calendar className="w-5 h-5 mr-2 text-indigo-600" />
-              Upcoming Deadlines
+              Study Suggestions
             </h4>
             
             <div className="space-y-3">
@@ -140,7 +193,7 @@ export function ProgressSummary() {
             </div>
             
             <Button variant="outline" size="sm" className="w-full mt-4">
-              View All Deadlines
+              Explore Subjects
             </Button>
           </div>
         </div>

@@ -24,7 +24,11 @@ export function CharacterPanel() {
     );
   }
 
-  const xpPercentage = (studentProgress.xp / studentProgress.xpToNextLevel) * 100;
+  // Calculate XP progress to next level
+  const currentLevelXP = (studentProgress.level - 1) * 100; // XP needed for current level
+  const nextLevelXP = studentProgress.level * 100; // XP needed for next level
+  const progressXP = studentProgress.xp - currentLevelXP; // XP progress in current level
+  const xpPercentage = (progressXP / 100) * 100; // Percentage to next level
   const firstName = session?.user?.name?.split(' ')[0] || 'Student';
 
   return (
@@ -63,7 +67,7 @@ export function CharacterPanel() {
             <div className="space-y-1">
               <div className="flex justify-between text-sm">
                 <span className="text-indigo-100">Experience Points</span>
-                <span className="font-medium">{studentProgress.xp} / {studentProgress.xpToNextLevel} XP</span>
+                <span className="font-medium">{progressXP} / 100 XP to Level {studentProgress.level + 1}</span>
               </div>
               <div className="w-64 h-3 bg-indigo-800/50 rounded-full overflow-hidden">
                 <motion.div

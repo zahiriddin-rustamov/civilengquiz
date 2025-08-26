@@ -347,22 +347,20 @@ export default function TopicOverviewPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
               >
-                <Link href={topicData.isUnlocked ? `/subjects/${subjectId}/topics/${topicId}/questions` : '#'}>
-                  <ContentTypeCard
-                    type="questions"
-                    title="Interactive Questions"
-                    description="Test your knowledge with quizzes and practice problems"
-                    icon={<FileText className="w-8 h-8" />}
-                    color="from-blue-400 to-blue-500"
-                    data={{
-                      count: topicData.contentCounts.questions,
-                      completed: topicData.completedContent.questions,
-                      timeSpent: 0 // TODO: Add real time tracking
-                    }}
-                    href={`/subjects/${subjectId}/topics/${topicId}/questions`}
-                    isUnlocked={topicData.isUnlocked}
-                  />
-                </Link>
+                <ContentTypeCard
+                  type="questions"
+                  title="Interactive Questions"
+                  description="Test your knowledge with quizzes and practice problems"
+                  icon={<FileText className="w-8 h-8" />}
+                  color="from-blue-400 to-blue-500"
+                  data={{
+                    count: topicData.contentCounts.questions,
+                    completed: topicData.completedContent.questions,
+                    timeSpent: 0 // TODO: Add real time tracking
+                  }}
+                  href={`/subjects/${subjectId}/topics/${topicId}/questions`}
+                  isUnlocked={topicData.isUnlocked}
+                />
               </motion.div>
 
               {/* Flashcards Card */}
@@ -371,23 +369,21 @@ export default function TopicOverviewPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                <Link href={topicData.isUnlocked ? `/subjects/${subjectId}/topics/${topicId}/flashcards` : '#'}>
-                  <ContentTypeCard
-                    type="flashcards"
-                    title="Study Flashcards"
-                    description="Memorize key concepts with spaced repetition"
-                    icon={<BookOpen className="w-8 h-8" />}
-                    color="from-emerald-400 to-emerald-500"
-                    data={{
-                      count: topicData.contentCounts.flashcards,
-                      completed: topicData.completedContent.flashcards,
-                      mastered: topicData.completedContent.flashcards, // Simplified for now
-                      timeSpent: 0 // TODO: Add real time tracking
-                    }}
-                    href={`/subjects/${subjectId}/topics/${topicId}/flashcards`}
-                    isUnlocked={topicData.isUnlocked}
-                  />
-                </Link>
+                <ContentTypeCard
+                  type="flashcards"
+                  title="Study Flashcards"
+                  description="Memorize key concepts with spaced repetition"
+                  icon={<BookOpen className="w-8 h-8" />}
+                  color="from-emerald-400 to-emerald-500"
+                  data={{
+                    count: topicData.contentCounts.flashcards,
+                    completed: topicData.completedContent.flashcards,
+                    mastered: topicData.completedContent.flashcards, // Simplified for now
+                    timeSpent: 0 // TODO: Add real time tracking
+                  }}
+                  href={`/subjects/${subjectId}/topics/${topicId}/flashcards`}
+                  isUnlocked={topicData.isUnlocked}
+                />
               </motion.div>
 
               {/* Media Card */}
@@ -396,22 +392,20 @@ export default function TopicOverviewPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                <Link href={topicData.isUnlocked ? `/subjects/${subjectId}/topics/${topicId}/media` : '#'}>
-                  <ContentTypeCard
-                    type="media"
-                    title="Learning Media"
-                    description="Watch videos and explore interactive content"
-                    icon={<Play className="w-8 h-8" />}
-                    color="from-indigo-400 to-indigo-500"
-                    data={{
-                      count: topicData.contentCounts.media,
-                      completed: topicData.completedContent.media,
-                      timeSpent: 0 // TODO: Add real time tracking
-                    }}
-                    href={`/subjects/${subjectId}/topics/${topicId}/media`}
-                    isUnlocked={topicData.isUnlocked}
-                  />
-                </Link>
+                <ContentTypeCard
+                  type="media"
+                  title="Learning Media"
+                  description="Watch videos and explore interactive content"
+                  icon={<Play className="w-8 h-8" />}
+                  color="from-indigo-400 to-indigo-500"
+                  data={{
+                    count: topicData.contentCounts.media,
+                    completed: topicData.completedContent.media,
+                    timeSpent: 0 // TODO: Add real time tracking
+                  }}
+                  href={`/subjects/${subjectId}/topics/${topicId}/media`}
+                  isUnlocked={topicData.isUnlocked}
+                />
               </motion.div>
             </div>
           </div>

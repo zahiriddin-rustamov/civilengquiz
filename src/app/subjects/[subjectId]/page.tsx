@@ -42,7 +42,7 @@ interface EnhancedTopic {
   createdAt: Date;
   updatedAt: Date;
   progress: number;
-  contentTypes: {
+  contentCounts: {
     questions: number;
     flashcards: number;
     media: number;
@@ -139,8 +139,8 @@ export default function SubjectPage() {
         createdAt: topic.createdAt,
         updatedAt: topic.updatedAt,
         progress: 0, // TODO: Calculate actual progress from user data
-        contentTypes: {
-          questions: 0, // TODO: Fetch actual counts
+        contentCounts: (topic as any).contentCounts || {
+          questions: 0,
           flashcards: 0,
           media: 0
         }
@@ -443,7 +443,7 @@ function TopicCard({ topic, subjectId }: {
           >
             <FileText className="w-6 h-6 mb-2" />
             <span className="text-xs font-medium">Questions</span>
-            <span className="text-xs">{topic.contentTypes.questions}</span>
+            <span className="text-xs">{topic.contentCounts.questions}</span>
           </Link>
 
           <Link 
@@ -456,7 +456,7 @@ function TopicCard({ topic, subjectId }: {
           >
             <BookOpen className="w-6 h-6 mb-2" />
             <span className="text-xs font-medium">Flashcards</span>
-            <span className="text-xs">{topic.contentTypes.flashcards}</span>
+            <span className="text-xs">{topic.contentCounts.flashcards}</span>
           </Link>
 
           <Link 
@@ -469,7 +469,7 @@ function TopicCard({ topic, subjectId }: {
           >
             <Play className="w-6 h-6 mb-2" />
             <span className="text-xs font-medium">Media</span>
-            <span className="text-xs">{topic.contentTypes.media}</span>
+            <span className="text-xs">{topic.contentCounts.media}</span>
           </Link>
         </div>
 

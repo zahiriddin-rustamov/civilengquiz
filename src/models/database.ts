@@ -11,6 +11,13 @@ export interface IUser extends Document {
   verificationToken?: string;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
+  // Gaming/Progress fields
+  level: number;
+  totalXP: number;
+  currentStreak: number;
+  maxStreak: number;
+  lastActiveDate?: Date;
+  achievements: string[]; // Array of achievement IDs
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,6 +31,13 @@ const UserSchema = new Schema<IUser>({
   verificationToken: { type: String },
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },
+  // Gaming/Progress fields
+  level: { type: Number, default: 1 },
+  totalXP: { type: Number, default: 0 },
+  currentStreak: { type: Number, default: 0 },
+  maxStreak: { type: Number, default: 0 },
+  lastActiveDate: { type: Date },
+  achievements: [{ type: String }],
 }, {
   timestamps: true
 });
