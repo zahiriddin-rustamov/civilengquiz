@@ -25,162 +25,65 @@ import {
   Droplets
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Subject, Topic } from '@/models';
+import { ISubject, ITopic } from '@/models/database';
 
-// Mock data for topics - in real app, this would come from API
-const MOCK_TOPICS: Record<string, (Topic & {
-  progress: number;
+// Enhanced topic type for UI (plain object, not Mongoose document)
+interface EnhancedTopic {
+  _id: any;
+  name: string;
+  description: string;
+  longDescription?: string;
+  subjectId: any;
+  order: number;
   isUnlocked: boolean;
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  estimatedMinutes: number;
+  xpReward: number;
+  createdAt: Date;
+  updatedAt: Date;
+  progress: number;
   contentTypes: {
     questions: number;
     flashcards: number;
     media: number;
   };
-  estimatedTime: number; // in minutes
-  xpReward: number;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-})[]> = {
-  '1': [ // Concrete Technology
-    {
-      id: 'ct-1',
-      name: 'Fresh Concrete',
-      description: 'Learn about the properties and behavior of concrete in its plastic state.',
-      order: 1,
-      subjectId: '1',
-      content: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      progress: 0,
-      isUnlocked: true,
-      contentTypes: { questions: 15, flashcards: 8, media: 3 },
-      estimatedTime: 45,
-      xpReward: 150,
-      difficulty: 'Beginner',
-    },
-    {
-      id: 'ct-2',
-      name: 'Hardened Concrete',
-      description: 'Understand the properties of concrete after it has set and hardened.',
-      order: 2,
-      subjectId: '1',
-      content: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      progress: 0,
-      isUnlocked: true,
-      contentTypes: { questions: 20, flashcards: 12, media: 4 },
-      estimatedTime: 60,
-      xpReward: 200,
-      difficulty: 'Intermediate',
-    },
-    {
-      id: 'ct-3',
-      name: 'Concrete Mix Design',
-      description: 'Master the art of designing concrete mixes for specific applications.',
-      order: 3,
-      subjectId: '1',
-      content: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      progress: 0,
-      isUnlocked: false,
-      contentTypes: { questions: 25, flashcards: 15, media: 6 },
-      estimatedTime: 90,
-      xpReward: 300,
-      difficulty: 'Advanced',
-    },
-  ],
-  '2': [ // Environmental Engineering
-    {
-      id: 'ee-1',
-      name: 'Water Quality',
-      description: 'Study water quality parameters and assessment methods.',
-      order: 1,
-      subjectId: '2',
-      content: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      progress: 0,
-      isUnlocked: true,
-      contentTypes: { questions: 18, flashcards: 10, media: 5 },
-      estimatedTime: 50,
-      xpReward: 180,
-      difficulty: 'Beginner',
-    },
-    {
-      id: 'ee-2',
-      name: 'Air Pollution Control',
-      description: 'Learn about air pollution sources and control technologies.',
-      order: 2,
-      subjectId: '2',
-      content: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      progress: 0,
-      isUnlocked: true,
-      contentTypes: { questions: 22, flashcards: 14, media: 7 },
-      estimatedTime: 70,
-      xpReward: 250,
-      difficulty: 'Intermediate',
-    },
-  ],
-  '3': [ // Water Resources
-    {
-      id: 'wr-1',
-      name: 'Hydrology Basics',
-      description: 'Understand the water cycle and hydrological processes.',
-      order: 1,
-      subjectId: '3',
-      content: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      progress: 0,
-      isUnlocked: false,
-      contentTypes: { questions: 20, flashcards: 12, media: 8 },
-      estimatedTime: 80,
-      xpReward: 280,
-      difficulty: 'Advanced',
-    },
-  ],
+}
+
+// Helper functions for UI enhancements
+const getSubjectIcon = (name: string) => {
+  switch (name) {
+    case 'Concrete Technology':
+      return <Building2 className="w-8 h-8" />;
+    case 'Environmental Engineering':
+      return <Globe className="w-8 h-8" />;
+    case 'Water Resources':
+      return <Droplets className="w-8 h-8" />;
+    default:
+      return <Building2 className="w-8 h-8" />;
+  }
 };
 
-const SUBJECT_INFO: Record<string, {
-  name: string;
-  description: string;
-  icon: React.ReactNode;
-  color: string;
-  isUnlocked: boolean;
-}> = {
-  '1': {
-    name: 'Concrete Technology',
-    description: 'Master the art of concrete design, mixing, and testing',
-    icon: <Building2 className="w-8 h-8" />,
-    color: 'from-blue-500 to-cyan-600',
-    isUnlocked: true,
-  },
-  '2': {
-    name: 'Environmental Engineering',
-    description: 'Explore sustainable solutions for environmental challenges',
-    icon: <Globe className="w-8 h-8" />,
-    color: 'from-green-500 to-emerald-600',
-    isUnlocked: true,
-  },
-  '3': {
-    name: 'Water Resources',
-    description: 'Command the flow of water systems and hydraulic engineering',
-    icon: <Droplets className="w-8 h-8" />,
-    color: 'from-indigo-500 to-purple-600',
-    isUnlocked: false,
-  },
+const getSubjectColor = (name: string) => {
+  switch (name) {
+    case 'Concrete Technology':
+      return 'from-blue-500 to-cyan-600';
+    case 'Environmental Engineering':
+      return 'from-green-500 to-emerald-600';
+    case 'Water Resources':
+      return 'from-indigo-500 to-purple-600';
+    default:
+      return 'from-gray-500 to-gray-600';
+  }
 };
 
 export default function SubjectPage() {
   const params = useParams();
   const router = useRouter();
   const { data: session, status } = useSession();
-  const [topics, setTopics] = useState<typeof MOCK_TOPICS[string]>([]);
-  const [subjectInfo, setSubjectInfo] = useState<typeof SUBJECT_INFO[string] | null>(null);
+  const [topics, setTopics] = useState<EnhancedTopic[]>([]);
+  const [subjectInfo, setSubjectInfo] = useState<ISubject | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const subjectId = params.subjectId as string;
 
@@ -191,20 +94,66 @@ export default function SubjectPage() {
     }
 
     if (status === 'authenticated' && subjectId) {
-      // TODO: In real app, fetch from API
-      const mockTopics = MOCK_TOPICS[subjectId] || [];
-      const mockSubjectInfo = SUBJECT_INFO[subjectId];
-      
-      if (!mockSubjectInfo) {
-        router.push('/subjects');
-        return;
-      }
-
-      setTopics(mockTopics);
-      setSubjectInfo(mockSubjectInfo);
-      setIsLoading(false);
+      fetchSubjectAndTopics();
     }
   }, [status, subjectId, router]);
+
+  const fetchSubjectAndTopics = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Fetch subject info
+      const subjectResponse = await fetch(`/api/subjects/${subjectId}`);
+      if (!subjectResponse.ok) {
+        if (subjectResponse.status === 404) {
+          router.push('/subjects');
+          return;
+        }
+        throw new Error('Failed to fetch subject');
+      }
+      
+      const subject: ISubject = await subjectResponse.json();
+      setSubjectInfo(subject);
+
+      // Fetch topics for this subject
+      const topicsResponse = await fetch(`/api/subjects/${subjectId}/topics`);
+      if (!topicsResponse.ok) {
+        throw new Error('Failed to fetch topics');
+      }
+      
+      const topicsData: ITopic[] = await topicsResponse.json();
+      
+      // Transform topics to include UI enhancements
+      const enhancedTopics: EnhancedTopic[] = topicsData.map(topic => ({
+        _id: topic._id,
+        name: topic.name,
+        description: topic.description,
+        longDescription: topic.longDescription,
+        subjectId: topic.subjectId,
+        order: topic.order,
+        isUnlocked: topic.isUnlocked,
+        difficulty: topic.difficulty,
+        estimatedMinutes: topic.estimatedMinutes,
+        xpReward: topic.xpReward,
+        createdAt: topic.createdAt,
+        updatedAt: topic.updatedAt,
+        progress: 0, // TODO: Calculate actual progress from user data
+        contentTypes: {
+          questions: 0, // TODO: Fetch actual counts
+          flashcards: 0,
+          media: 0
+        }
+      }));
+      
+      setTopics(enhancedTopics);
+    } catch (err) {
+      console.error('Error fetching subject data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load subject data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -224,10 +173,33 @@ export default function SubjectPage() {
 
   if (status === 'loading' || isLoading) {
     return (
-      <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
-          <p className="mt-4 text-gray-600">Loading topics...</p>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
+        <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4">
+          <div className="text-center">
+            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
+            <p className="mt-4 text-gray-600">Loading subject...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
+        <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4">
+          <div className="text-center">
+            <div className="text-red-500 text-xl mb-4">⚠️ Error Loading Subject</div>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <div className="space-x-4">
+              <Button onClick={fetchSubjectAndTopics} variant="outline">
+                Try Again
+              </Button>
+              <Button asChild>
+                <Link href="/subjects">Back to Study Worlds</Link>
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -235,13 +207,15 @@ export default function SubjectPage() {
 
   if (!subjectInfo) {
     return (
-      <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-800">Subject not found</h2>
-          <p className="mt-2 text-gray-600">The requested subject could not be found.</p>
-          <Button asChild className="mt-4">
-            <Link href="/subjects">Back to Study Worlds</Link>
-          </Button>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
+        <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-800">Subject not found</h2>
+            <p className="mt-2 text-gray-600">The requested subject could not be found.</p>
+            <Button asChild className="mt-4">
+              <Link href="/subjects">Back to Study Worlds</Link>
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -249,7 +223,7 @@ export default function SubjectPage() {
 
   const completedTopics = topics.filter(t => t.progress === 100).length;
   const totalXP = topics.reduce((sum, t) => sum + (t.isUnlocked ? t.xpReward : 0), 0);
-  const totalTime = topics.reduce((sum, t) => sum + t.estimatedTime, 0);
+  const totalTime = topics.reduce((sum, t) => sum + t.estimatedMinutes, 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
@@ -272,7 +246,7 @@ export default function SubjectPage() {
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${subjectInfo.color} p-8 text-white shadow-xl mb-8`}
+          className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${getSubjectColor(subjectInfo.name)} p-8 text-white shadow-xl mb-8`}
         >
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-10">
@@ -282,7 +256,7 @@ export default function SubjectPage() {
           <div className="relative">
             <div className="flex items-center space-x-6 mb-6">
               <div className="flex-shrink-0 w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
-                {subjectInfo.icon}
+                {getSubjectIcon(subjectInfo.name)}
               </div>
               <div>
                 <h1 className="text-3xl font-bold mb-2">{subjectInfo.name}</h1>
@@ -352,7 +326,7 @@ export default function SubjectPage() {
             <div className="grid gap-6">
               {topics.map((topic, index) => (
                 <motion.div
-                  key={topic.id}
+                  key={topic._id.toString()}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
@@ -371,7 +345,7 @@ export default function SubjectPage() {
 
 // Topic Card Component
 function TopicCard({ topic, subjectId }: { 
-  topic: typeof MOCK_TOPICS[string][0]; 
+  topic: EnhancedTopic; 
   subjectId: string;
 }) {
   const getDifficultyColor = (difficulty: string) => {
@@ -409,7 +383,7 @@ function TopicCard({ topic, subjectId }: {
       <div className="p-6">
         {/* Header - Now clickable to go to topic overview */}
         <Link 
-          href={topic.isUnlocked ? `/subjects/${subjectId}/topics/${topic.id}` : '#'}
+          href={topic.isUnlocked ? `/subjects/${subjectId}/topics/${topic._id}` : '#'}
           className={`block ${topic.isUnlocked ? 'cursor-pointer' : 'cursor-not-allowed'}`}
         >
           <div className="flex items-start justify-between mb-4">
@@ -434,7 +408,7 @@ function TopicCard({ topic, subjectId }: {
             
             <div className="flex items-center space-x-2 text-sm text-gray-500">
               <Clock className="w-4 h-4" />
-              <span>{topic.estimatedTime}min</span>
+              <span>{topic.estimatedMinutes}min</span>
             </div>
           </div>
         </Link>
@@ -460,7 +434,7 @@ function TopicCard({ topic, subjectId }: {
         {/* Content Types */}
         <div className="grid grid-cols-3 gap-4 mb-4">
           <Link 
-            href={`/subjects/${subjectId}/topics/${topic.id}/questions`}
+            href={`/subjects/${subjectId}/topics/${topic._id}/questions`}
             className={`flex flex-col items-center p-3 rounded-lg border transition-colors ${
               topic.isUnlocked 
                 ? 'border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700' 
@@ -473,7 +447,7 @@ function TopicCard({ topic, subjectId }: {
           </Link>
 
           <Link 
-            href={`/subjects/${subjectId}/topics/${topic.id}/flashcards`}
+            href={`/subjects/${subjectId}/topics/${topic._id}/flashcards`}
             className={`flex flex-col items-center p-3 rounded-lg border transition-colors ${
               topic.isUnlocked 
                 ? 'border-green-200 bg-green-50 hover:bg-green-100 text-green-700' 
@@ -486,7 +460,7 @@ function TopicCard({ topic, subjectId }: {
           </Link>
 
           <Link 
-            href={`/subjects/${subjectId}/topics/${topic.id}/media`}
+            href={`/subjects/${subjectId}/topics/${topic._id}/media`}
             className={`flex flex-col items-center p-3 rounded-lg border transition-colors ${
               topic.isUnlocked 
                 ? 'border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700' 
@@ -527,7 +501,7 @@ function TopicCard({ topic, subjectId }: {
                 size="sm"
                 className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-sm"
               >
-                <Link href={`/subjects/${subjectId}/topics/${topic.id}`}>
+                <Link href={`/subjects/${subjectId}/topics/${topic._id}`}>
                   <Target className="w-4 h-4 mr-1" />
                   Overview
                 </Link>

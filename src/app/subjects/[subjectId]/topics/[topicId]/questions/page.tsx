@@ -24,8 +24,8 @@ import { FillInBlankQuestion } from '@/components/quiz/FillInBlankQuestion';
 import { NumericalQuestion } from '@/components/quiz/NumericalQuestion';
 import { MatchingQuestion } from '@/components/quiz/MatchingQuestion';
 
-// Mock data for different question types
-const MOCK_QUESTIONS_DATA: Record<string, Record<string, {
+// Enhanced questions data type for UI
+interface QuestionsData {
   topicName: string;
   subjectName: string;
   questions: Array<{
@@ -35,137 +35,7 @@ const MOCK_QUESTIONS_DATA: Record<string, Record<string, {
   }>;
   totalXP: number;
   estimatedTime: number;
-}>> = {
-  '1': { // Concrete Technology
-    'ct-1': { // Fresh Concrete
-      topicName: 'Fresh Concrete',
-      subjectName: 'Concrete Technology',
-      totalXP: 500,
-      estimatedTime: 25,
-      questions: [
-        {
-          id: 'mcq-1',
-          type: 'multiple-choice',
-          data: {
-            id: 'mcq-1',
-            text: 'What is the primary factor that affects the workability of fresh concrete?',
-            options: [
-              'Water-cement ratio',
-              'Aggregate size',
-              'Cement type',
-              'Temperature'
-            ],
-            correctAnswer: 0,
-            explanation: 'The water-cement ratio is the most critical factor affecting workability. Higher water content increases workability but reduces strength.',
-            difficulty: 'Beginner',
-            points: 50
-          }
-        },
-        {
-          id: 'tf-1',
-          type: 'true-false',
-          data: {
-            id: 'tf-1',
-            text: 'Adding more water to concrete mix always improves its workability without any negative effects.',
-            correctAnswer: false,
-            explanation: 'While adding water improves workability, it significantly reduces the concrete strength and durability due to increased porosity.',
-            difficulty: 'Beginner',
-            points: 40
-          }
-        },
-        {
-          id: 'fib-1',
-          type: 'fill-in-blank',
-          data: {
-            id: 'fib-1',
-            text: 'The _____ test is commonly used to measure the workability of fresh concrete, and a typical value for normal concrete is _____ mm.',
-            blanks: [
-              {
-                id: 'blank-1',
-                correctAnswers: ['slump', 'Slump'],
-                caseSensitive: false
-              },
-              {
-                id: 'blank-2',
-                correctAnswers: ['75-100', '75', '100', '80', '90'],
-                caseSensitive: false
-              }
-            ],
-            explanation: 'The slump test measures concrete workability. Normal concrete typically has a slump of 75-100mm.',
-            difficulty: 'Intermediate',
-            points: 80
-          }
-        },
-        {
-          id: 'num-1',
-          type: 'numerical',
-          data: {
-            id: 'num-1',
-            text: 'Calculate the water-cement ratio for a concrete mix containing 350 kg/m³ of cement and 175 kg/m³ of water.',
-            correctAnswer: 0.5,
-            tolerance: 0.02,
-            unit: '',
-            formula: 'W/C ratio = Water content / Cement content',
-            explanation: 'W/C ratio = 175/350 = 0.5. This is a typical ratio for normal strength concrete.',
-            difficulty: 'Intermediate',
-            points: 100
-          }
-        },
-        {
-          id: 'match-1',
-          type: 'matching',
-          data: {
-            id: 'match-1',
-            text: 'Match the concrete admixtures with their primary functions:',
-            pairs: [
-              {
-                id: 'pair-1',
-                left: 'Plasticizer',
-                right: 'Improves workability without adding water'
-              },
-              {
-                id: 'pair-2',
-                left: 'Accelerator',
-                right: 'Speeds up setting and hardening'
-              },
-              {
-                id: 'pair-3',
-                left: 'Retarder',
-                right: 'Delays setting time'
-              },
-              {
-                id: 'pair-4',
-                left: 'Air-entraining agent',
-                right: 'Introduces air bubbles for freeze-thaw resistance'
-              }
-            ],
-            explanation: 'Different admixtures serve specific purposes in concrete mix design to achieve desired properties.',
-            difficulty: 'Advanced',
-            points: 120
-          }
-        },
-        {
-          id: 'mcq-2',
-          type: 'multiple-choice',
-          data: {
-            id: 'mcq-2',
-            text: 'Which factor does NOT directly affect the bleeding of fresh concrete?',
-            options: [
-              'Fineness of cement',
-              'Water-cement ratio',
-              'Aggregate gradation',
-              'Curing temperature'
-            ],
-            correctAnswer: 3,
-            explanation: 'Curing temperature affects hardened concrete properties but not bleeding, which occurs in fresh concrete.',
-            difficulty: 'Advanced',
-            points: 110
-          }
-        }
-      ]
-    }
-  }
-};
+}
 
 interface QuestionAnswer {
   questionId: string;
@@ -178,10 +48,11 @@ export default function QuestionsPage() {
   const params = useParams();
   const router = useRouter();
   const { data: session, status } = useSession();
-  const [questionsData, setQuestionsData] = useState<typeof MOCK_QUESTIONS_DATA[string][string] | null>(null);
+  const [questionsData, setQuestionsData] = useState<QuestionsData | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<QuestionAnswer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [startTime] = useState(Date.now());
 
@@ -195,17 +66,55 @@ export default function QuestionsPage() {
     }
 
     if (status === 'authenticated' && subjectId && topicId) {
-      const mockData = MOCK_QUESTIONS_DATA[subjectId]?.[topicId];
-      
-      if (!mockData) {
-        router.push(`/subjects/${subjectId}/topics/${topicId}`);
-        return;
-      }
-
-      setQuestionsData(mockData);
-      setIsLoading(false);
+      fetchQuestions();
     }
   }, [status, subjectId, topicId, router]);
+
+  const fetchQuestions = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/topics/${topicId}/questions`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          router.push(`/subjects/${subjectId}/topics/${topicId}`);
+          return;
+        }
+        throw new Error('Failed to fetch questions');
+      }
+
+      const data = await response.json();
+
+      // Transform questions to match UI format
+      const transformedQuestions = data.questions.map((q: any) => ({
+        id: q._id.toString(),
+        type: q.type,
+        data: {
+          ...q.data,
+          id: q._id.toString(),
+          difficulty: q.difficulty,
+          points: q.points,
+          explanation: q.explanation
+        }
+      }));
+
+      const questionsData: QuestionsData = {
+        topicName: data.topicName,
+        subjectName: data.subjectName,
+        questions: transformedQuestions,
+        totalXP: data.totalXP,
+        estimatedTime: data.estimatedTime
+      };
+
+      setQuestionsData(questionsData);
+    } catch (err) {
+      console.error('Error fetching questions:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load questions');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleAnswer = (questionId: string, answer: any, isCorrect: boolean, points: number) => {
     const newAnswer: QuestionAnswer = {
@@ -341,11 +250,33 @@ export default function QuestionsPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-xl mb-4">⚠️ Error Loading Questions</div>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <div className="space-x-4">
+            <Button onClick={fetchQuestions} variant="outline">
+              Try Again
+            </Button>
+            <Button asChild>
+              <Link href={`/subjects/${subjectId}/topics/${topicId}`}>Back to Topic</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!questionsData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-600">Questions not found</p>
+          <Button asChild className="mt-4">
+            <Link href={`/subjects/${subjectId}/topics/${topicId}`}>Back to Topic</Link>
+          </Button>
         </div>
       </div>
     );

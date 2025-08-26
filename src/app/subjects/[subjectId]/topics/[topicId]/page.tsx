@@ -28,39 +28,34 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-// Mock data for topic details - in real app, this would come from API
-const MOCK_TOPIC_DATA: Record<string, Record<string, {
-  id: string;
+// Enhanced topic data type for UI
+interface EnhancedTopicData {
+  _id: any;
   name: string;
   description: string;
-  longDescription: string;
-  subjectName: string;
-  progress: number;
+  longDescription?: string;
+  subjectId: any;
+  order: number;
   isUnlocked: boolean;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  estimatedTime: number;
+  estimatedMinutes: number;
   xpReward: number;
-  contentTypes: {
-    questions: {
-      count: number;
-      completed: number;
-      averageScore: number;
-      bestScore: number;
-      timeSpent: number; // in minutes
-    };
-    flashcards: {
-      count: number;
-      completed: number;
-      mastered: number;
-      timeSpent: number;
-    };
-    media: {
-      count: number;
-      completed: number;
-      totalDuration: number; // in minutes
-      timeSpent: number;
-    };
+  createdAt: Date;
+  updatedAt: Date;
+  // Enhanced UI data
+  subjectName: string;
+  progress: number;
+  contentCounts: {
+    questions: number;
+    flashcards: number;
+    media: number;
   };
+  completedContent: {
+    questions: number;
+    flashcards: number;
+    media: number;
+  };
+  // TODO: Add these when implementing user progress
   achievements: {
     id: string;
     name: string;
@@ -71,112 +66,15 @@ const MOCK_TOPIC_DATA: Record<string, Record<string, {
   }[];
   streakDays: number;
   lastAccessed: Date;
-}>> = {
-  '1': { // Concrete Technology
-    'ct-1': {
-      id: 'ct-1',
-      name: 'Fresh Concrete',
-      description: 'Learn about the properties and behavior of concrete in its plastic state.',
-      longDescription: 'Dive deep into the fascinating world of fresh concrete! Master the fundamental properties that determine workability, understand the science behind slump tests, and discover how different additives affect concrete behavior. This foundational topic will prepare you for advanced concrete technology concepts.',
-      subjectName: 'Concrete Technology',
-      progress: 65,
-      isUnlocked: true,
-      difficulty: 'Beginner',
-      estimatedTime: 45,
-      xpReward: 150,
-      contentTypes: {
-        questions: {
-          count: 15,
-          completed: 10,
-          averageScore: 78,
-          bestScore: 92,
-          timeSpent: 25
-        },
-        flashcards: {
-          count: 8,
-          completed: 5,
-          mastered: 3,
-          timeSpent: 15
-        },
-        media: {
-          count: 3,
-          completed: 2,
-          totalDuration: 18,
-          timeSpent: 12
-        }
-      },
-      achievements: [
-        {
-          id: 'first-quiz',
-          name: 'First Steps',
-          description: 'Complete your first quiz',
-          icon: <Trophy className="w-5 h-5" />,
-          unlocked: true,
-          rarity: 'Common'
-        },
-        {
-          id: 'perfect-score',
-          name: 'Perfectionist',
-          description: 'Score 100% on a quiz',
-          icon: <Star className="w-5 h-5" />,
-          unlocked: false,
-          rarity: 'Rare'
-        }
-      ],
-      streakDays: 3,
-      lastAccessed: new Date()
-    },
-    'ct-2': {
-      id: 'ct-2',
-      name: 'Hardened Concrete',
-      description: 'Understand the properties of concrete after it has set and hardened.',
-      longDescription: 'Explore the transformation of concrete from plastic to hardened state. Learn about compressive strength, durability factors, and testing methods that ensure structural integrity.',
-      subjectName: 'Concrete Technology',
-      progress: 0,
-      isUnlocked: true,
-      difficulty: 'Intermediate',
-      estimatedTime: 60,
-      xpReward: 200,
-      contentTypes: {
-        questions: { count: 20, completed: 0, averageScore: 0, bestScore: 0, timeSpent: 0 },
-        flashcards: { count: 12, completed: 0, mastered: 0, timeSpent: 0 },
-        media: { count: 4, completed: 0, totalDuration: 25, timeSpent: 0 }
-      },
-      achievements: [],
-      streakDays: 0,
-      lastAccessed: new Date()
-    }
-  },
-  '2': { // Environmental Engineering
-    'ee-1': {
-      id: 'ee-1',
-      name: 'Water Quality',
-      description: 'Study water quality parameters and assessment methods.',
-      longDescription: 'Master the essential parameters that define water quality and learn the scientific methods used to assess and monitor water systems for environmental protection.',
-      subjectName: 'Environmental Engineering',
-      progress: 0,
-      isUnlocked: true,
-      difficulty: 'Beginner',
-      estimatedTime: 50,
-      xpReward: 180,
-      contentTypes: {
-        questions: { count: 18, completed: 0, averageScore: 0, bestScore: 0, timeSpent: 0 },
-        flashcards: { count: 10, completed: 0, mastered: 0, timeSpent: 0 },
-        media: { count: 5, completed: 0, totalDuration: 30, timeSpent: 0 }
-      },
-      achievements: [],
-      streakDays: 0,
-      lastAccessed: new Date()
-    }
-  }
-};
+}
 
 export default function TopicOverviewPage() {
   const params = useParams();
   const router = useRouter();
   const { data: session, status } = useSession();
-  const [topicData, setTopicData] = useState<typeof MOCK_TOPIC_DATA[string][string] | null>(null);
+  const [topicData, setTopicData] = useState<EnhancedTopicData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const subjectId = params.subjectId as string;
   const topicId = params.topicId as string;
@@ -188,18 +86,67 @@ export default function TopicOverviewPage() {
     }
 
     if (status === 'authenticated' && subjectId && topicId) {
-      // TODO: In real app, fetch from API
-      const mockData = MOCK_TOPIC_DATA[subjectId]?.[topicId];
-      
-      if (!mockData) {
-        router.push(`/subjects/${subjectId}`);
-        return;
-      }
-
-      setTopicData(mockData);
-      setIsLoading(false);
+      fetchTopicData();
     }
   }, [status, subjectId, topicId, router]);
+
+  const fetchTopicData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Fetch topic data with content counts
+      const topicResponse = await fetch(`/api/topics/${topicId}`);
+      if (!topicResponse.ok) {
+        if (topicResponse.status === 404) {
+          router.push(`/subjects/${subjectId}`);
+          return;
+        }
+        throw new Error('Failed to fetch topic');
+      }
+
+      const topicApiData = await topicResponse.json();
+
+      // Fetch subject name
+      const subjectResponse = await fetch(`/api/subjects/${subjectId}`);
+      let subjectName = 'Unknown Subject';
+      if (subjectResponse.ok) {
+        const subjectData = await subjectResponse.json();
+        subjectName = subjectData.name;
+      }
+
+      // Transform data to match our UI interface
+      const enhancedTopicData: EnhancedTopicData = {
+        _id: topicApiData._id,
+        name: topicApiData.name,
+        description: topicApiData.description,
+        longDescription: topicApiData.longDescription,
+        subjectId: topicApiData.subjectId,
+        order: topicApiData.order,
+        isUnlocked: topicApiData.isUnlocked,
+        difficulty: topicApiData.difficulty,
+        estimatedMinutes: topicApiData.estimatedMinutes,
+        xpReward: topicApiData.xpReward,
+        createdAt: topicApiData.createdAt,
+        updatedAt: topicApiData.updatedAt,
+        subjectName,
+        progress: topicApiData.progress || 0,
+        contentCounts: topicApiData.contentCounts || { questions: 0, flashcards: 0, media: 0 },
+        completedContent: topicApiData.completedContent || { questions: 0, flashcards: 0, media: 0 },
+        // TODO: Implement these when adding user progress tracking
+        achievements: [],
+        streakDays: 0,
+        lastAccessed: new Date()
+      };
+
+      setTopicData(enhancedTopicData);
+    } catch (err) {
+      console.error('Error fetching topic data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load topic data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -229,10 +176,33 @@ export default function TopicOverviewPage() {
 
   if (status === 'loading' || isLoading) {
     return (
-      <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
-          <p className="mt-4 text-gray-600">Loading topic...</p>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
+        <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4">
+          <div className="text-center">
+            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
+            <p className="mt-4 text-gray-600">Loading topic...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
+        <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4">
+          <div className="text-center">
+            <div className="text-red-500 text-xl mb-4">⚠️ Error Loading Topic</div>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <div className="space-x-4">
+              <Button onClick={fetchTopicData} variant="outline">
+                Try Again
+              </Button>
+              <Button asChild>
+                <Link href={`/subjects/${subjectId}`}>Back to Subject</Link>
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -240,25 +210,27 @@ export default function TopicOverviewPage() {
 
   if (!topicData) {
     return (
-      <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-800">Topic not found</h2>
-          <p className="mt-2 text-gray-600">The requested topic could not be found.</p>
-          <Button asChild className="mt-4">
-            <Link href={`/subjects/${subjectId}`}>Back to Subject</Link>
-          </Button>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
+        <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-800">Topic not found</h2>
+            <p className="mt-2 text-gray-600">The requested topic could not be found.</p>
+            <Button asChild className="mt-4">
+              <Link href={`/subjects/${subjectId}`}>Back to Subject</Link>
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
-  const totalContentItems = topicData.contentTypes.questions.count + 
-                           topicData.contentTypes.flashcards.count + 
-                           topicData.contentTypes.media.count;
+  const totalContentItems = topicData.contentCounts.questions + 
+                           topicData.contentCounts.flashcards + 
+                           topicData.contentCounts.media;
   
-  const completedContentItems = topicData.contentTypes.questions.completed + 
-                               topicData.contentTypes.flashcards.completed + 
-                               topicData.contentTypes.media.completed;
+  const completedContentItems = topicData.completedContent.questions + 
+                               topicData.completedContent.flashcards + 
+                               topicData.completedContent.media;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
@@ -347,7 +319,7 @@ export default function TopicOverviewPage() {
                   <Clock className="w-5 h-5" />
                   <span className="text-white/80">Est. Time</span>
                 </div>
-                <div className="text-2xl font-bold">{topicData.estimatedTime}min</div>
+                <div className="text-2xl font-bold">{topicData.estimatedMinutes}min</div>
               </div>
 
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
@@ -382,7 +354,11 @@ export default function TopicOverviewPage() {
                     description="Test your knowledge with quizzes and practice problems"
                     icon={<FileText className="w-8 h-8" />}
                     color="from-blue-400 to-blue-500"
-                    data={topicData.contentTypes.questions}
+                    data={{
+                      count: topicData.contentCounts.questions,
+                      completed: topicData.completedContent.questions,
+                      timeSpent: 0 // TODO: Add real time tracking
+                    }}
                     href={`/subjects/${subjectId}/topics/${topicId}/questions`}
                     isUnlocked={topicData.isUnlocked}
                   />
@@ -402,7 +378,12 @@ export default function TopicOverviewPage() {
                     description="Memorize key concepts with spaced repetition"
                     icon={<BookOpen className="w-8 h-8" />}
                     color="from-emerald-400 to-emerald-500"
-                    data={topicData.contentTypes.flashcards}
+                    data={{
+                      count: topicData.contentCounts.flashcards,
+                      completed: topicData.completedContent.flashcards,
+                      mastered: topicData.completedContent.flashcards, // Simplified for now
+                      timeSpent: 0 // TODO: Add real time tracking
+                    }}
                     href={`/subjects/${subjectId}/topics/${topicId}/flashcards`}
                     isUnlocked={topicData.isUnlocked}
                   />
@@ -422,7 +403,11 @@ export default function TopicOverviewPage() {
                     description="Watch videos and explore interactive content"
                     icon={<Play className="w-8 h-8" />}
                     color="from-indigo-400 to-indigo-500"
-                    data={topicData.contentTypes.media}
+                    data={{
+                      count: topicData.contentCounts.media,
+                      completed: topicData.completedContent.media,
+                      timeSpent: 0 // TODO: Add real time tracking
+                    }}
                     href={`/subjects/${subjectId}/topics/${topicId}/media`}
                     isUnlocked={topicData.isUnlocked}
                   />

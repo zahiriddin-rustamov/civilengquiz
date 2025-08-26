@@ -23,8 +23,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { FlashcardDeck } from '@/components/flashcards/FlashcardDeck';
 
-// Mock data for flashcards
-const MOCK_FLASHCARDS_DATA: Record<string, Record<string, {
+// Enhanced flashcards data type for UI
+interface FlashcardsData {
   topicName: string;
   subjectName: string;
   flashcards: Array<{
@@ -40,98 +40,7 @@ const MOCK_FLASHCARDS_DATA: Record<string, Record<string, {
   }>;
   totalXP: number;
   estimatedTime: number;
-}>> = {
-  '1': { // Concrete Technology
-    'ct-1': { // Fresh Concrete
-      topicName: 'Fresh Concrete',
-      subjectName: 'Concrete Technology',
-      totalXP: 400,
-      estimatedTime: 20,
-      flashcards: [
-        {
-          id: 'fc-1',
-          front: 'What is workability in concrete?',
-          back: 'Workability is the ease with which concrete can be mixed, transported, placed, and compacted without segregation or bleeding. It depends on water content, aggregate properties, and admixtures.',
-          difficulty: 'Beginner',
-          category: 'Properties',
-          tags: ['workability', 'fresh-concrete', 'properties'],
-          masteryLevel: 'New',
-          reviewCount: 0
-        },
-        {
-          id: 'fc-2',
-          front: 'What is the slump test used for?',
-          back: 'The slump test measures the consistency and workability of fresh concrete. A higher slump indicates more fluid concrete, while lower slump indicates stiffer concrete.',
-          difficulty: 'Beginner',
-          category: 'Testing',
-          tags: ['slump-test', 'testing', 'workability'],
-          masteryLevel: 'Learning',
-          reviewCount: 2
-        },
-        {
-          id: 'fc-3',
-          front: 'What is bleeding in concrete?',
-          back: 'Bleeding is the tendency of water to rise to the surface of freshly placed concrete. It occurs when cement particles settle and water moves upward, potentially weakening the surface.',
-          difficulty: 'Intermediate',
-          category: 'Defects',
-          tags: ['bleeding', 'defects', 'water'],
-          masteryLevel: 'Familiar',
-          reviewCount: 5
-        },
-        {
-          id: 'fc-4',
-          front: 'What is segregation in concrete?',
-          back: 'Segregation is the separation of concrete ingredients, typically when coarse aggregates separate from the mortar. It can occur during mixing, transportation, or placement.',
-          difficulty: 'Intermediate',
-          category: 'Defects',
-          tags: ['segregation', 'defects', 'aggregates'],
-          masteryLevel: 'New',
-          reviewCount: 0
-        },
-        {
-          id: 'fc-5',
-          front: 'What are the factors affecting workability?',
-          back: 'Key factors include: water-cement ratio, aggregate size and shape, cement fineness, admixtures, temperature, and time. Higher water content generally increases workability but reduces strength.',
-          difficulty: 'Advanced',
-          category: 'Properties',
-          tags: ['workability', 'factors', 'water-cement-ratio'],
-          masteryLevel: 'Learning',
-          reviewCount: 3
-        },
-        {
-          id: 'fc-6',
-          front: 'What is the purpose of admixtures in concrete?',
-          back: 'Admixtures modify concrete properties such as workability, setting time, durability, and strength. Common types include plasticizers, accelerators, retarders, and air-entraining agents.',
-          difficulty: 'Intermediate',
-          category: 'Admixtures',
-          tags: ['admixtures', 'plasticizers', 'properties'],
-          masteryLevel: 'Mastered',
-          reviewCount: 8
-        },
-        {
-          id: 'fc-7',
-          front: 'What is the water-cement ratio?',
-          back: 'The water-cement ratio (W/C) is the weight of water divided by the weight of cement in a concrete mix. It directly affects concrete strength, durability, and workability.',
-          difficulty: 'Beginner',
-          category: 'Mix Design',
-          tags: ['water-cement-ratio', 'strength', 'mix-design'],
-          masteryLevel: 'Familiar',
-          reviewCount: 4
-        },
-        {
-          id: 'fc-8',
-          front: 'What is the setting time of concrete?',
-          back: 'Setting time is when concrete changes from plastic to solid state. Initial set (30-60 min) is when concrete starts to harden; final set (6-10 hours) is when it becomes rigid.',
-          difficulty: 'Advanced',
-          category: 'Properties',
-          tags: ['setting-time', 'hardening', 'initial-set'],
-          masteryLevel: 'New',
-          reviewCount: 0
-        }
-      ]
-    }
-  }
-};
+}
 
 interface StudySession {
   mode: 'study' | 'review' | 'browse';
@@ -144,8 +53,9 @@ export default function FlashcardsPage() {
   const params = useParams();
   const router = useRouter();
   const { data: session, status } = useSession();
-  const [flashcardsData, setFlashcardsData] = useState<typeof MOCK_FLASHCARDS_DATA[string][string] | null>(null);
+  const [flashcardsData, setFlashcardsData] = useState<FlashcardsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [studyMode, setStudyMode] = useState<'menu' | 'study' | 'review' | 'browse'>('menu');
   const [studySession, setStudySession] = useState<StudySession | null>(null);
   const [sessionCompleted, setSessionCompleted] = useState(false);
@@ -160,17 +70,33 @@ export default function FlashcardsPage() {
     }
 
     if (status === 'authenticated' && subjectId && topicId) {
-      const mockData = MOCK_FLASHCARDS_DATA[subjectId]?.[topicId];
-      
-      if (!mockData) {
-        router.push(`/subjects/${subjectId}/topics/${topicId}`);
-        return;
-      }
-
-      setFlashcardsData(mockData);
-      setIsLoading(false);
+      fetchFlashcards();
     }
   }, [status, subjectId, topicId, router]);
+
+  const fetchFlashcards = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/topics/${topicId}/flashcards`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          router.push(`/subjects/${subjectId}/topics/${topicId}`);
+          return;
+        }
+        throw new Error('Failed to fetch flashcards');
+      }
+
+      const data = await response.json();
+      setFlashcardsData(data);
+    } catch (err) {
+      console.error('Error fetching flashcards:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load flashcards');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleStartStudy = (mode: 'study' | 'review' | 'browse') => {
     setStudyMode(mode);
@@ -277,11 +203,33 @@ export default function FlashcardsPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-xl mb-4">⚠️ Error Loading Flashcards</div>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <div className="space-x-4">
+            <Button onClick={fetchFlashcards} variant="outline">
+              Try Again
+            </Button>
+            <Button asChild>
+              <Link href={`/subjects/${subjectId}/topics/${topicId}`}>Back to Topic</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!flashcardsData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-600">Flashcards not found</p>
+          <Button asChild className="mt-4">
+            <Link href={`/subjects/${subjectId}/topics/${topicId}`}>Back to Topic</Link>
+          </Button>
         </div>
       </div>
     );

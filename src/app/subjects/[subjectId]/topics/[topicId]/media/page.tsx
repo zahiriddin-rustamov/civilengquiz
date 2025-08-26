@@ -24,8 +24,8 @@ import { VideoPlayer } from '@/components/media/VideoPlayer';
 import { InteractiveSimulation } from '@/components/media/InteractiveSimulation';
 import { ImageGallery } from '@/components/media/ImageGallery';
 
-// Mock data for different media types
-const MOCK_MEDIA_DATA: Record<string, Record<string, {
+// Enhanced media data type for UI
+interface MediaData {
   topicName: string;
   subjectName: string;
   totalXP: number;
@@ -45,7 +45,7 @@ const MOCK_MEDIA_DATA: Record<string, Record<string, {
     id: string;
     title: string;
     description: string;
-    type: 'concrete-slump' | 'beam-loading' | 'water-flow' | 'soil-compaction';
+    type: 'concrete-slump' | 'beam-loading' | 'water-flow' | 'soil-compaction' | string;
     difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
     points: number;
     parameters: {
@@ -80,194 +80,8 @@ const MOCK_MEDIA_DATA: Record<string, Record<string, {
       }[];
     }[];
   }>;
-}>> = {
-  '1': { // Concrete Technology
-    'ct-1': { // Fresh Concrete
-      topicName: 'Fresh Concrete',
-      subjectName: 'Concrete Technology',
-      totalXP: 800,
-      estimatedTime: 45,
-      videos: [
-        {
-          id: 'video-1',
-          title: 'Concrete Mixing Process',
-          description: 'Learn the step-by-step process of mixing concrete for optimal workability and strength.',
-          url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', // Mock URL
-          duration: 480, // 8 minutes
-          thumbnail: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400',
-          difficulty: 'Beginner',
-          points: 100,
-          topics: ['Mixing', 'Workability', 'Quality Control']
-        },
-        {
-          id: 'video-2',
-          title: 'Slump Test Demonstration',
-          description: 'Watch a professional demonstration of the slump test procedure and result interpretation.',
-          url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', // Mock URL
-          duration: 360, // 6 minutes
-          thumbnail: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400',
-          difficulty: 'Intermediate',
-          points: 120,
-          topics: ['Testing', 'Workability', 'Standards']
-        }
-      ],
-      simulations: [
-        {
-          id: 'sim-1',
-          title: 'Concrete Slump Calculator',
-          description: 'Interactive simulation to understand how different factors affect concrete workability.',
-          type: 'concrete-slump',
-          difficulty: 'Intermediate',
-          points: 150,
-          parameters: [
-            {
-              name: 'Water-Cement Ratio',
-              min: 0.3,
-              max: 0.8,
-              default: 0.5,
-              unit: '',
-              description: 'Ratio of water to cement by weight'
-            },
-            {
-              name: 'Aggregate Size',
-              min: 10,
-              max: 40,
-              default: 20,
-              unit: 'mm',
-              description: 'Maximum size of coarse aggregate'
-            },
-            {
-              name: 'Temperature',
-              min: 5,
-              max: 40,
-              default: 20,
-              unit: '°C',
-              description: 'Ambient temperature during mixing'
-            }
-          ],
-          learningObjectives: [
-            'Understand the relationship between W/C ratio and workability',
-            'Learn how aggregate size affects concrete flow',
-            'Recognize the impact of temperature on fresh concrete properties'
-          ]
-        },
-        {
-          id: 'sim-2',
-          title: 'Beam Deflection Analysis',
-          description: 'Calculate beam deflections under various loading conditions.',
-          type: 'beam-loading',
-          difficulty: 'Advanced',
-          points: 200,
-          parameters: [
-            {
-              name: 'Applied Load',
-              min: 5,
-              max: 50,
-              default: 10,
-              unit: 'kN',
-              description: 'Point load applied at center of beam'
-            },
-            {
-              name: 'Beam Length',
-              min: 2,
-              max: 8,
-              default: 3,
-              unit: 'm',
-              description: 'Length of simply supported beam'
-            },
-            {
-              name: 'Moment of Inertia',
-              min: 50,
-              max: 500,
-              default: 100,
-              unit: 'cm⁴',
-              description: 'Second moment of area of beam cross-section'
-            }
-          ],
-          learningObjectives: [
-            'Apply beam deflection formulas',
-            'Understand the relationship between load and deflection',
-            'Learn about serviceability limit states'
-          ]
-        }
-      ],
-      galleries: [
-        {
-          id: 'gallery-1',
-          title: 'Concrete Testing Equipment',
-          description: 'Visual guide to equipment used for testing fresh and hardened concrete.',
-          category: 'photos',
-          difficulty: 'Beginner',
-          points: 80,
-          images: [
-            {
-              id: 'img-1',
-              title: 'Slump Cone',
-              description: 'Standard slump cone used for workability testing',
-              url: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=800',
-              thumbnail: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400',
-              tags: ['Testing', 'Equipment', 'Workability'],
-              annotations: [
-                { x: 30, y: 20, label: 'Top Opening', description: '100mm diameter opening' },
-                { x: 50, y: 80, label: 'Base', description: '200mm diameter base' }
-              ]
-            },
-            {
-              id: 'img-2',
-              title: 'Compression Testing Machine',
-              description: 'Universal testing machine for concrete cube compression tests',
-              url: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800',
-              thumbnail: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400',
-              tags: ['Testing', 'Strength', 'Equipment']
-            },
-            {
-              id: 'img-3',
-              title: 'Concrete Mixer',
-              description: 'Industrial concrete mixer for large-scale production',
-              url: 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=800',
-              thumbnail: 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=400',
-              tags: ['Mixing', 'Production', 'Equipment']
-            },
-            {
-              id: 'img-4',
-              title: 'Concrete Samples',
-              description: 'Various concrete cube samples prepared for testing',
-              url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800',
-              thumbnail: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',
-              tags: ['Samples', 'Testing', 'Quality Control']
-            }
-          ]
-        },
-        {
-          id: 'gallery-2',
-          title: 'Concrete Mix Design Charts',
-          description: 'Reference charts and diagrams for concrete mix proportioning.',
-          category: 'charts',
-          difficulty: 'Intermediate',
-          points: 100,
-          images: [
-            {
-              id: 'chart-1',
-              title: 'Water-Cement Ratio vs Strength',
-              description: 'Relationship between W/C ratio and compressive strength',
-              url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800',
-              thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400',
-              tags: ['Charts', 'Strength', 'Mix Design']
-            },
-            {
-              id: 'chart-2',
-              title: 'Aggregate Gradation Curves',
-              description: 'Particle size distribution curves for different aggregate types',
-              url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800',
-              thumbnail: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400',
-              tags: ['Aggregates', 'Gradation', 'Charts']
-            }
-          ]
-        }
-      ]
-    }
-  }
-};
+}
+
 
 interface MediaProgress {
   videoProgress: Record<string, { progress: number; completed: boolean; points: number }>;
@@ -279,13 +93,14 @@ export default function MediaPage() {
   const params = useParams();
   const router = useRouter();
   const { data: session, status } = useSession();
-  const [mediaData, setMediaData] = useState<typeof MOCK_MEDIA_DATA[string][string] | null>(null);
+  const [mediaData, setMediaData] = useState<MediaData | null>(null);
   const [progress, setProgress] = useState<MediaProgress>({
     videoProgress: {},
     simulationProgress: {},
     galleryProgress: {}
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const subjectId = params.subjectId as string;
   const topicId = params.topicId as string;
@@ -297,17 +112,33 @@ export default function MediaPage() {
     }
 
     if (status === 'authenticated' && subjectId && topicId) {
-      const mockData = MOCK_MEDIA_DATA[subjectId]?.[topicId];
-      
-      if (!mockData) {
-        router.push(`/subjects/${subjectId}/topics/${topicId}`);
-        return;
-      }
-
-      setMediaData(mockData);
-      setIsLoading(false);
+      fetchMedia();
     }
   }, [status, subjectId, topicId, router]);
+
+  const fetchMedia = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/topics/${topicId}/media`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          router.push(`/subjects/${subjectId}/topics/${topicId}`);
+          return;
+        }
+        throw new Error('Failed to fetch media');
+      }
+
+      const data = await response.json();
+      setMediaData(data);
+    } catch (err) {
+      console.error('Error fetching media:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load media');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleVideoProgress = (videoId: string, progressValue: number, completed: boolean, points: number) => {
     setProgress(prev => ({
@@ -393,11 +224,33 @@ export default function MediaPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-xl mb-4">⚠️ Error Loading Media</div>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <div className="space-x-4">
+            <Button onClick={fetchMedia} variant="outline">
+              Try Again
+            </Button>
+            <Button asChild>
+              <Link href={`/subjects/${subjectId}/topics/${topicId}`}>Back to Topic</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!mediaData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-600">Media content not found</p>
+          <Button asChild className="mt-4">
+            <Link href={`/subjects/${subjectId}/topics/${topicId}`}>Back to Topic</Link>
+          </Button>
         </div>
       </div>
     );
@@ -540,7 +393,10 @@ export default function MediaPage() {
                   transition={{ delay: 0.5 + index * 0.1 }}
                 >
                   <InteractiveSimulation
-                    simulation={simulation}
+                    simulation={{
+                      ...simulation,
+                      type: simulation.type as 'concrete-slump' | 'beam-loading' | 'water-flow' | 'soil-compaction'
+                    }}
                     onComplete={handleSimulationComplete}
                     isCompleted={progress.simulationProgress[simulation.id]?.completed || false}
                   />

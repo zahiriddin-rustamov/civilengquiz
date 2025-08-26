@@ -17,70 +17,50 @@ import {
   Building2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Subject } from '@/models';
+import { ISubject } from '@/models/database';
 
-// Gaming-themed subject data with the three subjects you specified
-const STUDY_WORLDS: (Subject & { 
+// Enhanced subject type for UI
+interface EnhancedSubject extends ISubject {
   icon: React.ReactNode;
   color: string;
-  isUnlocked: boolean;
   progress: number;
-  xpReward: number;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   topicsCount: number;
-})[] = [
-  {
-    id: '1',
-    name: 'Concrete Technology',
-    description: 'Master the art of concrete design, mixing, and testing. Unlock the secrets of modern construction materials.',
-    icon: <Building2 className="w-8 h-8" />,
-    color: 'from-blue-500 to-cyan-600',
-    isUnlocked: true,
-    progress: 0,
-    xpReward: 1200,
-    difficulty: 'Beginner',
-    topicsCount: 8,
-    topics: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: '2',
-    name: 'Environmental Engineering',
-    description: 'Explore sustainable solutions for environmental challenges. Become a guardian of our planet\'s future.',
-    icon: <Globe className="w-8 h-8" />,
-    color: 'from-green-500 to-emerald-600',
-    isUnlocked: true,
-    progress: 0,
-    xpReward: 1500,
-    difficulty: 'Intermediate',
-    topicsCount: 12,
-    topics: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: '3',
-    name: 'Water Resources',
-    description: 'Command the flow of water systems and hydraulic engineering. Master the element that shapes civilizations.',
-    icon: <Droplets className="w-8 h-8" />,
-    color: 'from-indigo-500 to-purple-600',
-    isUnlocked: false, // This one starts locked for demonstration
-    progress: 0,
-    xpReward: 1800,
-    difficulty: 'Advanced',
-    topicsCount: 15,
-    topics: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
+}
+
+// Subject icon mapping
+const getSubjectIcon = (name: string) => {
+  switch (name) {
+    case 'Concrete Technology':
+      return <Building2 className="w-8 h-8" />;
+    case 'Environmental Engineering':
+      return <Globe className="w-8 h-8" />;
+    case 'Water Resources':
+      return <Droplets className="w-8 h-8" />;
+    default:
+      return <BookOpen className="w-8 h-8" />;
+  }
+};
+
+// Subject color mapping
+const getSubjectColor = (name: string) => {
+  switch (name) {
+    case 'Concrete Technology':
+      return 'from-blue-500 to-cyan-600';
+    case 'Environmental Engineering':
+      return 'from-green-500 to-emerald-600';
+    case 'Water Resources':
+      return 'from-indigo-500 to-purple-600';
+    default:
+      return 'from-gray-500 to-gray-600';
+  }
+};
 
 export default function StudyWorldsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [studyWorlds, setStudyWorlds] = useState(STUDY_WORLDS);
+  const [studyWorlds, setStudyWorlds] = useState<EnhancedSubject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Redirect if not authenticated
@@ -90,13 +70,39 @@ export default function StudyWorldsPage() {
     }
 
     if (status === 'authenticated') {
-      // TODO: In a real app, fetch subjects and progress from the API
-      // For now, simulate loading
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 500);
+      fetchSubjects();
     }
   }, [status, router]);
+
+  const fetchSubjects = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await fetch('/api/subjects');
+      if (!response.ok) {
+        throw new Error('Failed to fetch subjects');
+      }
+      
+      const subjects: ISubject[] = await response.json();
+      
+      // Transform subjects to include UI enhancements
+      const enhancedSubjects: EnhancedSubject[] = subjects.map(subject => ({
+        ...subject,
+        icon: getSubjectIcon(subject.name),
+        color: getSubjectColor(subject.name),
+        progress: 0, // TODO: Calculate actual progress from user data
+        topicsCount: 0, // TODO: Fetch actual topic count
+      }));
+      
+      setStudyWorlds(enhancedSubjects);
+    } catch (err) {
+      console.error('Error fetching subjects:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load subjects');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -116,10 +122,28 @@ export default function StudyWorldsPage() {
 
   if (status === 'loading' || isLoading) {
     return (
-      <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
-          <p className="mt-4 text-gray-600">Loading Study Worlds...</p>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
+        <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4">
+          <div className="text-center">
+            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
+            <p className="mt-4 text-gray-600">Loading Study Worlds...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
+        <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4">
+          <div className="text-center">
+            <div className="text-red-500 text-xl mb-4">⚠️ Error Loading Subjects</div>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <Button onClick={fetchSubjects} variant="outline">
+              Try Again
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -202,14 +226,14 @@ export default function StudyWorldsPage() {
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             {studyWorlds.map((world, index) => (
               <motion.div
-                key={world.id}
+                key={world._id.toString()}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
                 className="group relative"
               >
                 {world.isUnlocked ? (
-                  <Link href={`/subjects/${world.id}`}>
+                  <Link href={`/subjects/${world._id}`}>
                     <WorldCard world={world} />
                   </Link>
                 ) : (
@@ -252,7 +276,7 @@ export default function StudyWorldsPage() {
 }
 
 // World Card Component
-function WorldCard({ world }: { world: typeof STUDY_WORLDS[0] }) {
+function WorldCard({ world }: { world: EnhancedSubject }) {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'Beginner': return 'text-green-600 bg-green-100';
