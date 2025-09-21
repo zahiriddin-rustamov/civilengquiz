@@ -241,7 +241,11 @@ if (mongoose.models.Topic) {
   delete mongoose.models.Topic;
 }
 export const Topic = mongoose.model<ITopic>('Topic', TopicSchema);
-export const Question = mongoose.models.Question || mongoose.model<IQuestion>('Question', QuestionSchema);
+// Force clear cached Question model to ensure schema updates
+if (mongoose.models.Question) {
+  delete mongoose.models.Question;
+}
+export const Question = mongoose.model<IQuestion>('Question', QuestionSchema);
 export const Flashcard = mongoose.models.Flashcard || mongoose.model<IFlashcard>('Flashcard', FlashcardSchema);
 export const Media = mongoose.models.Media || mongoose.model<IMedia>('Media', MediaSchema);
 export const UserProgress = mongoose.models.UserProgress || mongoose.model<IUserProgress>('UserProgress', UserProgressSchema);
