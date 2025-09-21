@@ -121,6 +121,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400 });
     }
 
+    // Filter out empty entries from educational content
+    const cleanPreVideoContent = {
+      learningObjectives: preVideoContent?.learningObjectives?.filter((obj: string) => obj.trim()) || [],
+      prerequisites: preVideoContent?.prerequisites?.filter((obj: string) => obj.trim()) || [],
+      keyTerms: preVideoContent?.keyTerms?.filter((obj: any) => obj.term.trim() && obj.definition.trim()) || []
+    };
+
+    const cleanPostVideoContent = {
+      keyConcepts: postVideoContent?.keyConcepts?.filter((obj: string) => obj.trim()) || [],
+      reflectionQuestions: postVideoContent?.reflectionQuestions?.filter((obj: string) => obj.trim()) || [],
+      practicalApplications: postVideoContent?.practicalApplications?.filter((obj: string) => obj.trim()) || [],
+      additionalResources: postVideoContent?.additionalResources?.filter((obj: any) => obj.title.trim() && obj.url.trim()) || []
+    };
+
     // Create media
     const media = new Media({
       topicId: new Types.ObjectId(topicId),
@@ -133,17 +147,8 @@ export async function POST(req: Request) {
       youtubeUrl: youtubeUrl.trim(),
       youtubeId,
       videoType,
-      preVideoContent: preVideoContent || {
-        learningObjectives: [],
-        prerequisites: [],
-        keyTerms: []
-      },
-      postVideoContent: postVideoContent || {
-        keyConcepts: [],
-        reflectionQuestions: [],
-        practicalApplications: [],
-        additionalResources: []
-      }
+      preVideoContent: cleanPreVideoContent,
+      postVideoContent: cleanPostVideoContent
     });
 
     await media.save();

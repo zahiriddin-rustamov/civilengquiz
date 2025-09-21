@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Plus, X, Save, AlertCircle, CreditCard, Tag } from 'lucide-react';
 import { ImageUrlInput } from '@/components/ui/image-url-input';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { SettingsSection } from '@/components/admin/SettingsSection';
 import { ISubject, ITopic } from '@/models/database';
 
 interface FlashcardData {
@@ -426,59 +427,14 @@ export default function NewFlashcardPage() {
             <CardDescription>Configure difficulty, XP reward, and time estimate</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-4 gap-4">
-              <div>
-                <Label htmlFor="difficulty">Difficulty Level</Label>
-                <Select
-                  value={formData.difficulty}
-                  onValueChange={(value: 'Beginner' | 'Intermediate' | 'Advanced') =>
-                    setFormData(prev => ({ ...prev, difficulty: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Beginner">Beginner</SelectItem>
-                    <SelectItem value="Intermediate">Intermediate</SelectItem>
-                    <SelectItem value="Advanced">Advanced</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="xpReward">XP Reward</Label>
-                <Input
-                  id="xpReward"
-                  type="number"
-                  min="1"
-                  value={formData.xpReward}
-                  onChange={(e) => setFormData(prev => ({ ...prev, xpReward: parseInt(e.target.value) || 10 }))}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="estimatedMinutes">Time Estimate (minutes)</Label>
-                <Input
-                  id="estimatedMinutes"
-                  type="number"
-                  min="0.5"
-                  step="0.5"
-                  value={formData.estimatedMinutes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, estimatedMinutes: parseFloat(e.target.value) || 2 }))}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="order">Order</Label>
-                <Input
-                  id="order"
-                  type="number"
-                  min="1"
-                  value={formData.order}
-                  onChange={(e) => setFormData(prev => ({ ...prev, order: parseInt(e.target.value) || 1 }))}
-                />
-              </div>
-            </div>
+            <SettingsSection
+              difficulty={formData.difficulty}
+              xpReward={formData.xpReward}
+              estimatedMinutes={formData.estimatedMinutes}
+              onDifficultyChange={(difficulty) => setFormData(prev => ({ ...prev, difficulty }))}
+              onXpRewardChange={(xpReward) => setFormData(prev => ({ ...prev, xpReward }))}
+              onEstimatedMinutesChange={(estimatedMinutes) => setFormData(prev => ({ ...prev, estimatedMinutes }))}
+            />
           </CardContent>
         </Card>
 

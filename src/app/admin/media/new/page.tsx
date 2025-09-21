@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Plus, Trash2, Save, AlertCircle, Video, Play, Youtube } from 'lucide-react';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { SettingsSection } from '@/components/admin/SettingsSection';
 import { ISubject, ITopic } from '@/models/database';
 
 interface MediaData {
@@ -395,25 +396,26 @@ export default function NewMediaPage() {
 
             <div>
               <Label htmlFor="videoType">Video Type</Label>
-              <Select
-                value={formData.videoType}
-                onValueChange={(value: any) => setFormData(prev => ({ ...prev, videoType: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {videoTypes.map(type => (
-                    <SelectItem key={type.id} value={type.id}>
-                      <div className="flex items-center space-x-2">
-                        <type.icon className="w-4 h-4" />
-                        <span>{type.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-gray-500 mt-1">
+              <div className="flex gap-2 mt-2">
+                {videoTypes.map(type => (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, videoType: type.id as any }))}
+                    className={`
+                      flex items-center space-x-2 px-4 py-2 rounded-md border transition-all
+                      ${formData.videoType === type.id
+                        ? 'bg-blue-50 border-blue-200 text-blue-700'
+                        : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                      }
+                    `}
+                  >
+                    <type.icon className="w-4 h-4" />
+                    <span className="text-sm">{type.label}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-sm text-gray-500 mt-2">
                 {videoTypes.find(t => t.id === formData.videoType)?.description}
               </p>
             </div>
@@ -474,47 +476,6 @@ export default function NewMediaPage() {
                 </div>
               )}
             </div>
-
-            <div className="grid md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="difficulty">Difficulty Level</Label>
-                <Select
-                  value={formData.difficulty}
-                  onValueChange={(value: any) => setFormData(prev => ({ ...prev, difficulty: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Beginner">Beginner</SelectItem>
-                    <SelectItem value="Intermediate">Intermediate</SelectItem>
-                    <SelectItem value="Advanced">Advanced</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="xpReward">XP Reward</Label>
-                <Input
-                  id="xpReward"
-                  type="number"
-                  min="1"
-                  value={formData.xpReward}
-                  onChange={(e) => setFormData(prev => ({ ...prev, xpReward: parseInt(e.target.value) || 50 }))}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="estimatedMinutes">Estimated Minutes</Label>
-                <Input
-                  id="estimatedMinutes"
-                  type="number"
-                  min="1"
-                  value={formData.estimatedMinutes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, estimatedMinutes: parseInt(e.target.value) || 5 }))}
-                />
-              </div>
-            </div>
           </CardContent>
         </Card>
 
@@ -574,6 +535,24 @@ export default function NewMediaPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Settings</CardTitle>
+            <CardDescription>Configure difficulty, XP reward, and time estimate</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SettingsSection
+              difficulty={formData.difficulty}
+              xpReward={formData.xpReward}
+              estimatedMinutes={formData.estimatedMinutes}
+              onDifficultyChange={(difficulty) => setFormData(prev => ({ ...prev, difficulty }))}
+              onXpRewardChange={(xpReward) => setFormData(prev => ({ ...prev, xpReward }))}
+              onEstimatedMinutesChange={(estimatedMinutes) => setFormData(prev => ({ ...prev, estimatedMinutes }))}
+            />
+          </CardContent>
+        </Card>
 
         {/* Action Buttons */}
         <div className="flex justify-end space-x-3">

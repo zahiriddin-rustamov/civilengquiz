@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Plus, Trash2, Save, AlertCircle, FileQuestion, CheckCircle, Edit3, Calculator, Shuffle } from 'lucide-react';
 import { ImageUrlInput } from '@/components/ui/image-url-input';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { SettingsSection } from '@/components/admin/SettingsSection';
 import { ISubject, ITopic } from '@/models/database';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -402,27 +403,33 @@ export default function NewQuestionPage() {
         return (
           <div className="space-y-4">
             <Label>Correct Answer</Label>
-            <div className="flex space-x-4">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  name="trueFalse"
-                  checked={trueFalseData.correctAnswer === true}
-                  onChange={() => setTrueFalseData({ correctAnswer: true })}
-                  className="w-4 h-4 text-indigo-600"
-                />
-                <span>True</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  name="trueFalse"
-                  checked={trueFalseData.correctAnswer === false}
-                  onChange={() => setTrueFalseData({ correctAnswer: false })}
-                  className="w-4 h-4 text-indigo-600"
-                />
-                <span>False</span>
-              </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setTrueFalseData({ correctAnswer: true })}
+                className={`
+                  flex items-center justify-center px-4 py-2 rounded-md border transition-all text-sm
+                  ${trueFalseData.correctAnswer === true
+                    ? 'bg-blue-50 border-blue-200 text-blue-700'
+                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                  }
+                `}
+              >
+                True
+              </button>
+              <button
+                type="button"
+                onClick={() => setTrueFalseData({ correctAnswer: false })}
+                className={`
+                  flex items-center justify-center px-4 py-2 rounded-md border transition-all text-sm
+                  ${trueFalseData.correctAnswer === false
+                    ? 'bg-blue-50 border-blue-200 text-blue-700'
+                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                  }
+                `}
+              >
+                False
+              </button>
             </div>
           </div>
         );
@@ -827,48 +834,14 @@ export default function NewQuestionPage() {
             <CardDescription>Configure difficulty, XP reward, and time estimate</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="difficulty">Difficulty Level</Label>
-                <Select
-                  value={formData.difficulty}
-                  onValueChange={(value: 'Beginner' | 'Intermediate' | 'Advanced') =>
-                    setFormData(prev => ({ ...prev, difficulty: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Beginner">Beginner</SelectItem>
-                    <SelectItem value="Intermediate">Intermediate</SelectItem>
-                    <SelectItem value="Advanced">Advanced</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="xpReward">XP Reward</Label>
-                <Input
-                  id="xpReward"
-                  type="number"
-                  min="1"
-                  value={formData.xpReward}
-                  onChange={(e) => setFormData(prev => ({ ...prev, xpReward: parseInt(e.target.value) || 5 }))}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="estimatedMinutes">Time Estimate (minutes)</Label>
-                <Input
-                  id="estimatedMinutes"
-                  type="number"
-                  min="0.5"
-                  step="0.5"
-                  value={formData.estimatedMinutes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, estimatedMinutes: parseFloat(e.target.value) || 1 }))}
-                />
-              </div>
-            </div>
+            <SettingsSection
+              difficulty={formData.difficulty}
+              xpReward={formData.xpReward}
+              estimatedMinutes={formData.estimatedMinutes}
+              onDifficultyChange={(difficulty) => setFormData(prev => ({ ...prev, difficulty }))}
+              onXpRewardChange={(xpReward) => setFormData(prev => ({ ...prev, xpReward }))}
+              onEstimatedMinutesChange={(estimatedMinutes) => setFormData(prev => ({ ...prev, estimatedMinutes }))}
+            />
           </CardContent>
         </Card>
 
