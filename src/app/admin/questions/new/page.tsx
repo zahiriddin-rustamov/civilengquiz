@@ -11,7 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Plus, Trash2, Save, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, AlertCircle, FileQuestion, CheckCircle, Edit3, Calculator, Shuffle } from 'lucide-react';
+import { ImageUrlInput } from '@/components/ui/image-url-input';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { ISubject, ITopic } from '@/models/database';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -23,16 +25,49 @@ interface QuestionData {
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   xpReward: number;
   estimatedMinutes: number;
-  order: number;
   data: any;
   explanation?: string;
 }
+
+const questionTypes = [
+  {
+    id: 'multiple-choice',
+    label: 'Multiple Choice',
+    icon: CheckCircle,
+    description: '4+ options with one correct answer'
+  },
+  {
+    id: 'true-false',
+    label: 'True/False',
+    icon: CheckCircle,
+    description: 'Simple true or false question'
+  },
+  {
+    id: 'fill-in-blank',
+    label: 'Fill in Blank',
+    icon: Edit3,
+    description: 'Students fill in missing words'
+  },
+  {
+    id: 'numerical',
+    label: 'Numerical',
+    icon: Calculator,
+    description: 'Answer with a number or calculation'
+  },
+  {
+    id: 'matching',
+    label: 'Matching',
+    icon: Shuffle,
+    description: 'Match terms with definitions'
+  }
+];
 
 export default function NewQuestionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [subjects, setSubjects] = useState<ISubject[]>([]);
   const [topics, setTopics] = useState<ITopic[]>([]);
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,8 +78,7 @@ export default function NewQuestionPage() {
     imageUrl: '',
     difficulty: 'Beginner',
     xpReward: 5,
-    estimatedMinutes: 2,
-    order: 1,
+    estimatedMinutes: 1,
     data: {},
     explanation: ''
   });
@@ -83,25 +117,26 @@ export default function NewQuestionPage() {
 
   useEffect(() => {
     fetchSubjects();
-    
+
     // Pre-select topic if provided in URL
     const topicId = searchParams?.get('topicId');
     if (topicId) {
       setFormData(prev => ({ ...prev, topicId }));
-      // Fetch the topic to get its subject
       fetchTopicAndSubject(topicId);
     }
   }, [searchParams]);
 
+  // Update XP and time estimates when difficulty or type changes
   useEffect(() => {
-    if (formData.topicId) {
-      const topic = topics.find(t => t._id.toString() === formData.topicId);
-      if (topic) {
-        // Auto-suggest order based on existing questions count
-        fetchNextOrder(formData.topicId);
-      }
-    }
-  }, [formData.topicId, topics]);
+    const newXpReward = getDefaultXpReward(formData.difficulty, formData.type);
+    const newEstimatedMinutes = getDefaultEstimatedMinutes(formData.type);
+
+    setFormData(prev => ({
+      ...prev,
+      xpReward: newXpReward,
+      estimatedMinutes: newEstimatedMinutes
+    }));
+  }, [formData.difficulty, formData.type]);
 
   const fetchSubjects = async () => {
     try {
@@ -121,7 +156,7 @@ export default function NewQuestionPage() {
       if (response.ok) {
         const data = await response.json();
         setTopics(data);
-        setFormData(prev => ({ ...prev, topicId: '' })); // Reset topic selection
+        setFormData(prev => ({ ...prev, topicId: '' }));
       }
     } catch (err) {
       console.error('Error fetching topics:', err);
@@ -133,7 +168,7 @@ export default function NewQuestionPage() {
       const response = await fetch(`/api/topics/${topicId}`);
       if (response.ok) {
         const topic = await response.json();
-        // Fetch the subject and its topics
+        setSelectedSubject(topic.subjectId);
         const subjectResponse = await fetch(`/api/subjects/${topic.subjectId}/topics`);
         if (subjectResponse.ok) {
           const topicsData = await subjectResponse.json();
@@ -145,22 +180,77 @@ export default function NewQuestionPage() {
     }
   };
 
-  const fetchNextOrder = async (topicId: string) => {
-    try {
-      const response = await fetch(`/api/admin/questions?topicId=${topicId}`);
-      if (response.ok) {
-        const data = await response.json();
-        const nextOrder = (data.questions?.length || 0) + 1;
-        setFormData(prev => ({ ...prev, order: nextOrder }));
-      }
-    } catch (err) {
-      console.error('Error fetching questions:', err);
+  const handleSubjectChange = (subjectId: string) => {
+    setSelectedSubject(subjectId);
+    fetchTopicsForSubject(subjectId);
+  };
+
+  const handleQuestionTypeChange = (newType: 'multiple-choice' | 'true-false' | 'fill-in-blank' | 'numerical' | 'matching') => {
+    setFormData(prev => ({ ...prev, type: newType }));
+
+    // Reset type-specific data
+    switch (newType) {
+      case 'multiple-choice':
+        setMultipleChoiceData({ options: ['', '', '', ''], correctAnswer: 0 });
+        break;
+      case 'true-false':
+        setTrueFalseData({ correctAnswer: true });
+        break;
+      case 'fill-in-blank':
+        setFillInBlankData({
+          blanks: [{ id: uuidv4(), correctAnswers: [''], caseSensitive: false }]
+        });
+        break;
+      case 'numerical':
+        setNumericalData({ correctAnswer: 0, tolerance: 0.01, unit: '', formula: '' });
+        break;
+      case 'matching':
+        setMatchingData({
+          pairs: [
+            { id: uuidv4(), left: '', right: '' },
+            { id: uuidv4(), left: '', right: '' }
+          ]
+        });
+        break;
     }
+  };
+
+  const getDefaultXpReward = (difficulty: string, type: string): number => {
+    const basePoints = {
+      'multiple-choice': 5,
+      'true-false': 3,
+      'fill-in-blank': 7,
+      'numerical': 8,
+      'matching': 6
+    };
+
+    const difficultyMultiplier = {
+      'Beginner': 1,
+      'Intermediate': 1.5,
+      'Advanced': 2
+    };
+
+    const base = basePoints[type as keyof typeof basePoints] || 5;
+    const multiplier = difficultyMultiplier[difficulty as keyof typeof difficultyMultiplier] || 1;
+
+    return Math.round(base * multiplier);
+  };
+
+  const getDefaultEstimatedMinutes = (type: string): number => {
+    const timeEstimates = {
+      'multiple-choice': 1,
+      'true-false': 0.5,
+      'fill-in-blank': 2,
+      'numerical': 3,
+      'matching': 2
+    };
+
+    return timeEstimates[type as keyof typeof timeEstimates] || 2;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.topicId || !formData.text.trim()) {
       setError('Please fill in all required fields');
       return;
@@ -206,7 +296,7 @@ export default function NewQuestionPage() {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/admin/questions', {
+      const response = await fetch('/api/questions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -228,7 +318,7 @@ export default function NewQuestionPage() {
     }
   };
 
-  const renderTypeSpecificFields = () => {
+  const renderQuestionTypeConfig = () => {
     switch (formData.type) {
       case 'multiple-choice':
         return (
@@ -255,6 +345,22 @@ export default function NewQuestionPage() {
                 />
                 {multipleChoiceData.correctAnswer === index && (
                   <Badge variant="secondary" className="bg-green-100 text-green-800">Correct</Badge>
+                )}
+                {multipleChoiceData.options.length > 2 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const newOptions = multipleChoiceData.options.filter((_, i) => i !== index);
+                      const newCorrectAnswer = multipleChoiceData.correctAnswer >= index
+                        ? Math.max(0, multipleChoiceData.correctAnswer - 1)
+                        : multipleChoiceData.correctAnswer;
+                      setMultipleChoiceData({ options: newOptions, correctAnswer: newCorrectAnswer });
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 )}
               </div>
             ))}
@@ -309,9 +415,11 @@ export default function NewQuestionPage() {
       case 'fill-in-blank':
         return (
           <div className="space-y-4">
-            <Label>Blanks Configuration</Label>
-            <div className="text-sm text-gray-600 mb-4">
-              Use _____ or {'{blank}'} in your question text to mark where blanks should appear.
+            <div>
+              <Label>Blanks Configuration</Label>
+              <p className="text-sm text-gray-600 mt-1">
+                Use _____ or {'{blank}'} in your question text to mark where blanks should appear.
+              </p>
             </div>
             {fillInBlankData.blanks.map((blank, blankIndex) => (
               <Card key={blank.id}>
@@ -535,10 +643,10 @@ export default function NewQuestionPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Page Header */}
       <div className="flex items-center space-x-4">
-        <Button variant="ghost" asChild>
+        <Button variant="outline" size="sm" asChild>
           <Link href="/admin/questions">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Questions
@@ -550,9 +658,9 @@ export default function NewQuestionPage() {
         </div>
       </div>
 
-      {/* Error Display */}
+      {/* Error Alert */}
       {error && (
-        <Card className="border-red-200">
+        <Card className="border-red-200 bg-red-50">
           <CardContent className="pt-6">
             <div className="flex items-center space-x-2 text-red-600">
               <AlertCircle className="w-5 h-5" />
@@ -562,183 +670,212 @@ export default function NewQuestionPage() {
         </Card>
       )}
 
-      {/* Main Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Left Column - Basic Info */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
-                <CardDescription>Configure the fundamental properties of your question</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="subject">Subject</Label>
-                    <Select onValueChange={(value) => fetchTopicsForSubject(value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select subject" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {subjects.map(subject => (
-                          <SelectItem key={subject._id.toString()} value={subject._id.toString()}>
-                            {subject.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+        {/* Basic Setup */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Basic Setup</CardTitle>
+            <CardDescription>Choose where this question belongs and what type it should be</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="subject">Subject *</Label>
+                <Select value={selectedSubject} onValueChange={handleSubjectChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select subject" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjects.map(subject => (
+                      <SelectItem key={subject._id.toString()} value={subject._id.toString()}>
+                        {subject.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                  <div>
-                    <Label htmlFor="topic">Topic</Label>
-                    <Select 
-                      value={formData.topicId} 
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, topicId: value }))}
-                      disabled={topics.length === 0}
+              <div>
+                <Label htmlFor="topic">Topic *</Label>
+                <Select
+                  value={formData.topicId}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, topicId: value }))}
+                  disabled={topics.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select topic" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {topics.map(topic => (
+                      <SelectItem key={topic._id.toString()} value={topic._id.toString()}>
+                        {topic.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label>Question Type *</Label>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-2">
+                {questionTypes.map((type) => {
+                  const IconComponent = type.icon;
+                  const isSelected = formData.type === type.id;
+                  return (
+                    <button
+                      key={type.id}
+                      type="button"
+                      onClick={() => handleQuestionTypeChange(type.id as any)}
+                      className={`p-3 border-2 rounded-lg text-left transition-all ${
+                        isSelected
+                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      }`}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select topic" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {topics.map(topic => (
-                          <SelectItem key={topic._id.toString()} value={topic._id.toString()}>
-                            {topic.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                      <div className="flex items-center space-x-2 mb-1">
+                        <IconComponent className="w-4 h-4" />
+                        <span className="font-medium text-sm">{type.label}</span>
+                      </div>
+                      <p className="text-xs text-gray-500 leading-tight">{type.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-                <div>
-                  <Label htmlFor="type">Question Type</Label>
-                  <Select 
-                    value={formData.type} 
-                    onValueChange={(value: any) => setFormData(prev => ({ ...prev, type: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
-                      <SelectItem value="true-false">True/False</SelectItem>
-                      <SelectItem value="fill-in-blank">Fill in Blank</SelectItem>
-                      <SelectItem value="numerical">Numerical</SelectItem>
-                      <SelectItem value="matching">Matching</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+        {/* Question Content */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Question Content</CardTitle>
+            <CardDescription>Write your question and add any supporting materials</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <RichTextEditor
+              label="Question Text *"
+              value={formData.text}
+              onChange={(value) => setFormData(prev => ({ ...prev, text: value }))}
+              placeholder="Enter your question text here..."
+              disabled={isLoading}
+              rows={3}
+              required
+            />
 
-                <div>
-                  <Label htmlFor="text">Question Text</Label>
-                  <Textarea
-                    id="text"
-                    value={formData.text}
-                    onChange={(e) => setFormData(prev => ({ ...prev, text: e.target.value }))}
-                    placeholder="Enter your question text here..."
-                    rows={3}
-                    required
-                  />
-                </div>
+            <ImageUrlInput
+              label="Question Image (optional)"
+              description="Add an image to help illustrate your question"
+              value={formData.imageUrl || ''}
+              onChange={(url) => setFormData(prev => ({ ...prev, imageUrl: url }))}
+              disabled={isLoading}
+              placeholder="https://example.com/question-image.jpg"
+            />
+          </CardContent>
+        </Card>
 
-                <div>
-                  <Label htmlFor="imageUrl">Image URL (optional)</Label>
-                  <Input
-                    id="imageUrl"
-                    type="url"
-                    value={formData.imageUrl}
-                    onChange={(e) => setFormData(prev => ({ ...prev, imageUrl: e.target.value }))}
-                    placeholder="https://example.com/image.jpg"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+        {/* Answer Configuration */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Answer Configuration</CardTitle>
+            <CardDescription>
+              Configure the correct answer(s) for your {questionTypes.find(t => t.id === formData.type)?.label?.toLowerCase()} question
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {renderQuestionTypeConfig()}
+          </CardContent>
+        </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Question Configuration</CardTitle>
-                <CardDescription>Configure the answers and options for your question</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {renderTypeSpecificFields()}
-              </CardContent>
-            </Card>
+        {/* Explanation */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Explanation</CardTitle>
+            <CardDescription>Help students understand the correct answer</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RichTextEditor
+              label="Explanation (optional)"
+              value={formData.explanation || ''}
+              onChange={(value) => setFormData(prev => ({ ...prev, explanation: value }))}
+              placeholder="Explain why this is the correct answer and provide additional context..."
+              disabled={isLoading}
+              rows={3}
+            />
+          </CardContent>
+        </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Explanation</CardTitle>
-                <CardDescription>Provide an explanation that will be shown after the question is answered</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={formData.explanation}
-                  onChange={(e) => setFormData(prev => ({ ...prev, explanation: e.target.value }))}
-                  placeholder="Explain the correct answer and provide additional context..."
-                  rows={3}
+        {/* Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Settings</CardTitle>
+            <CardDescription>Configure difficulty, XP reward, and time estimate</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="difficulty">Difficulty Level</Label>
+                <Select
+                  value={formData.difficulty}
+                  onValueChange={(value: 'Beginner' | 'Intermediate' | 'Advanced') =>
+                    setFormData(prev => ({ ...prev, difficulty: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Beginner">Beginner</SelectItem>
+                    <SelectItem value="Intermediate">Intermediate</SelectItem>
+                    <SelectItem value="Advanced">Advanced</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="xpReward">XP Reward</Label>
+                <Input
+                  id="xpReward"
+                  type="number"
+                  min="1"
+                  value={formData.xpReward}
+                  onChange={(e) => setFormData(prev => ({ ...prev, xpReward: parseInt(e.target.value) || 5 }))}
                 />
-              </CardContent>
-            </Card>
-          </div>
+              </div>
 
-          {/* Right Column - Settings */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Question Settings</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="difficulty">Difficulty Level</Label>
-                  <Select 
-                    value={formData.difficulty} 
-                    onValueChange={(value: any) => setFormData(prev => ({ ...prev, difficulty: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Beginner">Beginner</SelectItem>
-                      <SelectItem value="Intermediate">Intermediate</SelectItem>
-                      <SelectItem value="Advanced">Advanced</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="points">XP Points</Label>
-                  <Input
-                    id="points"
-                    type="number"
-                    min="1"
-                    value={formData.points}
-                    onChange={(e) => setFormData(prev => ({ ...prev, points: parseInt(e.target.value) || 10 }))}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="order">Order</Label>
-                  <Input
-                    id="order"
-                    type="number"
-                    min="1"
-                    value={formData.order}
-                    onChange={(e) => setFormData(prev => ({ ...prev, order: parseInt(e.target.value) || 1 }))}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+              <div>
+                <Label htmlFor="estimatedMinutes">Time Estimate (minutes)</Label>
+                <Input
+                  id="estimatedMinutes"
+                  type="number"
+                  min="0.5"
+                  step="0.5"
+                  value={formData.estimatedMinutes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, estimatedMinutes: parseFloat(e.target.value) || 1 }))}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Action Buttons */}
-        <div className="flex justify-end space-x-3">
-          <Button variant="outline" asChild>
-            <Link href="/admin/questions">Cancel</Link>
+        <div className="flex items-center justify-end space-x-4 pt-6 border-t">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.push('/admin/questions')}
+            disabled={isLoading}
+          >
+            Cancel
           </Button>
-          <Button type="submit" disabled={isLoading}>
+          <Button
+            type="submit"
+            disabled={isLoading || !formData.topicId || !formData.text.trim()}
+          >
             {isLoading ? (
-              'Creating...'
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Creating...
+              </>
             ) : (
               <>
                 <Save className="w-4 h-4 mr-2" />
