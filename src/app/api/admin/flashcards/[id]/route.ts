@@ -6,7 +6,7 @@ import { Flashcard } from '@/models/database';
 import { Types } from 'mongoose';
 
 // GET /api/admin/flashcards/[id] - Get single flashcard
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user || (session.user as any).role !== 'admin') {
@@ -15,7 +15,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     await connectToDatabase();
 
-    const flashcardId = params.id;
+    const { id: flashcardId } = await params;
 
     if (!Types.ObjectId.isValid(flashcardId)) {
       return NextResponse.json({ error: 'Invalid flashcard ID' }, { status: 400 });
@@ -62,7 +62,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 }
 
 // PUT /api/admin/flashcards/[id] - Update flashcard
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user || (session.user as any).role !== 'admin') {
@@ -71,7 +71,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     await connectToDatabase();
 
-    const flashcardId = params.id;
+    const { id: flashcardId } = await params;
 
     if (!Types.ObjectId.isValid(flashcardId)) {
       return NextResponse.json({ error: 'Invalid flashcard ID' }, { status: 400 });
@@ -156,7 +156,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 }
 
 // DELETE /api/admin/flashcards/[id] - Delete flashcard
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user || (session.user as any).role !== 'admin') {
@@ -165,7 +165,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
 
     await connectToDatabase();
 
-    const flashcardId = params.id;
+    const { id: flashcardId } = await params;
 
     if (!Types.ObjectId.isValid(flashcardId)) {
       return NextResponse.json({ error: 'Invalid flashcard ID' }, { status: 400 });
