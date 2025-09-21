@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Save, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ImageUpload } from '@/components/ui/image-upload';
+import { ImageUrlInput } from '@/components/ui/image-url-input';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { ISubject } from '@/models/database';
 
@@ -22,7 +22,6 @@ interface SubjectFormData {
   description: string;
   imageUrl: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  order: number;
   isUnlocked: boolean;
   prerequisiteId: string;
 }
@@ -42,7 +41,6 @@ export default function EditSubjectPage() {
     description: '',
     imageUrl: '',
     difficulty: 'Beginner',
-    order: 1,
     isUnlocked: true,
     prerequisiteId: 'none',
   });
@@ -93,7 +91,6 @@ export default function EditSubjectPage() {
         description: subject.description,
         imageUrl: subject.imageUrl || '',
         difficulty: subject.difficulty,
-        order: subject.order,
         isUnlocked: subject.isUnlocked,
         prerequisiteId: subject.prerequisiteId?.toString() || 'none',
       });
@@ -113,7 +110,6 @@ export default function EditSubjectPage() {
   const validateForm = (): string | null => {
     if (!formData.name.trim()) return 'Subject name is required';
     if (!formData.description.trim()) return 'Subject description is required';
-    if (formData.order < 1) return 'Order must be at least 1';
     return null;
   };
 
@@ -326,31 +322,15 @@ export default function EditSubjectPage() {
               required
             />
 
-            <ImageUpload
+            <ImageUrlInput
               label="Subject Image (optional)"
-              description="Upload an image to represent this subject"
+              description="Enter a URL for an image to represent this subject"
               value={formData.imageUrl}
               onChange={(url) => handleInputChange('imageUrl', url)}
               disabled={isLoading}
-              maxSizeKB={1024}
+              placeholder="https://example.com/subject-image.jpg"
             />
 
-            {/* Display Order */}
-            <div className="space-y-2">
-              <Label htmlFor="order">Display Order *</Label>
-              <Input
-                id="order"
-                type="number"
-                min="1"
-                max="100"
-                value={formData.order}
-                onChange={(e) => handleInputChange('order', parseInt(e.target.value) || 1)}
-                disabled={isLoading}
-              />
-              <p className="text-sm text-gray-500">
-                Order in which this subject appears in the list. Lower numbers appear first.
-              </p>
-            </div>
 
             {/* Settings */}
             <div className="space-y-4">

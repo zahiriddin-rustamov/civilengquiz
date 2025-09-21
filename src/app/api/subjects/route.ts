@@ -96,21 +96,25 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
     
     // Validate required fields
-    const { name, description, difficulty, order } = data;
+    const { name, description, difficulty } = data;
 
-    if (!name || !description || !difficulty || order === undefined) {
+    if (!name || !description || !difficulty) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, description, difficulty, order' },
+        { error: 'Missing required fields: name, description, difficulty' },
         { status: 400 }
       );
     }
+
+    // Auto-calculate next order value
+    const existingSubjects = await Subject.find({}).sort({ order: -1 }).limit(1);
+    const nextOrder = existingSubjects.length > 0 ? existingSubjects[0].order + 1 : 1;
 
     const subject = await SubjectService.createSubject({
       name,
       description,
       imageUrl: data.imageUrl,
       isUnlocked: data.isUnlocked ?? true,
-      order,
+      order: nextOrder,
       difficulty,
       prerequisiteId: data.prerequisiteId
     });

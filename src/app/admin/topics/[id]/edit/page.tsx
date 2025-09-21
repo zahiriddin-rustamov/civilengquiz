@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Save, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ImageUpload } from '@/components/ui/image-upload';
+import { ImageUrlInput } from '@/components/ui/image-url-input';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { ITopic, ISubject } from '@/models/database';
 
@@ -24,7 +24,6 @@ interface TopicFormData {
   imageUrl: string;
   subjectId: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  order: number;
   isUnlocked: boolean;
 }
 
@@ -46,7 +45,6 @@ export default function EditTopicPage() {
     imageUrl: '',
     subjectId: '',
     difficulty: 'Beginner',
-    order: 1,
     isUnlocked: true,
   });
 
@@ -82,7 +80,6 @@ export default function EditTopicPage() {
         imageUrl: topic.imageUrl || '',
         subjectId: topic.subjectId.toString(),
         difficulty: topic.difficulty,
-        order: topic.order,
         isUnlocked: topic.isUnlocked,
       });
     } catch (err) {
@@ -117,7 +114,6 @@ export default function EditTopicPage() {
     if (!formData.name.trim()) return 'Topic name is required';
     if (!formData.description.trim()) return 'Topic description is required';
     if (!formData.subjectId) return 'Please select a subject';
-    if (formData.order < 1) return 'Order must be at least 1';
     return null;
   };
 
@@ -345,31 +341,15 @@ export default function EditTopicPage() {
               rows={4}
             />
 
-            <ImageUpload
+            <ImageUrlInput
               label="Topic Image (optional)"
-              description="Upload an image to represent this topic"
+              description="Enter an image URL to represent this topic"
               value={formData.imageUrl}
               onChange={(url) => handleInputChange('imageUrl', url)}
               disabled={isLoading}
-              maxSizeKB={1024}
+              placeholder="https://example.com/topic-image.jpg"
             />
 
-            {/* Display Order */}
-            <div className="space-y-2">
-              <Label htmlFor="order">Display Order *</Label>
-              <Input
-                id="order"
-                type="number"
-                min="1"
-                max="100"
-                value={formData.order}
-                onChange={(e) => handleInputChange('order', parseInt(e.target.value) || 1)}
-                disabled={isLoading}
-              />
-              <p className="text-sm text-gray-500">
-                Order in which this topic appears within the subject. Lower numbers appear first.
-              </p>
-            </div>
 
             {/* Settings */}
             <div className="space-y-4">

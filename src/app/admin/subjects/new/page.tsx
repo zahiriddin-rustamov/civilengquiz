@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Save, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ImageUpload } from '@/components/ui/image-upload';
+import { ImageUrlInput } from '@/components/ui/image-url-input';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 interface SubjectFormData {
@@ -20,7 +20,6 @@ interface SubjectFormData {
   description: string;
   imageUrl: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  order: number;
   isUnlocked: boolean;
   prerequisiteId: string;
 }
@@ -35,14 +34,12 @@ export default function NewSubjectPage() {
     description: '',
     imageUrl: '',
     difficulty: 'Beginner',
-    order: 1,
     isUnlocked: true,
     prerequisiteId: 'none',
   });
 
   useEffect(() => {
     fetchAvailableSubjects();
-    fetchNextOrder();
   }, []);
 
   const fetchAvailableSubjects = async () => {
@@ -57,18 +54,6 @@ export default function NewSubjectPage() {
     }
   };
 
-  const fetchNextOrder = async () => {
-    try {
-      const response = await fetch('/api/subjects');
-      if (response.ok) {
-        const subjects = await response.json();
-        const maxOrder = subjects.length > 0 ? Math.max(...subjects.map((s: any) => s.order)) : 0;
-        setFormData(prev => ({ ...prev, order: maxOrder + 1 }));
-      }
-    } catch (err) {
-      console.error('Error fetching order:', err);
-    }
-  };
 
   const handleInputChange = (field: keyof SubjectFormData, value: string | number | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -78,7 +63,6 @@ export default function NewSubjectPage() {
   const validateForm = (): string | null => {
     if (!formData.name.trim()) return 'Subject name is required';
     if (!formData.description.trim()) return 'Subject description is required';
-    if (formData.order < 1) return 'Order must be at least 1';
     return null;
   };
 
@@ -230,31 +214,15 @@ export default function NewSubjectPage() {
               required
             />
 
-            <ImageUpload
+            <ImageUrlInput
               label="Subject Image (optional)"
-              description="Upload an image to represent this subject"
+              description="Enter a URL for an image to represent this subject"
               value={formData.imageUrl}
               onChange={(url) => handleInputChange('imageUrl', url)}
               disabled={isLoading}
-              maxSizeKB={1024}
+              placeholder="https://example.com/subject-image.jpg"
             />
 
-            {/* Display Order */}
-            <div className="space-y-2">
-              <Label htmlFor="order">Display Order *</Label>
-              <Input
-                id="order"
-                type="number"
-                min="1"
-                max="100"
-                value={formData.order}
-                onChange={(e) => handleInputChange('order', parseInt(e.target.value) || 1)}
-                disabled={isLoading}
-              />
-              <p className="text-sm text-gray-500">
-                Order in which this subject appears in the list. Lower numbers appear first.
-              </p>
-            </div>
 
             {/* Settings */}
             <div className="space-y-4">

@@ -85,14 +85,18 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
 
     // Validate required fields
-    const { name, description, subjectId, difficulty, order } = data;
+    const { name, description, subjectId, difficulty } = data;
 
-    if (!name || !description || !subjectId || !difficulty || order === undefined) {
+    if (!name || !description || !subjectId || !difficulty) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, description, subjectId, difficulty, order' },
+        { error: 'Missing required fields: name, description, subjectId, difficulty' },
         { status: 400 }
       );
     }
+
+    // Auto-calculate next order value within the subject
+    const existingTopics = await Topic.find({ subjectId }).sort({ order: -1 }).limit(1);
+    const nextOrder = existingTopics.length > 0 ? existingTopics[0].order + 1 : 1;
 
     const topic = await TopicService.createTopic({
       name,
@@ -100,7 +104,7 @@ export async function POST(request: NextRequest) {
       longDescription: data.longDescription,
       imageUrl: data.imageUrl,
       subjectId,
-      order,
+      order: nextOrder,
       difficulty,
       isUnlocked: data.isUnlocked ?? true
     });
