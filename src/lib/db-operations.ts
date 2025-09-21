@@ -232,7 +232,7 @@ export class ProgressService {
     ]);
 
     const totalItems = questions.length + flashcards.length + media.length;
-    const totalXP = [...questions, ...flashcards, ...media].reduce((sum, item) => sum + item.points, 0);
+    const totalXP = [...questions, ...flashcards, ...media].reduce((sum, item) => sum + item.xpReward, 0);
 
     if (totalItems === 0) {
       return { totalItems: 0, completedItems: 0, totalXP: 0, earnedXP: 0, progressPercentage: 0 };
