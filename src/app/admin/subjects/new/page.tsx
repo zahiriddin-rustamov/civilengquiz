@@ -20,8 +20,6 @@ interface SubjectFormData {
   description: string;
   imageUrl: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  estimatedHours: number;
-  xpReward: number;
   order: number;
   isUnlocked: boolean;
   prerequisiteId: string;
@@ -37,8 +35,6 @@ export default function NewSubjectPage() {
     description: '',
     imageUrl: '',
     difficulty: 'Beginner',
-    estimatedHours: 1,
-    xpReward: 100,
     order: 1,
     isUnlocked: true,
     prerequisiteId: 'none',
@@ -82,8 +78,6 @@ export default function NewSubjectPage() {
   const validateForm = (): string | null => {
     if (!formData.name.trim()) return 'Subject name is required';
     if (!formData.description.trim()) return 'Subject description is required';
-    if (formData.estimatedHours < 1) return 'Estimated hours must be at least 1';
-    if (formData.xpReward < 1) return 'XP reward must be at least 1';
     if (formData.order < 1) return 'Order must be at least 1';
     return null;
   };
@@ -245,46 +239,21 @@ export default function NewSubjectPage() {
               maxSizeKB={1024}
             />
 
-            {/* Numerical Settings */}
-            <div className="grid gap-6 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="estimatedHours">Estimated Hours *</Label>
-                <Input
-                  id="estimatedHours"
-                  type="number"
-                  min="1"
-                  max="200"
-                  value={formData.estimatedHours}
-                  onChange={(e) => handleInputChange('estimatedHours', parseInt(e.target.value) || 1)}
-                  disabled={isLoading}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="xpReward">XP Reward *</Label>
-                <Input
-                  id="xpReward"
-                  type="number"
-                  min="1"
-                  max="10000"
-                  value={formData.xpReward}
-                  onChange={(e) => handleInputChange('xpReward', parseInt(e.target.value) || 100)}
-                  disabled={isLoading}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="order">Display Order *</Label>
-                <Input
-                  id="order"
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={formData.order}
-                  onChange={(e) => handleInputChange('order', parseInt(e.target.value) || 1)}
-                  disabled={isLoading}
-                />
-              </div>
+            {/* Display Order */}
+            <div className="space-y-2">
+              <Label htmlFor="order">Display Order *</Label>
+              <Input
+                id="order"
+                type="number"
+                min="1"
+                max="100"
+                value={formData.order}
+                onChange={(e) => handleInputChange('order', parseInt(e.target.value) || 1)}
+                disabled={isLoading}
+              />
+              <p className="text-sm text-gray-500">
+                Order in which this subject appears in the list. Lower numbers appear first.
+              </p>
             </div>
 
             {/* Settings */}

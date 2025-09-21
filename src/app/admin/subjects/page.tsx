@@ -45,6 +45,8 @@ interface EnhancedSubject extends ISubject {
   flashcardCount: number;
   mediaCount: number;
   totalContent: number;
+  estimatedHours: number; // Calculated from topics
+  xpReward: number; // Calculated from topics
   prerequisiteId?: {
     _id: string;
     name: string;
@@ -79,7 +81,7 @@ export default function SubjectsPage() {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/subjects/enhanced');
+      const response = await fetch('/api/subjects');
       if (!response.ok) {
         throw new Error('Failed to fetch subjects');
       }
@@ -241,8 +243,26 @@ export default function SubjectsPage() {
                   <TableHead>Content</TableHead>
                   <TableHead>Prerequisite</TableHead>
                   <TableHead>Difficulty</TableHead>
-                  <TableHead>Hours</TableHead>
-                  <TableHead>XP</TableHead>
+                  <TableHead>
+                    <div className="relative group">
+                      Hours
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block">
+                        <div className="bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                          Calculated from topics
+                        </div>
+                      </div>
+                    </div>
+                  </TableHead>
+                  <TableHead>
+                    <div className="relative group">
+                      XP
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block">
+                        <div className="bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                          Calculated from topics
+                        </div>
+                      </div>
+                    </div>
+                  </TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[70px]">Actions</TableHead>
                 </TableRow>
