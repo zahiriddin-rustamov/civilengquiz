@@ -103,7 +103,7 @@ export default function QuestionsPage() {
           id: q._id.toString(),
           text: q.text,
           difficulty: q.difficulty,
-          points: q.points,
+          points: q.xpReward,
           explanation: q.explanation,
           ...q.data  // Spread the question-specific data (options, correctAnswer, etc.)
         }

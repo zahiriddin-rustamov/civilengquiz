@@ -35,7 +35,7 @@ export async function GET(
     const subject = await SubjectService.getSubjectById(topic.subjectId as any);
 
     // Calculate total XP and estimated time
-    const totalXP = questions.reduce((sum, q) => sum + q.points, 0);
+    const totalXP = questions.reduce((sum, q) => sum + (q.xpReward || 0), 0);
     const estimatedTime = Math.max(questions.length * 2, 10); // 2 minutes per question, minimum 10
 
     const response = {
