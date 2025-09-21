@@ -214,25 +214,6 @@ export default function QuestionsPage() {
     return subject?.name || 'Unknown Subject';
   };
 
-  const getQuestionStats = () => {
-    return {
-      total: questions.length,
-      byType: {
-        'multiple-choice': questions.filter(q => q.type === 'multiple-choice').length,
-        'true-false': questions.filter(q => q.type === 'true-false').length,
-        'fill-in-blank': questions.filter(q => q.type === 'fill-in-blank').length,
-        'numerical': questions.filter(q => q.type === 'numerical').length,
-        'matching': questions.filter(q => q.type === 'matching').length,
-      },
-      byDifficulty: {
-        'Beginner': questions.filter(q => q.difficulty === 'Beginner').length,
-        'Intermediate': questions.filter(q => q.difficulty === 'Intermediate').length,
-        'Advanced': questions.filter(q => q.difficulty === 'Advanced').length,
-      },
-      totalXpReward: questions.reduce((sum, q) => sum + q.xpReward, 0),
-      totalEstimatedMinutes: questions.reduce((sum, q) => sum + q.estimatedMinutes, 0),
-    };
-  };
 
   if (isLoading) {
     return (
@@ -278,8 +259,6 @@ export default function QuestionsPage() {
     );
   }
 
-  const stats = getQuestionStats();
-
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -306,54 +285,6 @@ export default function QuestionsPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Questions</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Multiple Choice</CardTitle>
-            <CheckCircle className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.byType['multiple-choice']}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Advanced Level</CardTitle>
-            <div className="w-3 h-3 rounded bg-red-500"></div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.byDifficulty.Advanced}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total XP</CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalXpReward}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Time</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{Math.round(stats.totalEstimatedMinutes)} min</div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Filters and Search */}
       <Card>

@@ -261,22 +261,6 @@ export default function MediaPage() {
     }
   };
 
-  const getMediaStats = () => {
-    return {
-      total: media.length,
-      byType: {
-        'video': media.filter(m => m.type === 'video').length,
-        'simulation': media.filter(m => m.type === 'simulation').length,
-        'gallery': media.filter(m => m.type === 'gallery').length,
-      },
-      byDifficulty: {
-        'Beginner': media.filter(m => m.difficulty === 'Beginner').length,
-        'Intermediate': media.filter(m => m.difficulty === 'Intermediate').length,
-        'Advanced': media.filter(m => m.difficulty === 'Advanced').length,
-      },
-      totalPoints: media.reduce((sum, m) => sum + m.points, 0),
-    };
-  };
 
   if (isLoading) {
     return (
@@ -319,8 +303,6 @@ export default function MediaPage() {
     );
   }
 
-  const stats = getMediaStats();
-
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -347,54 +329,6 @@ export default function MediaPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Media</CardTitle>
-            <Play className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Videos</CardTitle>
-            <Video className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.byType.video}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Simulations</CardTitle>
-            <MonitorSpeaker className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.byType.simulation}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Galleries</CardTitle>
-            <ImageIcon className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.byType.gallery}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total XP</CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalPoints}</div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Filters and Search */}
       <Card>

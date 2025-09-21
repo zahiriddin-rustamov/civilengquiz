@@ -261,20 +261,6 @@ export default function FlashcardsPage() {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
 
-  const getFlashcardStats = () => {
-    return {
-      total: flashcards.length,
-      byDifficulty: {
-        'Beginner': flashcards.filter(fc => fc.difficulty === 'Beginner').length,
-        'Intermediate': flashcards.filter(fc => fc.difficulty === 'Intermediate').length,
-        'Advanced': flashcards.filter(fc => fc.difficulty === 'Advanced').length,
-      },
-      totalXpReward: flashcards.reduce((sum, fc) => sum + fc.xpReward, 0),
-      totalEstimatedMinutes: flashcards.reduce((sum, fc) => sum + fc.estimatedMinutes, 0),
-      avgXpReward: flashcards.length > 0 ? Math.round(flashcards.reduce((sum, fc) => sum + fc.xpReward, 0) / flashcards.length) : 0,
-      categories: categories.length,
-    };
-  };
 
   if (isLoading) {
     return (
@@ -316,8 +302,6 @@ export default function FlashcardsPage() {
       </div>
     );
   }
-
-  const stats = getFlashcardStats();
 
   return (
     <div className="space-y-6">
@@ -369,54 +353,6 @@ export default function FlashcardsPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Flashcards</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Categories</CardTitle>
-            <Tag className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.categories}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Beginner Level</CardTitle>
-            <div className="w-3 h-3 rounded bg-green-500"></div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.byDifficulty.Beginner}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total XP</CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalXpReward}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Time</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{Math.round(stats.totalEstimatedMinutes)} min</div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Filters and Search */}
       <Card>
