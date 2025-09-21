@@ -21,22 +21,39 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { 
-  Plus, 
-  Search, 
-  MoreVertical, 
-  Edit, 
-  Trash2, 
+import {
+  Plus,
+  Search,
+  MoreVertical,
+  Edit,
+  Trash2,
   Eye,
   Users,
   BookOpen,
-  Clock
+  Clock,
+  FileText,
+  CreditCard,
+  Play,
+  ArrowUpDown,
+  Lock
 } from 'lucide-react';
 import { ISubject } from '@/models/database';
 
+interface EnhancedSubject extends ISubject {
+  topicCount: number;
+  questionCount: number;
+  flashcardCount: number;
+  mediaCount: number;
+  totalContent: number;
+  prerequisiteId?: {
+    _id: string;
+    name: string;
+  };
+}
+
 export default function SubjectsPage() {
-  const [subjects, setSubjects] = useState<ISubject[]>([]);
-  const [filteredSubjects, setFilteredSubjects] = useState<ISubject[]>([]);
+  const [subjects, setSubjects] = useState<EnhancedSubject[]>([]);
+  const [filteredSubjects, setFilteredSubjects] = useState<EnhancedSubject[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,12 +78,12 @@ export default function SubjectsPage() {
     try {
       setIsLoading(true);
       setError(null);
-      
-      const response = await fetch('/api/subjects');
+
+      const response = await fetch('/api/subjects/enhanced');
       if (!response.ok) {
         throw new Error('Failed to fetch subjects');
       }
-      
+
       const data = await response.json();
       setSubjects(data);
     } catch (err) {
@@ -157,56 +174,20 @@ export default function SubjectsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Subjects</h1>
           <p className="text-gray-600">Manage learning subjects and courses</p>
         </div>
-        <Button asChild>
-          <Link href="/admin/subjects/new">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Subject
-          </Link>
-        </Button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Subjects</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{subjects.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Published</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{subjects.filter(s => s.isUnlocked).length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Hours</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {subjects.reduce((sum, s) => sum + s.estimatedHours, 0)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total XP</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {subjects.reduce((sum, s) => sum + s.xpReward, 0)}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex space-x-2">
+          <Button variant="outline" asChild>
+            <Link href="/admin/subjects/reorder">
+              <ArrowUpDown className="w-4 h-4 mr-2" />
+              Reorder
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/admin/subjects/new">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Subject
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -257,22 +238,105 @@ export default function SubjectsPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Description</TableHead>
+                  <TableHead>Content</TableHead>
+                  <TableHead>Prerequisite</TableHead>
                   <TableHead>Difficulty</TableHead>
                   <TableHead>Hours</TableHead>
                   <TableHead>XP</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
                   <TableHead className="w-[70px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredSubjects.map((subject) => (
-                  <TableRow key={subject._id.toString()}>
-                    <TableCell className="font-medium">{subject.name}</TableCell>
+                  <TableRow
+                    key={subject._id.toString()}
+                    className="hover:bg-gray-50 transition-colors duration-200"
+                  >
+                    <TableCell className="font-medium">
+                      <div className="flex items-center space-x-2">
+                        <span className="hover:text-blue-600 transition-colors duration-200">
+                          {subject.name}
+                        </span>
+                        {subject.totalContent === 0 && (
+                          <div className="relative group">
+                            <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block">
+                              <div className="bg-red-600 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                                No content added yet
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {subject.prerequisiteId && (
+                          <div className="relative group">
+                            <Lock className="w-4 h-4 text-amber-500" />
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block">
+                              <div className="bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                                Requires: {subject.prerequisiteId.name}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="max-w-xs">
                       <div className="truncate" title={subject.description}>
                         {subject.description}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex items-center space-x-3 text-sm">
+                          <span className="flex items-center space-x-1 hover:bg-blue-50 px-1 py-0.5 rounded transition-colors duration-200">
+                            <BookOpen className="w-3 h-3 text-blue-500" />
+                            <span className="font-medium">{subject.topicCount}</span>
+                          </span>
+                          <span className="flex items-center space-x-1 hover:bg-green-50 px-1 py-0.5 rounded transition-colors duration-200">
+                            <FileText className="w-3 h-3 text-green-500" />
+                            <span className="font-medium">{subject.questionCount}</span>
+                          </span>
+                          <span className="flex items-center space-x-1 hover:bg-purple-50 px-1 py-0.5 rounded transition-colors duration-200">
+                            <CreditCard className="w-3 h-3 text-purple-500" />
+                            <span className="font-medium">{subject.flashcardCount}</span>
+                          </span>
+                          <span className="flex items-center space-x-1 hover:bg-red-50 px-1 py-0.5 rounded transition-colors duration-200">
+                            <Play className="w-3 h-3 text-red-500" />
+                            <span className="font-medium">{subject.mediaCount}</span>
+                          </span>
+                        </div>
+
+                        {/* Content Progress Bar */}
+                        {subject.totalContent > 0 ? (
+                          <div className="w-full">
+                            <div className="flex justify-between text-xs text-gray-500 mb-1">
+                              <span>Content progress</span>
+                              <span>{subject.totalContent} items</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                              <div
+                                className="h-1.5 rounded-full bg-gradient-to-r from-blue-500 via-green-500 to-purple-500 transition-all duration-500"
+                                style={{
+                                  width: `${Math.min(100, Math.max(10, (subject.totalContent / 10) * 100))}%`
+                                }}
+                              ></div>
+                            </div>
+                          </div>
+                        ) : (
+                          <Badge variant="outline" className="text-xs w-fit animate-pulse border-red-300 text-red-600">
+                            No content
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {subject.prerequisiteId ? (
+                        <Badge variant="outline" className="text-xs">
+                          {subject.prerequisiteId.name}
+                        </Badge>
+                      ) : (
+                        <span className="text-gray-400 text-sm">None</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge className={getDifficultyColor(subject.difficulty)}>
@@ -285,9 +349,6 @@ export default function SubjectsPage() {
                       <Badge variant={subject.isUnlocked ? "default" : "secondary"}>
                         {subject.isUnlocked ? 'Published' : 'Draft'}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(subject.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>

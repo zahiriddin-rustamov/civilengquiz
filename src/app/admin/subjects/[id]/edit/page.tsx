@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Save, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ImageUpload } from '@/components/ui/image-upload';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { ISubject } from '@/models/database';
 
 interface SubjectFormData {
@@ -24,6 +26,7 @@ interface SubjectFormData {
   xpReward: number;
   order: number;
   isUnlocked: boolean;
+  prerequisiteId: string;
 }
 
 export default function EditSubjectPage() {
@@ -35,6 +38,7 @@ export default function EditSubjectPage() {
   const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [originalSubject, setOriginalSubject] = useState<ISubject | null>(null);
+  const [availableSubjects, setAvailableSubjects] = useState<{ _id: string; name: string }[]>([]);
   const [formData, setFormData] = useState<SubjectFormData>({
     name: '',
     description: '',
@@ -44,13 +48,31 @@ export default function EditSubjectPage() {
     xpReward: 100,
     order: 1,
     isUnlocked: true,
+    prerequisiteId: 'none',
   });
 
   useEffect(() => {
     if (subjectId) {
       fetchSubject();
+      fetchAvailableSubjects();
     }
   }, [subjectId]);
+
+  const fetchAvailableSubjects = async () => {
+    try {
+      const response = await fetch('/api/subjects');
+      if (response.ok) {
+        const subjects = await response.json();
+        // Filter out the current subject to prevent self-reference
+        const filtered = subjects
+          .filter((s: any) => s._id !== subjectId)
+          .map((s: any) => ({ _id: s._id, name: s.name }));
+        setAvailableSubjects(filtered);
+      }
+    } catch (err) {
+      console.error('Error fetching available subjects:', err);
+    }
+  };
 
   const fetchSubject = async () => {
     try {
@@ -79,6 +101,7 @@ export default function EditSubjectPage() {
         xpReward: subject.xpReward,
         order: subject.order,
         isUnlocked: subject.isUnlocked,
+        prerequisiteId: subject.prerequisiteId?.toString() || 'none',
       });
     } catch (err) {
       console.error('Error fetching subject:', err);
@@ -115,12 +138,18 @@ export default function EditSubjectPage() {
     setError(null);
 
     try {
+      // Prepare the data, converting "none" or empty prerequisiteId to undefined
+      const submitData = {
+        ...formData,
+        prerequisiteId: formData.prerequisiteId && formData.prerequisiteId !== 'none' ? formData.prerequisiteId : undefined
+      };
+
       const response = await fetch(`/api/subjects/${subjectId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       if (!response.ok) {
@@ -272,27 +301,47 @@ export default function EditSubjectPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description *</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                placeholder="Brief description of what students will learn in this subject..."
-                rows={3}
+              <Label htmlFor="prerequisite">Prerequisite Subject (optional)</Label>
+              <Select
+                value={formData.prerequisiteId}
+                onValueChange={(value) => handleInputChange('prerequisiteId', value)}
                 disabled={isLoading}
-              />
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select prerequisite subject (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No prerequisite</SelectItem>
+                  {availableSubjects.map(subject => (
+                    <SelectItem key={subject._id} value={subject._id}>
+                      {subject.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-gray-500">
+                Students must complete this subject before accessing this subject
+              </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="imageUrl">Image URL (optional)</Label>
-              <Input
-                id="imageUrl"
-                value={formData.imageUrl}
-                onChange={(e) => handleInputChange('imageUrl', e.target.value)}
-                placeholder="https://example.com/image.jpg"
-                disabled={isLoading}
-              />
-            </div>
+            <RichTextEditor
+              label="Description *"
+              value={formData.description}
+              onChange={(value) => handleInputChange('description', value)}
+              placeholder="Provide a detailed description of what students will learn in this subject..."
+              disabled={isLoading}
+              rows={4}
+              required
+            />
+
+            <ImageUpload
+              label="Subject Image (optional)"
+              description="Upload an image to represent this subject"
+              value={formData.imageUrl}
+              onChange={(url) => handleInputChange('imageUrl', url)}
+              disabled={isLoading}
+              maxSizeKB={1024}
+            />
 
             {/* Numerical Settings */}
             <div className="grid gap-6 md:grid-cols-3">

@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     
     // Validate required fields
     const { name, description, difficulty, estimatedHours, xpReward, order } = data;
-    
+
     if (!name || !description || !difficulty || !estimatedHours || !xpReward || order === undefined) {
       return NextResponse.json(
         { error: 'Missing required fields: name, description, difficulty, estimatedHours, xpReward, order' },
@@ -49,7 +49,8 @@ export async function POST(request: NextRequest) {
       order,
       difficulty,
       estimatedHours,
-      xpReward
+      xpReward,
+      prerequisiteId: data.prerequisiteId
     });
 
     return NextResponse.json(subject, { status: 201 });

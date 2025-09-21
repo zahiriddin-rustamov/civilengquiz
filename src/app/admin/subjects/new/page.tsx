@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Save, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ImageUpload } from '@/components/ui/image-upload';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 interface SubjectFormData {
   name: string;
@@ -22,12 +24,14 @@ interface SubjectFormData {
   xpReward: number;
   order: number;
   isUnlocked: boolean;
+  prerequisiteId: string;
 }
 
 export default function NewSubjectPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [availableSubjects, setAvailableSubjects] = useState<{ _id: string; name: string }[]>([]);
   const [formData, setFormData] = useState<SubjectFormData>({
     name: '',
     description: '',
@@ -37,7 +41,38 @@ export default function NewSubjectPage() {
     xpReward: 100,
     order: 1,
     isUnlocked: true,
+    prerequisiteId: 'none',
   });
+
+  useEffect(() => {
+    fetchAvailableSubjects();
+    fetchNextOrder();
+  }, []);
+
+  const fetchAvailableSubjects = async () => {
+    try {
+      const response = await fetch('/api/subjects');
+      if (response.ok) {
+        const subjects = await response.json();
+        setAvailableSubjects(subjects.map((s: any) => ({ _id: s._id, name: s.name })));
+      }
+    } catch (err) {
+      console.error('Error fetching subjects:', err);
+    }
+  };
+
+  const fetchNextOrder = async () => {
+    try {
+      const response = await fetch('/api/subjects');
+      if (response.ok) {
+        const subjects = await response.json();
+        const maxOrder = subjects.length > 0 ? Math.max(...subjects.map((s: any) => s.order)) : 0;
+        setFormData(prev => ({ ...prev, order: maxOrder + 1 }));
+      }
+    } catch (err) {
+      console.error('Error fetching order:', err);
+    }
+  };
 
   const handleInputChange = (field: keyof SubjectFormData, value: string | number | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -66,12 +101,18 @@ export default function NewSubjectPage() {
     setError(null);
 
     try {
+      // Prepare the data, converting "none" or empty prerequisiteId to undefined
+      const submitData = {
+        ...formData,
+        prerequisiteId: formData.prerequisiteId && formData.prerequisiteId !== 'none' ? formData.prerequisiteId : undefined
+      };
+
       const response = await fetch('/api/subjects', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       if (!response.ok) {
@@ -139,12 +180,12 @@ export default function NewSubjectPage() {
                   disabled={isLoading}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="difficulty">Difficulty Level *</Label>
                 <Select
                   value={formData.difficulty}
-                  onValueChange={(value: 'Beginner' | 'Intermediate' | 'Advanced') => 
+                  onValueChange={(value: 'Beginner' | 'Intermediate' | 'Advanced') =>
                     handleInputChange('difficulty', value)
                   }
                   disabled={isLoading}
@@ -162,27 +203,47 @@ export default function NewSubjectPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description *</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                placeholder="Brief description of what students will learn in this subject..."
-                rows={3}
+              <Label htmlFor="prerequisite">Prerequisite Subject (optional)</Label>
+              <Select
+                value={formData.prerequisiteId}
+                onValueChange={(value) => handleInputChange('prerequisiteId', value)}
                 disabled={isLoading}
-              />
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select prerequisite subject (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No prerequisite</SelectItem>
+                  {availableSubjects.map(subject => (
+                    <SelectItem key={subject._id} value={subject._id}>
+                      {subject.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-gray-500">
+                Students must complete this subject before accessing the new subject
+              </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="imageUrl">Image URL (optional)</Label>
-              <Input
-                id="imageUrl"
-                value={formData.imageUrl}
-                onChange={(e) => handleInputChange('imageUrl', e.target.value)}
-                placeholder="https://example.com/image.jpg"
-                disabled={isLoading}
-              />
-            </div>
+            <RichTextEditor
+              label="Description *"
+              value={formData.description}
+              onChange={(value) => handleInputChange('description', value)}
+              placeholder="Provide a detailed description of what students will learn in this subject..."
+              disabled={isLoading}
+              rows={4}
+              required
+            />
+
+            <ImageUpload
+              label="Subject Image (optional)"
+              description="Upload an image to represent this subject"
+              value={formData.imageUrl}
+              onChange={(url) => handleInputChange('imageUrl', url)}
+              disabled={isLoading}
+              maxSizeKB={1024}
+            />
 
             {/* Numerical Settings */}
             <div className="grid gap-6 md:grid-cols-3">

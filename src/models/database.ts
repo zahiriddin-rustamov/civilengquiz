@@ -53,6 +53,7 @@ export interface ISubject extends Document {
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   estimatedHours: number;
   xpReward: number;
+  prerequisiteId?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -66,6 +67,7 @@ const SubjectSchema = new Schema<ISubject>({
   difficulty: { type: String, enum: ['Beginner', 'Intermediate', 'Advanced'], required: true },
   estimatedHours: { type: Number, required: true },
   xpReward: { type: Number, required: true },
+  prerequisiteId: { type: Schema.Types.ObjectId, ref: 'Subject' },
 }, {
   timestamps: true
 });
