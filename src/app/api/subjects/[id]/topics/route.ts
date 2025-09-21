@@ -21,8 +21,21 @@ export async function GET(
           MediaService.getMediaByTopic(topic._id.toString())
         ]);
 
+        // Calculate totals from content
+        const totalXpReward =
+          questions.reduce((sum, q) => sum + (q.xpReward || 0), 0) +
+          flashcards.reduce((sum, f) => sum + (f.xpReward || 0), 0) +
+          media.reduce((sum, m) => sum + (m.xpReward || 0), 0);
+
+        const totalEstimatedMinutes =
+          questions.reduce((sum, q) => sum + (q.estimatedMinutes || 0), 0) +
+          flashcards.reduce((sum, f) => sum + (f.estimatedMinutes || 0), 0) +
+          media.reduce((sum, m) => sum + (m.estimatedMinutes || 0), 0);
+
         return {
           ...topic,
+          xpReward: totalXpReward,
+          estimatedMinutes: totalEstimatedMinutes,
           contentCounts: {
             questions: questions.length,
             flashcards: flashcards.length,

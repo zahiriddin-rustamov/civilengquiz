@@ -92,7 +92,7 @@ export default function StudyWorldsPage() {
         icon: getSubjectIcon(subject.name),
         color: getSubjectColor(subject.name),
         progress: 0, // TODO: Calculate actual progress from user data
-        topicsCount: 0, // TODO: Fetch actual topic count
+        topicsCount: (subject as any).topicCount || 0, // Use actual topic count from API
       }));
       
       setStudyWorlds(enhancedSubjects);
@@ -318,8 +318,23 @@ function WorldCard({ world }: { world: EnhancedSubject }) {
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center space-x-4">
-            <div className="flex-shrink-0 w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
-              {world.icon}
+            <div className="flex-shrink-0 w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 overflow-hidden">
+              {world.imageUrl ? (
+                <img
+                  src={world.imageUrl}
+                  alt={world.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Fallback to icon if image fails to load
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    target.nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+              ) : null}
+              <div className={world.imageUrl ? 'hidden' : ''}>
+                {world.icon}
+              </div>
             </div>
             <div>
               <h3 className="text-xl font-bold mb-1">{world.name}</h3>

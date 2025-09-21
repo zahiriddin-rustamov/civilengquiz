@@ -134,8 +134,8 @@ export default function SubjectPage() {
         order: topic.order,
         isUnlocked: topic.isUnlocked,
         difficulty: topic.difficulty,
-        estimatedMinutes: topic.estimatedMinutes,
-        xpReward: topic.xpReward,
+        estimatedMinutes: topic.estimatedMinutes || 0,
+        xpReward: topic.xpReward || 0,
         createdAt: topic.createdAt,
         updatedAt: topic.updatedAt,
         progress: 0, // TODO: Calculate actual progress from user data
@@ -222,8 +222,8 @@ export default function SubjectPage() {
   }
 
   const completedTopics = topics.filter(t => t.progress === 100).length;
-  const totalXP = topics.reduce((sum, t) => sum + (t.isUnlocked ? t.xpReward : 0), 0);
-  const totalTime = topics.reduce((sum, t) => sum + t.estimatedMinutes, 0);
+  const totalXP = topics.reduce((sum, t) => sum + (t.isUnlocked ? (t.xpReward || 0) : 0), 0);
+  const totalTime = topics.reduce((sum, t) => sum + (t.estimatedMinutes || 0), 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
@@ -255,8 +255,23 @@ export default function SubjectPage() {
 
           <div className="relative">
             <div className="flex items-center space-x-6 mb-6">
-              <div className="flex-shrink-0 w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
-                {getSubjectIcon(subjectInfo.name)}
+              <div className="flex-shrink-0 w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 overflow-hidden">
+                {subjectInfo.imageUrl ? (
+                  <img
+                    src={subjectInfo.imageUrl}
+                    alt={subjectInfo.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Fallback to icon if image fails to load
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      target.nextElementSibling?.classList.remove('hidden');
+                    }}
+                  />
+                ) : null}
+                <div className={subjectInfo.imageUrl ? 'hidden' : ''}>
+                  {getSubjectIcon(subjectInfo.name)}
+                </div>
               </div>
               <div>
                 <h1 className="text-3xl font-bold mb-2">{subjectInfo.name}</h1>
@@ -287,7 +302,7 @@ export default function SubjectPage() {
                   <Clock className="w-5 h-5" />
                   <span className="text-white/80">Est. Time</span>
                 </div>
-                <div className="text-2xl font-bold">{Math.round(totalTime / 60)}h</div>
+                <div className="text-2xl font-bold">{totalTime}min</div>
               </div>
 
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
@@ -408,7 +423,7 @@ function TopicCard({ topic, subjectId }: {
             
             <div className="flex items-center space-x-2 text-sm text-gray-500">
               <Clock className="w-4 h-4" />
-              <span>{topic.estimatedMinutes}min</span>
+              <span>{topic.estimatedMinutes || 0}min</span>
             </div>
           </div>
         </Link>
@@ -477,7 +492,7 @@ function TopicCard({ topic, subjectId }: {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <Zap className="w-4 h-4 text-yellow-500" />
-            <span>+{topic.xpReward} XP</span>
+            <span>+{topic.xpReward || 0} XP</span>
           </div>
           
           <div className="flex items-center space-x-3">
