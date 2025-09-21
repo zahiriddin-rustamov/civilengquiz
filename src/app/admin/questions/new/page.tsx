@@ -274,6 +274,21 @@ export default function NewQuestionPage() {
           setError('All blanks must have at least one correct answer');
           return;
         }
+        // Validate that question text contains blank markers
+        const blankMarkers = /___+|\{blank\}/gi;
+        const markersInText = formData.text.match(blankMarkers);
+        const markerCount = markersInText ? markersInText.length : 0;
+
+        if (markerCount === 0) {
+          setError('Fill-in-blank questions must contain blank markers (_____ or {blank}) in the question text');
+          return;
+        }
+
+        if (markerCount !== fillInBlankData.blanks.length) {
+          setError(`Number of blank markers in question text (${markerCount}) must match number of configured blanks (${fillInBlankData.blanks.length})`);
+          return;
+        }
+
         questionData.data = fillInBlankData;
         break;
       case 'numerical':

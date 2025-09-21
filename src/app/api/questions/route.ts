@@ -118,6 +118,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Additional validation for fill-in-blank questions
+    if (type === 'fill-in-blank') {
+      const blankValidation = validateFillInBlankText(text, data.data);
+      if (!blankValidation.valid) {
+        return NextResponse.json(
+          { error: blankValidation.error },
+          { status: 400 }
+        );
+      }
+    }
+
     // Auto-calculate next order value within the topic
     const existingQuestions = await Question.find({ topicId }).sort({ order: -1 }).limit(1);
     const nextOrder = existingQuestions.length > 0 ? existingQuestions[0].order + 1 : 1;
@@ -262,6 +273,29 @@ function validateQuestionData(type: string, data: any): { valid: boolean; error?
 
     default:
       return { valid: false, error: 'Invalid question type' };
+  }
+
+  return { valid: true };
+}
+
+// Validate fill-in-blank question text contains appropriate blank markers
+function validateFillInBlankText(text: string, data: any): { valid: boolean; error?: string } {
+  const blankMarkers = /___+|\{blank\}/gi;
+  const markersInText = text.match(blankMarkers);
+  const markerCount = markersInText ? markersInText.length : 0;
+
+  if (markerCount === 0) {
+    return {
+      valid: false,
+      error: 'Fill-in-blank questions must contain blank markers (_____ or {blank}) in the question text'
+    };
+  }
+
+  if (markerCount !== data.blanks.length) {
+    return {
+      valid: false,
+      error: `Number of blank markers in question text (${markerCount}) must match number of configured blanks (${data.blanks.length})`
+    };
   }
 
   return { valid: true };
