@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Plus, X, Save, AlertCircle, CreditCard, Tag } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ArrowLeft, Plus, X, Save, AlertCircle, CreditCard, Tag, Loader2 } from 'lucide-react';
 import { ImageUrlInput } from '@/components/ui/image-url-input';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { ISubject, ITopic } from '@/models/database';
@@ -28,14 +29,14 @@ interface FlashcardData {
   category?: string;
 }
 
-export default function NewFlashcardPage() {
+export default function EditFlashcardPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [subjects, setSubjects] = useState<ISubject[]>([]);
   const [topics, setTopics] = useState<ITopic[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
 
   const [formData, setFormData] = useState<FlashcardData>({
     topicId: '',
@@ -53,45 +54,49 @@ export default function NewFlashcardPage() {
   const [currentTag, setCurrentTag] = useState('');
 
   useEffect(() => {
+    fetchFlashcard();
     fetchSubjects();
-
-    // Pre-select topic if provided in URL
-    const topicId = searchParams?.get('topicId');
-    const duplicateId = searchParams?.get('duplicate');
-
-    if (topicId) {
-      setFormData(prev => ({ ...prev, topicId }));
-      fetchTopicAndSubject(topicId);
-    }
-
-    // Load flashcard to duplicate
-    if (duplicateId) {
-      fetchFlashcardToDuplicate(duplicateId);
-    }
-  }, [searchParams]);
+  }, [params.id]);
 
   useEffect(() => {
-    if (formData.topicId) {
-      fetchNextOrder(formData.topicId);
+    if (selectedSubject) {
+      fetchTopicsForSubject(selectedSubject);
     }
-  }, [formData.topicId, topics]);
+  }, [selectedSubject]);
 
-  // Add keyboard shortcut support
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl/Cmd + Enter to submit
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        const form = document.getElementById('flashcard-form') as HTMLFormElement;
-        if (form) {
-          form.requestSubmit();
-        }
+  const fetchFlashcard = async () => {
+    try {
+      setIsFetching(true);
+      const response = await fetch(`/api/admin/flashcards/${params.id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch flashcard');
       }
-    };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+      const data = await response.json();
+      setFormData({
+        topicId: data.topicId.toString(),
+        front: data.front,
+        back: data.back,
+        imageUrl: data.imageUrl || '',
+        difficulty: data.difficulty,
+        xpReward: data.xpReward,
+        estimatedMinutes: data.estimatedMinutes,
+        order: data.order,
+        tags: data.tags || [],
+        category: data.category || ''
+      });
+
+      // Set the subject ID for fetching topics
+      if (data.subjectId) {
+        setSelectedSubject(data.subjectId.toString());
+      }
+    } catch (err) {
+      console.error('Error fetching flashcard:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load flashcard');
+    } finally {
+      setIsFetching(false);
+    }
+  };
 
   const fetchSubjects = async () => {
     try {
@@ -105,12 +110,6 @@ export default function NewFlashcardPage() {
     }
   };
 
-  const handleSubjectChange = (subjectId: string) => {
-    setSelectedSubject(subjectId);
-    fetchTopicsForSubject(subjectId);
-    setFormData(prev => ({ ...prev, topicId: '' }));
-  };
-
   const fetchTopicsForSubject = async (subjectId: string) => {
     try {
       const response = await fetch(`/api/subjects/${subjectId}/topics`);
@@ -120,65 +119,6 @@ export default function NewFlashcardPage() {
       }
     } catch (err) {
       console.error('Error fetching topics:', err);
-    }
-  };
-
-  const fetchTopicAndSubject = async (topicId: string) => {
-    try {
-      const response = await fetch(`/api/topics/${topicId}`);
-      if (response.ok) {
-        const topic = await response.json();
-        const subjectResponse = await fetch(`/api/subjects/${topic.subjectId}/topics`);
-        if (subjectResponse.ok) {
-          const topicsData = await subjectResponse.json();
-          setTopics(topicsData);
-          setSelectedSubject(topic.subjectId.toString());
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching topic and subject:', err);
-    }
-  };
-
-  const fetchNextOrder = async (topicId: string) => {
-    try {
-      const response = await fetch(`/api/admin/flashcards?topicId=${topicId}`);
-      if (response.ok) {
-        const data = await response.json();
-        const nextOrder = (data.flashcards?.length || 0) + 1;
-        setFormData(prev => ({ ...prev, order: nextOrder }));
-      }
-    } catch (err) {
-      console.error('Error fetching flashcards:', err);
-    }
-  };
-
-  const fetchFlashcardToDuplicate = async (flashcardId: string) => {
-    try {
-      const response = await fetch(`/api/admin/flashcards/${flashcardId}`);
-      if (response.ok) {
-        const flashcard = await response.json();
-        setFormData({
-          topicId: flashcard.topicId.toString(),
-          front: flashcard.front + ' (Copy)',
-          back: flashcard.back,
-          imageUrl: flashcard.imageUrl || '',
-          difficulty: flashcard.difficulty,
-          xpReward: flashcard.xpReward,
-          estimatedMinutes: flashcard.estimatedMinutes,
-          order: 1, // Will be updated when topic is selected
-          tags: [...flashcard.tags],
-          category: flashcard.category || ''
-        });
-
-        // Set the subject for fetching topics
-        if (flashcard.subjectId) {
-          setSelectedSubject(flashcard.subjectId.toString());
-          fetchTopicsForSubject(flashcard.subjectId.toString());
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching flashcard to duplicate:', err);
     }
   };
 
@@ -206,6 +146,23 @@ export default function NewFlashcardPage() {
     }
   };
 
+  // Add keyboard shortcut support
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + Enter to submit
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        const form = document.getElementById('flashcard-edit-form') as HTMLFormElement;
+        if (form) {
+          form.requestSubmit();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -218,8 +175,8 @@ export default function NewFlashcardPage() {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/admin/flashcards', {
-        method: 'POST',
+      const response = await fetch(`/api/admin/flashcards/${params.id}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -233,17 +190,45 @@ export default function NewFlashcardPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create flashcard');
+        throw new Error(errorData.error || 'Failed to update flashcard');
       }
 
       router.push('/admin/flashcards');
     } catch (err) {
-      console.error('Error creating flashcard:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create flashcard');
+      console.error('Error updating flashcard:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update flashcard');
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (isFetching) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" asChild>
+            <Link href="/admin/flashcards">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Flashcards
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Edit Flashcard</h1>
+            <p className="text-gray-600">Modify flashcard details</p>
+          </div>
+        </div>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-center space-x-2">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span>Loading flashcard...</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -256,12 +241,12 @@ export default function NewFlashcardPage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Create New Flashcard</h1>
-          <p className="text-gray-600">Add a new flashcard for spaced repetition learning</p>
+          <h1 className="text-3xl font-bold text-gray-900">Edit Flashcard</h1>
+          <p className="text-gray-600">Modify flashcard details</p>
         </div>
       </div>
 
-      {/* Error Alert */}
+      {/* Error Display */}
       {error && (
         <Card className="border-red-200 bg-red-50">
           <CardContent className="pt-6">
@@ -273,7 +258,7 @@ export default function NewFlashcardPage() {
         </Card>
       )}
 
-      <form id="flashcard-form" onSubmit={handleSubmit} className="space-y-6">
+      <form id="flashcard-edit-form" onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Setup */}
         <Card>
           <CardHeader>
@@ -284,7 +269,13 @@ export default function NewFlashcardPage() {
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="subject">Subject *</Label>
-                <Select value={selectedSubject} onValueChange={handleSubjectChange}>
+                <Select
+                  value={selectedSubject}
+                  onValueChange={(value) => {
+                    setSelectedSubject(value);
+                    fetchTopicsForSubject(value);
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select subject" />
                   </SelectTrigger>
@@ -559,12 +550,12 @@ export default function NewFlashcardPage() {
             {isLoading ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Creating...
+                Updating...
               </>
             ) : (
               <>
                 <Save className="w-4 h-4 mr-2" />
-                Create Flashcard
+                Update Flashcard
               </>
             )}
           </Button>

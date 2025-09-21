@@ -43,7 +43,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       {
         $addFields: {
           topicName: { $arrayElemAt: ['$topic.name', 0] },
-          subjectName: { $arrayElemAt: ['$subject.name', 0] }
+          subjectName: { $arrayElemAt: ['$subject.name', 0] },
+          subjectId: { $arrayElemAt: ['$topic.subjectId', 0] }
         }
       }
     ]);
@@ -78,18 +79,20 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     const body = await req.json();
     const {
+      topicId,
       front,
       back,
       imageUrl,
       difficulty,
-      points,
+      xpReward,
+      estimatedMinutes,
       order,
       tags,
       category
     } = body;
 
     // Validate required fields
-    if (!front?.trim() || !back?.trim() || !difficulty || points === undefined || order === undefined) {
+    if (!front?.trim() || !back?.trim() || !difficulty || xpReward === undefined || estimatedMinutes === undefined || order === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -97,11 +100,13 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     const updatedFlashcard = await Flashcard.findByIdAndUpdate(
       flashcardId,
       {
+        ...(topicId && { topicId: new Types.ObjectId(topicId) }),
         front: front.trim(),
         back: back.trim(),
         imageUrl,
         difficulty,
-        points,
+        xpReward,
+        estimatedMinutes,
         order,
         tags: Array.isArray(tags) ? tags.filter(tag => tag.trim()) : [],
         category: category?.trim() || undefined,
@@ -136,7 +141,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       {
         $addFields: {
           topicName: { $arrayElemAt: ['$topic.name', 0] },
-          subjectName: { $arrayElemAt: ['$subject.name', 0] }
+          subjectName: { $arrayElemAt: ['$subject.name', 0] },
+          subjectId: { $arrayElemAt: ['$topic.subjectId', 0] }
         }
       }
     ]);

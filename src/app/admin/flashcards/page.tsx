@@ -22,12 +22,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { 
-  Plus, 
-  Search, 
-  MoreVertical, 
-  Edit, 
-  Trash2, 
+import {
+  Plus,
+  Search,
+  MoreVertical,
+  Edit,
+  Trash2,
   Eye,
   CreditCard,
   Zap,
@@ -35,7 +35,9 @@ import {
   Upload,
   Download,
   Tag,
-  Clock
+  Clock,
+  Copy,
+  Filter
 } from 'lucide-react';
 import { ISubject, ITopic } from '@/models/database';
 import { Types } from 'mongoose';
@@ -47,7 +49,8 @@ interface EnhancedFlashcard {
   back: string;
   imageUrl?: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  points: number;
+  xpReward: number;
+  estimatedMinutes: number;
   order: number;
   tags: string[];
   category?: string;
@@ -189,6 +192,57 @@ export default function FlashcardsPage() {
     }
   };
 
+  const handleExport = (format: 'csv' | 'json') => {
+    const dataToExport = filteredFlashcards.map(fc => ({
+      front: fc.front,
+      back: fc.back,
+      difficulty: fc.difficulty,
+      xpReward: fc.xpReward,
+      estimatedMinutes: fc.estimatedMinutes,
+      tags: fc.tags.join(';'),
+      category: fc.category || '',
+      topicName: fc.topicName,
+      subjectName: fc.subjectName,
+      order: fc.order
+    }));
+
+    if (format === 'csv') {
+      const headers = ['Front', 'Back', 'Difficulty', 'XP Reward', 'Est. Minutes', 'Tags', 'Category', 'Topic', 'Subject', 'Order'];
+      const csvContent = [
+        headers.join(','),
+        ...dataToExport.map(row => [
+          `"${row.front.replace(/"/g, '""')}"`,
+          `"${row.back.replace(/"/g, '""')}"`,
+          row.difficulty,
+          row.xpReward,
+          row.estimatedMinutes,
+          `"${row.tags}"`,
+          `"${row.category}"`,
+          `"${row.topicName}"`,
+          `"${row.subjectName}"`,
+          row.order
+        ].join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `flashcards_export_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } else {
+      const jsonContent = JSON.stringify(dataToExport, null, 2);
+      const blob = new Blob([jsonContent], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `flashcards_export_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
+  };
+
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'Beginner': return 'bg-green-100 text-green-800';
@@ -215,8 +269,9 @@ export default function FlashcardsPage() {
         'Intermediate': flashcards.filter(fc => fc.difficulty === 'Intermediate').length,
         'Advanced': flashcards.filter(fc => fc.difficulty === 'Advanced').length,
       },
-      totalPoints: flashcards.reduce((sum, fc) => sum + fc.points, 0),
-      avgPoints: flashcards.length > 0 ? Math.round(flashcards.reduce((sum, fc) => sum + fc.points, 0) / flashcards.length) : 0,
+      totalXpReward: flashcards.reduce((sum, fc) => sum + fc.xpReward, 0),
+      totalEstimatedMinutes: flashcards.reduce((sum, fc) => sum + fc.estimatedMinutes, 0),
+      avgXpReward: flashcards.length > 0 ? Math.round(flashcards.reduce((sum, fc) => sum + fc.xpReward, 0) / flashcards.length) : 0,
       categories: categories.length,
     };
   };
@@ -273,6 +328,24 @@ export default function FlashcardsPage() {
           <p className="text-gray-600">Manage flashcards for spaced repetition learning</p>
         </div>
         <div className="flex space-x-2">
+          {filteredFlashcards.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => handleExport('csv')}>
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('json')}>
+                  Export as JSON
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           {selectedTopic !== 'all' && (
             <Button asChild variant="outline">
               <Link href={`/admin/flashcards/new?topicId=${selectedTopic}`}>
@@ -331,16 +404,16 @@ export default function FlashcardsPage() {
             <Zap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalPoints}</div>
+            <div className="text-2xl font-bold">{stats.totalXpReward}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Points</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Time</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.avgPoints}</div>
+            <div className="text-2xl font-bold">{Math.round(stats.totalEstimatedMinutes)} min</div>
           </CardContent>
         </Card>
       </div>
@@ -358,7 +431,7 @@ export default function FlashcardsPage() {
             <div className="flex items-center space-x-2">
               {/* Subject Filter */}
               <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-40">
                   <SelectValue placeholder="All subjects" />
                 </SelectTrigger>
                 <SelectContent>
@@ -370,10 +443,10 @@ export default function FlashcardsPage() {
                   ))}
                 </SelectContent>
               </Select>
-              
+
               {/* Topic Filter */}
               <Select value={selectedTopic} onValueChange={setSelectedTopic} disabled={selectedSubject === 'all'}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-40">
                   <SelectValue placeholder="All topics" />
                 </SelectTrigger>
                 <SelectContent>
@@ -388,7 +461,7 @@ export default function FlashcardsPage() {
 
               {/* Category Filter */}
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-36">
                   <SelectValue placeholder="All categories" />
                 </SelectTrigger>
                 <SelectContent>
@@ -400,10 +473,10 @@ export default function FlashcardsPage() {
                   ))}
                 </SelectContent>
               </Select>
-              
+
               {/* Difficulty Filter */}
               <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-36">
                   <SelectValue placeholder="All difficulties" />
                 </SelectTrigger>
                 <SelectContent>
@@ -459,7 +532,8 @@ export default function FlashcardsPage() {
                   <TableHead>Category</TableHead>
                   <TableHead>Difficulty</TableHead>
                   <TableHead>Tags</TableHead>
-                  <TableHead>Points</TableHead>
+                  <TableHead>XP</TableHead>
+                  <TableHead>Minutes</TableHead>
                   <TableHead>Order</TableHead>
                   <TableHead className="w-[70px]">Actions</TableHead>
                 </TableRow>
@@ -510,7 +584,8 @@ export default function FlashcardsPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{flashcard.points}</TableCell>
+                    <TableCell>{flashcard.xpReward}</TableCell>
+                    <TableCell>{flashcard.estimatedMinutes}</TableCell>
                     <TableCell>{flashcard.order}</TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -531,6 +606,12 @@ export default function FlashcardsPage() {
                             <Link href={`/admin/flashcards/${flashcard._id}/edit`}>
                               <Edit className="w-4 h-4 mr-2" />
                               Edit
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/flashcards/new?duplicate=${flashcard._id}`}>
+                              <Copy className="w-4 h-4 mr-2" />
+                              Duplicate
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />

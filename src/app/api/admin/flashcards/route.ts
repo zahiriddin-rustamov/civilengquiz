@@ -99,14 +99,19 @@ export async function POST(req: Request) {
       back,
       imageUrl,
       difficulty,
-      points,
+      xpReward,
+      estimatedMinutes,
       order,
       tags,
       category
     } = body;
 
+    // Handle backward compatibility for points/xpReward
+    const rewardPoints = xpReward !== undefined ? xpReward : (body.points || 10);
+    const estMinutes = estimatedMinutes !== undefined ? estimatedMinutes : 2;
+
     // Validate required fields
-    if (!topicId || !front?.trim() || !back?.trim() || !difficulty || points === undefined || order === undefined) {
+    if (!topicId || !front?.trim() || !back?.trim() || !difficulty || rewardPoints === undefined || order === undefined) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -123,7 +128,8 @@ export async function POST(req: Request) {
       back: back.trim(),
       imageUrl,
       difficulty,
-      points,
+      xpReward: rewardPoints,
+      estimatedMinutes: estMinutes,
       order,
       tags: Array.isArray(tags) ? tags.filter(tag => tag.trim()) : [],
       category: category?.trim() || undefined
@@ -197,7 +203,8 @@ export async function PUT(req: Request) {
       back: fc.back.trim(),
       imageUrl: fc.imageUrl,
       difficulty: fc.difficulty || 'Beginner',
-      points: fc.points || 5,
+      xpReward: fc.xpReward !== undefined ? fc.xpReward : (fc.points || 10),
+      estimatedMinutes: fc.estimatedMinutes !== undefined ? fc.estimatedMinutes : 2,
       order: fc.order || index + 1,
       tags: Array.isArray(fc.tags) ? fc.tags.filter(tag => tag.trim()) : [],
       category: fc.category?.trim() || undefined

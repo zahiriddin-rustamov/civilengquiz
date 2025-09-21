@@ -18,7 +18,8 @@ interface BulkFlashcard {
   front: string;
   back: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  points: number;
+  xpReward: number;
+  estimatedMinutes: number;
   tags: string[];
   category?: string;
 }
@@ -43,7 +44,8 @@ export default function BulkFlashcardsPage() {
       front: '',
       back: '',
       difficulty: 'Beginner',
-      points: 5,
+      xpReward: 10,
+      estimatedMinutes: 2,
       tags: [],
       category: ''
     }
@@ -95,9 +97,10 @@ export default function BulkFlashcardsPage() {
             front: columns[0] || '',
             back: columns[1] || '',
             difficulty: (columns[2] as any) || 'Beginner',
-            points: parseInt(columns[3]) || 5,
-            tags: columns[4] ? columns[4].split(';').map(tag => tag.trim()).filter(Boolean) : [],
-            category: columns[5] || undefined
+            xpReward: parseInt(columns[3]) || 10,
+            estimatedMinutes: parseInt(columns[4]) || 2,
+            tags: columns[5] ? columns[5].split(';').map(tag => tag.trim()).filter(Boolean) : [],
+            category: columns[6] || undefined
           };
 
           if (flashcard.front && flashcard.back) {
@@ -121,7 +124,8 @@ export default function BulkFlashcardsPage() {
         front: '',
         back: '',
         difficulty: 'Beginner',
-        points: 5,
+        xpReward: 10,
+        estimatedMinutes: 2,
         tags: [],
         category: ''
       }
@@ -192,7 +196,8 @@ export default function BulkFlashcardsPage() {
         front: '',
         back: '',
         difficulty: 'Beginner',
-        points: 5,
+        xpReward: 10,
+        estimatedMinutes: 2,
         tags: [],
         category: ''
       }]);
@@ -206,9 +211,10 @@ export default function BulkFlashcardsPage() {
   };
 
   const generateCSVTemplate = () => {
-    const template = `Front,Back,Difficulty,Points,Tags,Category
-"What is concrete?","A composite material made of cement, water, and aggregates",Beginner,5,"materials;basics","Definitions"
-"Calculate compressive strength","σ = F/A where F is force and A is area",Intermediate,10,"formulas;strength","Calculations"`;
+    const template = `Front,Back,Difficulty,XP Reward,Est. Minutes,Tags,Category
+"What is concrete?","A composite material made of cement, water, and aggregates",Beginner,10,2,"materials;basics","Definitions"
+"Calculate compressive strength","σ = F/A where F is force and A is area",Intermediate,15,3,"formulas;strength","Calculations"
+"What is the modulus of elasticity?","The ratio of stress to strain in the elastic region",Advanced,20,4,"mechanics;properties","Concepts"`;
     
     const blob = new Blob([template], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -335,13 +341,13 @@ export default function BulkFlashcardsPage() {
                   id="csvData"
                   value={csvData}
                   onChange={(e) => setCsvData(e.target.value)}
-                  placeholder="Front,Back,Difficulty,Points,Tags,Category
-What is concrete?,A composite material...,Beginner,5,materials;basics,Definitions"
+                  placeholder="Front,Back,Difficulty,XP Reward,Est. Minutes,Tags,Category
+What is concrete?,A composite material...,Beginner,10,2,materials;basics,Definitions"
                   rows={8}
                   className="font-mono text-sm"
                 />
                 <div className="mt-2 text-sm text-gray-600">
-                  Expected format: Front, Back, Difficulty, Points, Tags (semicolon-separated), Category
+                  Expected format: Front, Back, Difficulty, XP Reward, Est. Minutes, Tags (semicolon-separated), Category
                 </div>
               </div>
 
@@ -372,7 +378,7 @@ What is concrete?,A composite material...,Beginner,5,materials;basics,Definition
                           <div className="font-medium text-sm">Flashcard {index + 1}</div>
                           <div className="flex space-x-2">
                             <Badge className="text-xs">{flashcard.difficulty}</Badge>
-                            <Badge variant="outline" className="text-xs">{flashcard.points} XP</Badge>
+                            <Badge variant="outline" className="text-xs">{flashcard.xpReward} XP</Badge>
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-sm">
@@ -461,7 +467,7 @@ What is concrete?,A composite material...,Beginner,5,materials;basics,Definition
                       </div>
                     </div>
 
-                    <div className="grid md:grid-cols-4 gap-4">
+                    <div className="grid md:grid-cols-5 gap-4">
                       <div>
                         <Label>Difficulty</Label>
                         <Select 
@@ -480,12 +486,22 @@ What is concrete?,A composite material...,Beginner,5,materials;basics,Definition
                       </div>
 
                       <div>
-                        <Label>Points</Label>
+                        <Label>XP Reward</Label>
                         <Input
                           type="number"
                           min="1"
-                          value={flashcard.points}
-                          onChange={(e) => updateManualFlashcard(index, 'points', parseInt(e.target.value) || 5)}
+                          value={flashcard.xpReward}
+                          onChange={(e) => updateManualFlashcard(index, 'xpReward', parseInt(e.target.value) || 10)}
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Est. Minutes</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={flashcard.estimatedMinutes}
+                          onChange={(e) => updateManualFlashcard(index, 'estimatedMinutes', parseInt(e.target.value) || 2)}
                         />
                       </div>
 
