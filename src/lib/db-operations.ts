@@ -137,7 +137,7 @@ export class FlashcardService {
   }
 }
 
-// Media Operations
+// Media Operations (YouTube-focused)
 export class MediaService {
   static async getMediaByTopic(topicId: string): Promise<IMedia[]> {
     await connectToDatabase();

@@ -183,17 +183,52 @@ const freshConcreteFlashcards = [
 // Sample media content for Fresh Concrete topic
 const freshConcreteMedia = [
   {
-    type: 'video' as const,
     title: 'Concrete Mixing Process',
     description: 'Learn the step-by-step process of mixing concrete for optimal workability and strength.',
     difficulty: 'Beginner' as const,
-    points: 100,
+    xpReward: 100,
+    estimatedMinutes: 8,
     order: 1,
-    data: {
-      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-      duration: 480,
-      thumbnail: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400',
-      topics: ['Mixing', 'Workability', 'Quality Control']
+    youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    youtubeId: 'dQw4w9WgXcQ',
+    videoType: 'video' as const,
+    thumbnail: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400',
+    duration: 480,
+    preVideoContent: {
+      learningObjectives: [
+        'Understand the proper sequence of concrete mixing',
+        'Learn about different mixing methods and equipment',
+        'Identify factors affecting concrete workability'
+      ],
+      prerequisites: [
+        'Basic knowledge of concrete components',
+        'Understanding of water-cement ratio'
+      ],
+      keyTerms: [
+        { term: 'Workability', definition: 'The ease with which concrete can be mixed, transported, and placed' },
+        { term: 'Slump', definition: 'A measure of concrete consistency and workability' }
+      ]
+    },
+    postVideoContent: {
+      keyConcepts: [
+        'Proper mixing sequence ensures uniform distribution of materials',
+        'Over-mixing can reduce workability and cause segregation',
+        'Different projects require different mixing methods'
+      ],
+      reflectionQuestions: [
+        'What would happen if you added water first before cement?',
+        'How does mixing time affect concrete quality?',
+        'When would you choose machine mixing over hand mixing?'
+      ],
+      practicalApplications: [
+        'Small residential projects: portable mixer',
+        'Large construction: ready-mix concrete trucks',
+        'Specialized applications: high-performance mixing equipment'
+      ],
+      additionalResources: [
+        { title: 'ACI Concrete Mixing Guidelines', url: 'https://www.concrete.org' },
+        { title: 'Concrete Construction Magazine', url: 'https://www.concreteconstruction.net' }
+      ]
     }
   },
   {

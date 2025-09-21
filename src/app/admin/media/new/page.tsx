@@ -7,76 +7,86 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Plus, X, Save, AlertCircle, Play, Video, MonitorSpeaker, ImageIcon, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, AlertCircle, Video, Play, Youtube } from 'lucide-react';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { ISubject, ITopic } from '@/models/database';
 
 interface MediaData {
   topicId: string;
-  type: 'video' | 'simulation' | 'gallery';
   title: string;
   description: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  points: number;
+  xpReward: number;
+  estimatedMinutes: number;
   order: number;
-  data: any;
+  youtubeUrl: string;
+  videoType: 'video' | 'short';
+  preVideoContent: {
+    learningObjectives: string[];
+    prerequisites: string[];
+    keyTerms: { term: string; definition: string }[];
+  };
+  postVideoContent: {
+    keyConcepts: string[];
+    reflectionQuestions: string[];
+    practicalApplications: string[];
+    additionalResources: { title: string; url: string }[];
+  };
 }
 
-interface GalleryImage {
-  url: string;
-  caption: string;
-  alt?: string;
-}
+const videoTypes = [
+  {
+    id: 'video',
+    label: 'YouTube Video',
+    icon: Video,
+    description: 'Full-length educational video'
+  },
+  {
+    id: 'short',
+    label: 'YouTube Short',
+    icon: Play,
+    description: 'Short-form educational content'
+  }
+];
 
 export default function NewMediaPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [subjects, setSubjects] = useState<ISubject[]>([]);
   const [topics, setTopics] = useState<ITopic[]>([]);
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [youtubePreview, setYoutubePreview] = useState<{id: string; thumbnail: string} | null>(null);
 
   const [formData, setFormData] = useState<MediaData>({
     topicId: '',
-    type: 'video',
     title: '',
     description: '',
     difficulty: 'Beginner',
-    points: 10,
+    xpReward: 50,
+    estimatedMinutes: 5,
     order: 1,
-    data: {}
+    youtubeUrl: '',
+    videoType: 'video',
+    preVideoContent: {
+      learningObjectives: [''],
+      prerequisites: [''],
+      keyTerms: [{ term: '', definition: '' }]
+    },
+    postVideoContent: {
+      keyConcepts: [''],
+      reflectionQuestions: [''],
+      practicalApplications: [''],
+      additionalResources: [{ title: '', url: '' }]
+    }
   });
-
-  // Type-specific data states
-  const [videoData, setVideoData] = useState({
-    url: '',
-    duration: 0,
-    thumbnail: '',
-    captions: '',
-    quality: '720p'
-  });
-
-  const [simulationData, setSimulationData] = useState({
-    url: '',
-    width: 800,
-    height: 600,
-    parameters: {} as Record<string, any>,
-    instructions: ''
-  });
-
-  const [galleryData, setGalleryData] = useState({
-    images: [{ url: '', caption: '', alt: '' }] as GalleryImage[]
-  });
-
-  const [parameterKey, setParameterKey] = useState('');
-  const [parameterValue, setParameterValue] = useState('');
 
   useEffect(() => {
     fetchSubjects();
-    
+
     // Pre-select topic if provided in URL
     const topicId = searchParams?.get('topicId');
     if (topicId) {
@@ -89,7 +99,40 @@ export default function NewMediaPage() {
     if (formData.topicId) {
       fetchNextOrder(formData.topicId);
     }
-  }, [formData.topicId, topics]);
+  }, [formData.topicId]);
+
+  useEffect(() => {
+    // Extract YouTube ID and generate preview
+    if (formData.youtubeUrl) {
+      const youtubeId = extractYouTubeId(formData.youtubeUrl);
+      if (youtubeId) {
+        setYoutubePreview({
+          id: youtubeId,
+          thumbnail: `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`
+        });
+      } else {
+        setYoutubePreview(null);
+      }
+    } else {
+      setYoutubePreview(null);
+    }
+  }, [formData.youtubeUrl]);
+
+  const extractYouTubeId = (url: string): string | null => {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
+    ];
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) {
+        return match[1];
+      }
+    }
+    return null;
+  };
 
   const fetchSubjects = async () => {
     try {
@@ -105,6 +148,7 @@ export default function NewMediaPage() {
 
   const fetchTopicsForSubject = async (subjectId: string) => {
     try {
+      setSelectedSubject(subjectId);
       const response = await fetch(`/api/subjects/${subjectId}/topics`);
       if (response.ok) {
         const data = await response.json();
@@ -121,6 +165,7 @@ export default function NewMediaPage() {
       const response = await fetch(`/api/topics/${topicId}`);
       if (response.ok) {
         const topic = await response.json();
+        setSelectedSubject(topic.subjectId.toString());
         const subjectResponse = await fetch(`/api/subjects/${topic.subjectId}/topics`);
         if (subjectResponse.ok) {
           const topicsData = await subjectResponse.json();
@@ -145,81 +190,47 @@ export default function NewMediaPage() {
     }
   };
 
-  const addGalleryImage = () => {
-    setGalleryData(prev => ({
-      images: [...prev.images, { url: '', caption: '', alt: '' }]
+  const addArrayItem = (section: 'preVideoContent' | 'postVideoContent', field: string, defaultValue: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [field]: [...(prev[section] as any)[field], defaultValue]
+      }
     }));
   };
 
-  const removeGalleryImage = (index: number) => {
-    setGalleryData(prev => ({
-      images: prev.images.filter((_, i) => i !== index)
+  const removeArrayItem = (section: 'preVideoContent' | 'postVideoContent', field: string, index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [field]: (prev[section] as any)[field].filter((_: any, i: number) => i !== index)
+      }
     }));
   };
 
-  const updateGalleryImage = (index: number, field: keyof GalleryImage, value: string) => {
-    setGalleryData(prev => {
-      const updated = [...prev.images];
-      updated[index] = { ...updated[index], [field]: value };
-      return { images: updated };
-    });
-  };
-
-  const addSimulationParameter = () => {
-    if (parameterKey.trim() && parameterValue.trim()) {
-      setSimulationData(prev => ({
-        ...prev,
-        parameters: {
-          ...prev.parameters,
-          [parameterKey.trim()]: parameterValue.trim()
-        }
-      }));
-      setParameterKey('');
-      setParameterValue('');
-    }
-  };
-
-  const removeSimulationParameter = (key: string) => {
-    setSimulationData(prev => {
-      const updated = { ...prev.parameters };
-      delete updated[key];
-      return { ...prev, parameters: updated };
-    });
+  const updateArrayItem = (section: 'preVideoContent' | 'postVideoContent', field: string, index: number, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [field]: (prev[section] as any)[field].map((item: any, i: number) => i === index ? value : item)
+      }
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.topicId || !formData.title.trim() || !formData.description.trim()) {
+
+    if (!formData.topicId || !formData.title.trim() || !formData.description.trim() || !formData.youtubeUrl.trim()) {
       setError('Please fill in all required fields');
       return;
     }
 
-    // Prepare media data based on type
-    let mediaData = { ...formData };
-    switch (formData.type) {
-      case 'video':
-        if (!videoData.url.trim()) {
-          setError('Video URL is required');
-          return;
-        }
-        mediaData.data = videoData;
-        break;
-      case 'simulation':
-        if (!simulationData.url.trim()) {
-          setError('Simulation URL is required');
-          return;
-        }
-        mediaData.data = simulationData;
-        break;
-      case 'gallery':
-        const validImages = galleryData.images.filter(img => img.url.trim() && img.caption.trim());
-        if (validImages.length === 0) {
-          setError('At least one image with URL and caption is required');
-          return;
-        }
-        mediaData.data = { images: validImages };
-        break;
+    if (!extractYouTubeId(formData.youtubeUrl)) {
+      setError('Please enter a valid YouTube URL');
+      return;
     }
 
     try {
@@ -231,7 +242,7 @@ export default function NewMediaPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(mediaData),
+        body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
@@ -248,257 +259,68 @@ export default function NewMediaPage() {
     }
   };
 
-  const renderTypeSpecificFields = () => {
-    switch (formData.type) {
-      case 'video':
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="videoUrl">Video URL *</Label>
+  const renderArraySection = (
+    title: string,
+    section: 'preVideoContent' | 'postVideoContent',
+    field: string,
+    placeholder: string,
+    defaultValue: any
+  ) => (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-medium">{title}</Label>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => addArrayItem(section, field, defaultValue)}
+        >
+          <Plus className="w-4 h-4 mr-1" />
+          Add
+        </Button>
+      </div>
+      {(formData[section] as any)[field].map((item: any, index: number) => (
+        <div key={index} className="flex gap-2">
+          {typeof item === 'string' ? (
+            <Input
+              value={item}
+              onChange={(e) => updateArrayItem(section, field, index, e.target.value)}
+              placeholder={placeholder}
+              className="flex-1"
+            />
+          ) : (
+            <div className="flex-1 grid grid-cols-2 gap-2">
               <Input
-                id="videoUrl"
-                type="url"
-                value={videoData.url}
-                onChange={(e) => setVideoData(prev => ({ ...prev, url: e.target.value }))}
-                placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
-                required
+                value={item.term || item.title || ''}
+                onChange={(e) => updateArrayItem(section, field, index, { ...item, [field === 'keyTerms' ? 'term' : 'title']: e.target.value })}
+                placeholder={field === 'keyTerms' ? 'Term' : 'Title'}
               />
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="duration">Duration (seconds)</Label>
-                <Input
-                  id="duration"
-                  type="number"
-                  min="0"
-                  value={videoData.duration}
-                  onChange={(e) => setVideoData(prev => ({ ...prev, duration: parseInt(e.target.value) || 0 }))}
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="quality">Quality</Label>
-                <Select 
-                  value={videoData.quality} 
-                  onValueChange={(value) => setVideoData(prev => ({ ...prev, quality: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="480p">480p</SelectItem>
-                    <SelectItem value="720p">720p</SelectItem>
-                    <SelectItem value="1080p">1080p</SelectItem>
-                    <SelectItem value="4K">4K</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="thumbnail">Thumbnail URL (optional)</Label>
               <Input
-                id="thumbnail"
-                type="url"
-                value={videoData.thumbnail}
-                onChange={(e) => setVideoData(prev => ({ ...prev, thumbnail: e.target.value }))}
-                placeholder="https://example.com/thumbnail.jpg"
+                value={item.definition || item.url || ''}
+                onChange={(e) => updateArrayItem(section, field, index, { ...item, [field === 'keyTerms' ? 'definition' : 'url']: e.target.value })}
+                placeholder={field === 'keyTerms' ? 'Definition' : 'URL'}
               />
             </div>
-
-            <div>
-              <Label htmlFor="captions">Captions URL (optional)</Label>
-              <Input
-                id="captions"
-                type="url"
-                value={videoData.captions}
-                onChange={(e) => setVideoData(prev => ({ ...prev, captions: e.target.value }))}
-                placeholder="https://example.com/captions.vtt"
-              />
-            </div>
-          </div>
-        );
-
-      case 'simulation':
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="simulationUrl">Simulation URL *</Label>
-              <Input
-                id="simulationUrl"
-                type="url"
-                value={simulationData.url}
-                onChange={(e) => setSimulationData(prev => ({ ...prev, url: e.target.value }))}
-                placeholder="https://phet.colorado.edu/sims/... or embedded iframe URL"
-                required
-              />
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="width">Width (px)</Label>
-                <Input
-                  id="width"
-                  type="number"
-                  min="300"
-                  value={simulationData.width}
-                  onChange={(e) => setSimulationData(prev => ({ ...prev, width: parseInt(e.target.value) || 800 }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="height">Height (px)</Label>
-                <Input
-                  id="height"
-                  type="number"
-                  min="200"
-                  value={simulationData.height}
-                  onChange={(e) => setSimulationData(prev => ({ ...prev, height: parseInt(e.target.value) || 600 }))}
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label>Simulation Parameters</Label>
-              <div className="space-y-2">
-                <div className="flex space-x-2">
-                  <Input
-                    value={parameterKey}
-                    onChange={(e) => setParameterKey(e.target.value)}
-                    placeholder="Parameter name"
-                    className="flex-1"
-                  />
-                  <Input
-                    value={parameterValue}
-                    onChange={(e) => setParameterValue(e.target.value)}
-                    placeholder="Parameter value"
-                    className="flex-1"
-                  />
-                  <Button type="button" onClick={addSimulationParameter} variant="outline">
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-                
-                {Object.entries(simulationData.parameters).length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(simulationData.parameters).map(([key, value]) => (
-                      <Badge key={key} variant="secondary" className="flex items-center gap-1">
-                        {key}: {value}
-                        <button
-                          type="button"
-                          onClick={() => removeSimulationParameter(key)}
-                          className="ml-1 hover:bg-gray-300 rounded-full p-1"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="instructions">Usage Instructions</Label>
-              <Textarea
-                id="instructions"
-                value={simulationData.instructions}
-                onChange={(e) => setSimulationData(prev => ({ ...prev, instructions: e.target.value }))}
-                placeholder="Instructions for using the simulation..."
-                rows={3}
-              />
-            </div>
-          </div>
-        );
-
-      case 'gallery':
-        return (
-          <div className="space-y-4">
-            <Label>Gallery Images</Label>
-            {galleryData.images.map((image, index) => (
-              <Card key={index}>
-                <CardContent className="pt-4">
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <Label>Image {index + 1}</Label>
-                      {galleryData.images.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeGalleryImage(index)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                    <div>
-                      <Label>Image URL *</Label>
-                      <Input
-                        value={image.url}
-                        onChange={(e) => updateGalleryImage(index, 'url', e.target.value)}
-                        placeholder="https://example.com/image.jpg"
-                        type="url"
-                      />
-                    </div>
-                    <div>
-                      <Label>Caption *</Label>
-                      <Input
-                        value={image.caption}
-                        onChange={(e) => updateGalleryImage(index, 'caption', e.target.value)}
-                        placeholder="Description of the image"
-                      />
-                    </div>
-                    <div>
-                      <Label>Alt Text (optional)</Label>
-                      <Input
-                        value={image.alt}
-                        onChange={(e) => updateGalleryImage(index, 'alt', e.target.value)}
-                        placeholder="Accessibility description"
-                      />
-                    </div>
-                    {image.url && (
-                      <div>
-                        <img 
-                          src={image.url} 
-                          alt={image.alt || image.caption} 
-                          className="max-w-xs h-32 object-cover rounded border"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            <Button type="button" onClick={addGalleryImage} variant="outline">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Image
-            </Button>
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
-
-  const getPreviewIcon = () => {
-    switch (formData.type) {
-      case 'video': return <Video className="w-8 h-8" />;
-      case 'simulation': return <MonitorSpeaker className="w-8 h-8" />;
-      case 'gallery': return <ImageIcon className="w-8 h-8" />;
-      default: return <Play className="w-8 h-8" />;
-    }
-  };
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => removeArrayItem(section, field, index)}
+            disabled={(formData[section] as any)[field].length <= 1}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Page Header */}
       <div className="flex items-center space-x-4">
-        <Button variant="ghost" asChild>
+        <Button variant="outline" size="sm" asChild>
           <Link href="/admin/media">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Media
@@ -506,13 +328,13 @@ export default function NewMediaPage() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Create New Media</h1>
-          <p className="text-gray-600">Add videos, simulations, or image galleries</p>
+          <p className="text-gray-600">Add educational YouTube videos and shorts</p>
         </div>
       </div>
 
-      {/* Error Display */}
+      {/* Error Alert */}
       {error && (
-        <Card className="border-red-200">
+        <Card className="border-red-200 bg-red-50">
           <CardContent className="pt-6">
             <div className="flex items-center space-x-2 text-red-600">
               <AlertCircle className="w-5 h-5" />
@@ -522,191 +344,236 @@ export default function NewMediaPage() {
         </Card>
       )}
 
-      {/* Main Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Left Column - Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
-                <CardDescription>Configure the fundamental properties of your media content</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="subject">Subject</Label>
-                    <Select onValueChange={(value) => fetchTopicsForSubject(value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select subject" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {subjects.map(subject => (
-                          <SelectItem key={subject._id.toString()} value={subject._id.toString()}>
-                            {subject.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+        {/* Basic Setup */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Basic Setup</CardTitle>
+            <CardDescription>Choose where this media belongs and what type it should be</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="subject">Subject *</Label>
+                <Select
+                  value={selectedSubject}
+                  onValueChange={fetchTopicsForSubject}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select subject" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjects.map(subject => (
+                      <SelectItem key={subject._id.toString()} value={subject._id.toString()}>
+                        {subject.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                  <div>
-                    <Label htmlFor="topic">Topic</Label>
-                    <Select 
-                      value={formData.topicId} 
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, topicId: value }))}
-                      disabled={topics.length === 0}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select topic" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {topics.map(topic => (
-                          <SelectItem key={topic._id.toString()} value={topic._id.toString()}>
-                            {topic.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+              <div>
+                <Label htmlFor="topic">Topic *</Label>
+                <Select
+                  value={formData.topicId}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, topicId: value }))}
+                  disabled={topics.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select topic" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {topics.map(topic => (
+                      <SelectItem key={topic._id.toString()} value={topic._id.toString()}>
+                        {topic.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-                <div>
-                  <Label htmlFor="type">Media Type</Label>
-                  <Select 
-                    value={formData.type} 
-                    onValueChange={(value: any) => setFormData(prev => ({ ...prev, type: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="video">Video</SelectItem>
-                      <SelectItem value="simulation">Interactive Simulation</SelectItem>
-                      <SelectItem value="gallery">Image Gallery</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div>
+              <Label htmlFor="videoType">Video Type</Label>
+              <Select
+                value={formData.videoType}
+                onValueChange={(value: any) => setFormData(prev => ({ ...prev, videoType: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {videoTypes.map(type => (
+                    <SelectItem key={type.id} value={type.id}>
+                      <div className="flex items-center space-x-2">
+                        <type.icon className="w-4 h-4" />
+                        <span>{type.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-gray-500 mt-1">
+                {videoTypes.find(t => t.id === formData.videoType)?.description}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
-                <div>
-                  <Label htmlFor="title">Title</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="Enter a descriptive title for your media content..."
-                    required
-                  />
-                </div>
+        {/* Media Content */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Media Content</CardTitle>
+            <CardDescription>Configure the video content and settings</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="title">Title *</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Enter a descriptive title for your video..."
+                required
+              />
+            </div>
 
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Provide a detailed description of the content and learning objectives..."
-                    rows={3}
-                    required
-                  />
-                </div>
-              </CardContent>
-            </Card>
+            <RichTextEditor
+              label="Description *"
+              value={formData.description}
+              onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
+              placeholder="Provide a detailed description of the video content and learning objectives..."
+              required
+            />
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Content Configuration</CardTitle>
-                <CardDescription>Configure the specific properties for your {formData.type} content</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {renderTypeSpecificFields()}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Column - Settings */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Media Settings</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="difficulty">Difficulty Level</Label>
-                  <Select 
-                    value={formData.difficulty} 
-                    onValueChange={(value: any) => setFormData(prev => ({ ...prev, difficulty: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Beginner">Beginner</SelectItem>
-                      <SelectItem value="Intermediate">Intermediate</SelectItem>
-                      <SelectItem value="Advanced">Advanced</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="points">XP Points</Label>
-                  <Input
-                    id="points"
-                    type="number"
-                    min="1"
-                    value={formData.points}
-                    onChange={(e) => setFormData(prev => ({ ...prev, points: parseInt(e.target.value) || 10 }))}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="order">Order</Label>
-                  <Input
-                    id="order"
-                    type="number"
-                    min="1"
-                    value={formData.order}
-                    onChange={(e) => setFormData(prev => ({ ...prev, order: parseInt(e.target.value) || 1 }))}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Preview Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  {getPreviewIcon()}
-                  Media Preview
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {formData.title || formData.description ? (
-                  <div className="p-4 border-2 border-dashed border-indigo-300 rounded-lg bg-indigo-50">
-                    <div className="text-xs font-medium text-indigo-600 mb-2">
-                      {formData.type.toUpperCase()}
+            <div>
+              <Label htmlFor="youtubeUrl">YouTube URL *</Label>
+              <Input
+                id="youtubeUrl"
+                type="url"
+                value={formData.youtubeUrl}
+                onChange={(e) => setFormData(prev => ({ ...prev, youtubeUrl: e.target.value }))}
+                placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
+                required
+              />
+              {youtubePreview && (
+                <div className="mt-2 p-3 border rounded-lg bg-gray-50">
+                  <div className="flex items-center space-x-3">
+                    <Youtube className="w-5 h-5 text-red-500" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">YouTube Video Detected</p>
+                      <p className="text-xs text-gray-500">ID: {youtubePreview.id}</p>
                     </div>
-                    <div className="font-medium text-gray-800 mb-2">
-                      {formData.title || 'Enter title...'}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {formData.description || 'Enter description...'}
-                    </div>
-                    <div className="mt-3 flex items-center space-x-2">
-                      <Badge className="text-xs">{formData.difficulty}</Badge>
-                      <Badge variant="outline" className="text-xs">{formData.points} XP</Badge>
-                    </div>
+                    <img
+                      src={youtubePreview.thumbnail}
+                      alt="Video thumbnail"
+                      className="w-16 h-12 object-cover rounded"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
                   </div>
-                ) : (
-                  <div className="text-center text-gray-500 py-8">
-                    {getPreviewIcon()}
-                    <p className="text-sm mt-2">Enter content to see preview</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+                </div>
+              )}
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="difficulty">Difficulty Level</Label>
+                <Select
+                  value={formData.difficulty}
+                  onValueChange={(value: any) => setFormData(prev => ({ ...prev, difficulty: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Beginner">Beginner</SelectItem>
+                    <SelectItem value="Intermediate">Intermediate</SelectItem>
+                    <SelectItem value="Advanced">Advanced</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="xpReward">XP Reward</Label>
+                <Input
+                  id="xpReward"
+                  type="number"
+                  min="1"
+                  value={formData.xpReward}
+                  onChange={(e) => setFormData(prev => ({ ...prev, xpReward: parseInt(e.target.value) || 50 }))}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="estimatedMinutes">Estimated Minutes</Label>
+                <Input
+                  id="estimatedMinutes"
+                  type="number"
+                  min="1"
+                  value={formData.estimatedMinutes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, estimatedMinutes: parseInt(e.target.value) || 5 }))}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Pre-Video Content */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Pre-Video Content</CardTitle>
+            <CardDescription>Content to show before the video to prepare students</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {renderArraySection('Learning Objectives', 'preVideoContent', 'learningObjectives', 'What will students learn from this video?', '')}
+            {renderArraySection('Prerequisites', 'preVideoContent', 'prerequisites', 'What should students know before watching?', '')}
+            {renderArraySection('Key Terms', 'preVideoContent', 'keyTerms', 'Important terms in this video', { term: '', definition: '' })}
+          </CardContent>
+        </Card>
+
+        {/* Post-Video Content */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Post-Video Content</CardTitle>
+            <CardDescription>Content to reinforce learning after watching the video</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {renderArraySection('Key Concepts', 'postVideoContent', 'keyConcepts', 'Main takeaways from the video', '')}
+            {renderArraySection('Reflection Questions', 'postVideoContent', 'reflectionQuestions', 'Questions to help students reflect', '')}
+            {renderArraySection('Practical Applications', 'postVideoContent', 'practicalApplications', 'How to apply this knowledge', '')}
+            {renderArraySection('Additional Resources', 'postVideoContent', 'additionalResources', 'Related learning materials', { title: '', url: '' })}
+          </CardContent>
+        </Card>
+
+        {/* Preview */}
+        {(formData.title || formData.description) && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                {formData.videoType === 'video' ? <Video className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                Media Preview
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="p-4 border-2 border-dashed border-indigo-300 rounded-lg bg-indigo-50">
+                <div className="text-xs font-medium text-indigo-600 mb-2">
+                  {formData.videoType === 'video' ? 'YOUTUBE VIDEO' : 'YOUTUBE SHORT'}
+                </div>
+                <div className="font-medium text-gray-800 mb-2">
+                  {formData.title || 'Enter title...'}
+                </div>
+                <div className="text-sm text-gray-600 mb-3" dangerouslySetInnerHTML={{
+                  __html: formData.description || 'Enter description...'
+                }} />
+                <div className="flex items-center space-x-2">
+                  <Badge className="text-xs">{formData.difficulty}</Badge>
+                  <Badge variant="outline" className="text-xs">{formData.xpReward} XP</Badge>
+                  <Badge variant="outline" className="text-xs">{formData.estimatedMinutes} min</Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Action Buttons */}
         <div className="flex justify-end space-x-3">

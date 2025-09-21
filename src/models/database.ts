@@ -164,32 +164,77 @@ const FlashcardSchema = new Schema<IFlashcard>({
   timestamps: true
 });
 
-// Media Schema
+// Media Schema (YouTube-focused)
 export interface IMedia extends Document {
   _id: Types.ObjectId;
   topicId: Types.ObjectId;
-  type: 'video' | 'simulation' | 'gallery';
   title: string;
   description: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   xpReward: number;
   estimatedMinutes: number;
   order: number;
-  data: any; // Flexible data structure for different media types
+
+  // YouTube video data
+  youtubeUrl: string;
+  youtubeId: string;
+  videoType: 'video' | 'short';
+  thumbnail?: string;
+  duration?: number; // in seconds
+
+  // Educational content structure
+  preVideoContent: {
+    learningObjectives: string[];
+    prerequisites: string[];
+    keyTerms: { term: string; definition: string }[];
+  };
+
+  postVideoContent: {
+    keyConcepts: string[];
+    reflectionQuestions: string[];
+    practicalApplications: string[];
+    additionalResources?: { title: string; url: string }[];
+  };
+
   createdAt: Date;
   updatedAt: Date;
 }
 
 const MediaSchema = new Schema<IMedia>({
   topicId: { type: Schema.Types.ObjectId, ref: 'Topic', required: true },
-  type: { type: String, enum: ['video', 'simulation', 'gallery'], required: true },
   title: { type: String, required: true },
   description: { type: String, required: true },
   difficulty: { type: String, enum: ['Beginner', 'Intermediate', 'Advanced'], required: true },
   xpReward: { type: Number, required: true },
   estimatedMinutes: { type: Number, required: true },
   order: { type: Number, required: true },
-  data: { type: Schema.Types.Mixed, required: true },
+
+  // YouTube video data
+  youtubeUrl: { type: String, required: true },
+  youtubeId: { type: String, required: true },
+  videoType: { type: String, enum: ['video', 'short'], required: true },
+  thumbnail: { type: String },
+  duration: { type: Number },
+
+  // Educational content structure
+  preVideoContent: {
+    learningObjectives: [{ type: String }],
+    prerequisites: [{ type: String }],
+    keyTerms: [{
+      term: { type: String, required: true },
+      definition: { type: String, required: true }
+    }]
+  },
+
+  postVideoContent: {
+    keyConcepts: [{ type: String }],
+    reflectionQuestions: [{ type: String }],
+    practicalApplications: [{ type: String }],
+    additionalResources: [{
+      title: { type: String, required: true },
+      url: { type: String, required: true }
+    }]
+  }
 }, {
   timestamps: true
 });

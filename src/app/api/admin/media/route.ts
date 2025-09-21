@@ -51,7 +51,8 @@ export async function GET(req: Request) {
       {
         $addFields: {
           topicName: { $arrayElemAt: ['$topic.name', 0] },
-          subjectName: { $arrayElemAt: ['$subject.name', 0] }
+          subjectName: { $arrayElemAt: ['$subject.name', 0] },
+          subjectId: { $arrayElemAt: ['$topic.subjectId', 0] }
         }
       },
       { $sort: { 'topic.order': 1, order: 1 } },
@@ -91,17 +92,20 @@ export async function POST(req: Request) {
     const body = await req.json();
     const {
       topicId,
-      type,
       title,
       description,
       difficulty,
-      points,
+      xpReward,
+      estimatedMinutes,
       order,
-      data
+      youtubeUrl,
+      videoType,
+      preVideoContent,
+      postVideoContent
     } = body;
 
     // Validate required fields
-    if (!topicId || !type || !title?.trim() || !description?.trim() || !difficulty || points === undefined || order === undefined || !data) {
+    if (!topicId || !title?.trim() || !description?.trim() || !difficulty || xpReward === undefined || estimatedMinutes === undefined || order === undefined || !youtubeUrl?.trim() || !videoType) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -111,22 +115,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Topic not found' }, { status: 404 });
     }
 
-    // Validate media type and data structure
-    const validationResult = validateMediaData(type, data);
-    if (!validationResult.valid) {
-      return NextResponse.json({ error: validationResult.error }, { status: 400 });
+    // Extract YouTube ID from URL
+    const youtubeId = extractYouTubeId(youtubeUrl);
+    if (!youtubeId) {
+      return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400 });
     }
 
     // Create media
     const media = new Media({
       topicId: new Types.ObjectId(topicId),
-      type,
       title: title.trim(),
       description: description.trim(),
       difficulty,
-      points,
+      xpReward,
+      estimatedMinutes,
       order,
-      data
+      youtubeUrl: youtubeUrl.trim(),
+      youtubeId,
+      videoType,
+      preVideoContent: preVideoContent || {
+        learningObjectives: [],
+        prerequisites: [],
+        keyTerms: []
+      },
+      postVideoContent: postVideoContent || {
+        keyConcepts: [],
+        reflectionQuestions: [],
+        practicalApplications: [],
+        additionalResources: []
+      }
     });
 
     await media.save();
@@ -153,7 +170,8 @@ export async function POST(req: Request) {
       {
         $addFields: {
           topicName: { $arrayElemAt: ['$topic.name', 0] },
-          subjectName: { $arrayElemAt: ['$subject.name', 0] }
+          subjectName: { $arrayElemAt: ['$subject.name', 0] },
+          subjectId: { $arrayElemAt: ['$topic.subjectId', 0] }
         }
       }
     ]);
@@ -166,41 +184,20 @@ export async function POST(req: Request) {
   }
 }
 
-// Validate media data based on type
-function validateMediaData(type: string, data: any): { valid: boolean; error?: string } {
-  switch (type) {
-    case 'video':
-      if (!data.url || typeof data.url !== 'string') {
-        return { valid: false, error: 'Video must have a valid URL' };
-      }
-      if (data.duration && (typeof data.duration !== 'number' || data.duration <= 0)) {
-        return { valid: false, error: 'Duration must be a positive number' };
-      }
-      break;
+// Extract YouTube video ID from URL
+function extractYouTubeId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
+  ];
 
-    case 'simulation':
-      if (!data.url || typeof data.url !== 'string') {
-        return { valid: false, error: 'Simulation must have a valid URL' };
-      }
-      if (data.parameters && typeof data.parameters !== 'object') {
-        return { valid: false, error: 'Simulation parameters must be an object' };
-      }
-      break;
-
-    case 'gallery':
-      if (!Array.isArray(data.images) || data.images.length === 0) {
-        return { valid: false, error: 'Gallery must have at least one image' };
-      }
-      for (const image of data.images) {
-        if (!image.url || !image.caption) {
-          return { valid: false, error: 'Each gallery image must have URL and caption' };
-        }
-      }
-      break;
-
-    default:
-      return { valid: false, error: 'Invalid media type' };
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) {
+      return match[1];
+    }
   }
 
-  return { valid: true };
+  return null;
 }

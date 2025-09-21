@@ -38,23 +38,13 @@ import {
   Clock,
   ExternalLink
 } from 'lucide-react';
-import { ISubject, ITopic } from '@/models/database';
+import { ISubject, ITopic, IMedia } from '@/models/database';
 import { Types } from 'mongoose';
 
-interface EnhancedMedia {
-  _id: Types.ObjectId;
-  topicId: Types.ObjectId;
-  type: 'video' | 'simulation' | 'gallery';
-  title: string;
-  description: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  points: number;
-  order: number;
-  data: any;
-  createdAt: Date;
-  updatedAt: Date;
+interface EnhancedMedia extends IMedia {
   topicName: string;
   subjectName: string;
+  subjectId: Types.ObjectId;
 }
 
 export default function MediaPage() {
@@ -65,7 +55,7 @@ export default function MediaPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [selectedTopic, setSelectedTopic] = useState<string>('all');
-  const [selectedType, setSelectedType] = useState<string>('all');
+  const [selectedVideoType, setSelectedVideoType] = useState<string>('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,9 +97,9 @@ export default function MediaPage() {
       filtered = filtered.filter(mediaItem => mediaItem.topicId.toString() === selectedTopic);
     }
 
-    // Filter by type
-    if (selectedType !== 'all') {
-      filtered = filtered.filter(mediaItem => mediaItem.type === selectedType);
+    // Filter by video type
+    if (selectedVideoType !== 'all') {
+      filtered = filtered.filter(mediaItem => mediaItem.videoType === selectedVideoType);
     }
 
     // Filter by difficulty
@@ -118,7 +108,7 @@ export default function MediaPage() {
     }
 
     setFilteredMedia(filtered);
-  }, [media, searchTerm, selectedSubject, selectedTopic, selectedType, selectedDifficulty, subjects]);
+  }, [media, searchTerm, selectedSubject, selectedTopic, selectedVideoType, selectedDifficulty, subjects]);
 
   const fetchMedia = async () => {
     try {
@@ -195,30 +185,27 @@ export default function MediaPage() {
     }
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
+  const getVideoTypeColor = (videoType: string) => {
+    switch (videoType) {
       case 'video': return 'bg-red-100 text-red-800';
-      case 'simulation': return 'bg-blue-100 text-blue-800';
-      case 'gallery': return 'bg-purple-100 text-purple-800';
+      case 'short': return 'bg-orange-100 text-orange-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
+  const getVideoTypeIcon = (videoType: string) => {
+    switch (videoType) {
       case 'video': return <Video className="w-4 h-4" />;
-      case 'simulation': return <MonitorSpeaker className="w-4 h-4" />;
-      case 'gallery': return <ImageIcon className="w-4 h-4" />;
-      default: return <Play className="w-4 h-4" />;
+      case 'short': return <Play className="w-4 h-4" />;
+      default: return <Video className="w-4 h-4" />;
     }
   };
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'video': return 'Video';
-      case 'simulation': return 'Simulation';
-      case 'gallery': return 'Gallery';
-      default: return type;
+  const getVideoTypeLabel = (videoType: string) => {
+    switch (videoType) {
+      case 'video': return 'YouTube Video';
+      case 'short': return 'YouTube Short';
+      default: return videoType;
     }
   };
 
@@ -231,34 +218,15 @@ export default function MediaPage() {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
 
-  const getMediaPreview = (mediaItem: EnhancedMedia) => {
-    switch (mediaItem.type) {
-      case 'video':
-        return (
-          <div className="flex items-center space-x-2">
-            <Video className="w-4 h-4 text-red-500" />
-            <span className="text-sm">
-              {mediaItem.data.duration ? `${Math.floor(mediaItem.data.duration / 60)}:${(mediaItem.data.duration % 60).toString().padStart(2, '0')}` : 'Video'}
-            </span>
-          </div>
-        );
-      case 'simulation':
-        return (
-          <div className="flex items-center space-x-2">
-            <MonitorSpeaker className="w-4 h-4 text-blue-500" />
-            <span className="text-sm">Interactive</span>
-          </div>
-        );
-      case 'gallery':
-        return (
-          <div className="flex items-center space-x-2">
-            <ImageIcon className="w-4 h-4 text-purple-500" />
-            <span className="text-sm">{mediaItem.data.images?.length || 0} images</span>
-          </div>
-        );
-      default:
-        return <span className="text-sm text-gray-500">Unknown</span>;
-    }
+  const getVideoPreview = (mediaItem: EnhancedMedia) => {
+    return (
+      <div className="flex items-center space-x-2">
+        {getVideoTypeIcon(mediaItem.videoType)}
+        <span className="text-sm">
+          {mediaItem.duration ? `${Math.floor(mediaItem.duration / 60)}:${(mediaItem.duration % 60).toString().padStart(2, '0')}` : 'No duration'}
+        </span>
+      </div>
+    );
   };
 
 
@@ -309,7 +277,7 @@ export default function MediaPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Media</h1>
-          <p className="text-gray-600">Manage videos, simulations, and image galleries</p>
+          <p className="text-gray-600">Manage educational YouTube videos and shorts</p>
         </div>
         <div className="flex space-x-2">
           {selectedTopic !== 'all' && (
@@ -337,7 +305,7 @@ export default function MediaPage() {
             <div>
               <CardTitle>All Media</CardTitle>
               <CardDescription>
-                {filteredMedia.length} of {media.length} media items
+                {filteredMedia.length} of {media.length} YouTube videos
               </CardDescription>
             </div>
             <div className="flex items-center space-x-2">
@@ -371,16 +339,15 @@ export default function MediaPage() {
                 </SelectContent>
               </Select>
 
-              {/* Type Filter */}
-              <Select value={selectedType} onValueChange={setSelectedType}>
+              {/* Video Type Filter */}
+              <Select value={selectedVideoType} onValueChange={setSelectedVideoType}>
                 <SelectTrigger className="w-40">
-                  <SelectValue placeholder="All types" />
+                  <SelectValue placeholder="All video types" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All types</SelectItem>
-                  <SelectItem value="video">Video</SelectItem>
-                  <SelectItem value="simulation">Simulation</SelectItem>
-                  <SelectItem value="gallery">Gallery</SelectItem>
+                  <SelectItem value="video">YouTube Video</SelectItem>
+                  <SelectItem value="short">YouTube Short</SelectItem>
                 </SelectContent>
               </Select>
               
@@ -401,7 +368,7 @@ export default function MediaPage() {
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search media..."
+                  placeholder="Search YouTube videos..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-8 w-64"
@@ -416,11 +383,11 @@ export default function MediaPage() {
               <Play className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No media found</h3>
               <p className="mt-1 text-sm text-gray-500">
-                {searchTerm || selectedSubject !== 'all' || selectedTopic !== 'all' || selectedType !== 'all' || selectedDifficulty !== 'all'
-                  ? 'Try adjusting your search or filters.' 
-                  : 'Get started by adding media content.'}
+                {searchTerm || selectedSubject !== 'all' || selectedTopic !== 'all' || selectedVideoType !== 'all' || selectedDifficulty !== 'all'
+                  ? 'Try adjusting your search or filters.'
+                  : 'Get started by adding YouTube videos.'}
               </p>
-              {!searchTerm && selectedSubject === 'all' && selectedTopic === 'all' && selectedType === 'all' && selectedDifficulty === 'all' && (
+              {!searchTerm && selectedSubject === 'all' && selectedTopic === 'all' && selectedVideoType === 'all' && selectedDifficulty === 'all' && (
                 <div className="mt-6">
                   <Button asChild>
                     <Link href="/admin/media/new">
@@ -439,10 +406,10 @@ export default function MediaPage() {
                   <TableHead>Description</TableHead>
                   <TableHead>Topic</TableHead>
                   <TableHead>Subject</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Content</TableHead>
+                  <TableHead>Video Type</TableHead>
+                  <TableHead>Duration</TableHead>
                   <TableHead>Difficulty</TableHead>
-                  <TableHead>Points</TableHead>
+                  <TableHead>XP Reward</TableHead>
                   <TableHead>Order</TableHead>
                   <TableHead className="w-[70px]">Actions</TableHead>
                 </TableRow>
@@ -468,20 +435,20 @@ export default function MediaPage() {
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">{mediaItem.subjectName}</TableCell>
                     <TableCell>
-                      <Badge className={getTypeColor(mediaItem.type)}>
+                      <Badge className={getVideoTypeColor(mediaItem.videoType)}>
                         <div className="flex items-center space-x-1">
-                          {getTypeIcon(mediaItem.type)}
-                          <span>{getTypeLabel(mediaItem.type)}</span>
+                          {getVideoTypeIcon(mediaItem.videoType)}
+                          <span>{getVideoTypeLabel(mediaItem.videoType)}</span>
                         </div>
                       </Badge>
                     </TableCell>
-                    <TableCell>{getMediaPreview(mediaItem)}</TableCell>
+                    <TableCell>{getVideoPreview(mediaItem)}</TableCell>
                     <TableCell>
                       <Badge className={getDifficultyColor(mediaItem.difficulty)}>
                         {mediaItem.difficulty}
                       </Badge>
                     </TableCell>
-                    <TableCell>{mediaItem.points}</TableCell>
+                    <TableCell>{mediaItem.xpReward}</TableCell>
                     <TableCell>{mediaItem.order}</TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -498,14 +465,12 @@ export default function MediaPage() {
                               View
                             </Link>
                           </DropdownMenuItem>
-                          {mediaItem.data.url && (
-                            <DropdownMenuItem asChild>
-                              <a href={mediaItem.data.url} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="w-4 h-4 mr-2" />
-                                Open URL
-                              </a>
-                            </DropdownMenuItem>
-                          )}
+                          <DropdownMenuItem asChild>
+                            <a href={mediaItem.youtubeUrl} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              Open YouTube
+                            </a>
+                          </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link href={`/admin/media/${mediaItem._id}/edit`}>
                               <Edit className="w-4 h-4 mr-2" />
