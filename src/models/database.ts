@@ -74,12 +74,11 @@ export interface ITopic extends Document {
   name: string;
   description: string;
   longDescription?: string;
+  imageUrl?: string;
   subjectId: Types.ObjectId;
   order: number;
   isUnlocked: boolean;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  estimatedMinutes: number;
-  xpReward: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -88,12 +87,11 @@ const TopicSchema = new Schema<ITopic>({
   name: { type: String, required: true },
   description: { type: String, required: true },
   longDescription: { type: String },
+  imageUrl: { type: String },
   subjectId: { type: Schema.Types.ObjectId, ref: 'Subject', required: true },
   order: { type: Number, required: true },
   isUnlocked: { type: Boolean, default: true },
   difficulty: { type: String, enum: ['Beginner', 'Intermediate', 'Advanced'], required: true },
-  estimatedMinutes: { type: Number, required: true },
-  xpReward: { type: Number, required: true },
 }, {
   timestamps: true
 });
@@ -106,7 +104,8 @@ export interface IQuestion extends Document {
   text: string;
   imageUrl?: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  points: number;
+  xpReward: number;
+  estimatedMinutes: number;
   order: number;
   data: any; // Flexible data structure for different question types
   explanation?: string;
@@ -116,15 +115,16 @@ export interface IQuestion extends Document {
 
 const QuestionSchema = new Schema<IQuestion>({
   topicId: { type: Schema.Types.ObjectId, ref: 'Topic', required: true },
-  type: { 
-    type: String, 
-    enum: ['multiple-choice', 'true-false', 'fill-in-blank', 'numerical', 'matching'], 
-    required: true 
+  type: {
+    type: String,
+    enum: ['multiple-choice', 'true-false', 'fill-in-blank', 'numerical', 'matching'],
+    required: true
   },
   text: { type: String, required: true },
   imageUrl: { type: String },
   difficulty: { type: String, enum: ['Beginner', 'Intermediate', 'Advanced'], required: true },
-  points: { type: Number, required: true },
+  xpReward: { type: Number, required: true },
+  estimatedMinutes: { type: Number, required: true },
   order: { type: Number, required: true },
   data: { type: Schema.Types.Mixed, required: true }, // Stores question-specific data
   explanation: { type: String },
@@ -140,7 +140,8 @@ export interface IFlashcard extends Document {
   back: string;
   imageUrl?: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  points: number;
+  xpReward: number;
+  estimatedMinutes: number;
   order: number;
   tags: string[];
   category?: string;
@@ -154,7 +155,8 @@ const FlashcardSchema = new Schema<IFlashcard>({
   back: { type: String, required: true },
   imageUrl: { type: String },
   difficulty: { type: String, enum: ['Beginner', 'Intermediate', 'Advanced'], required: true },
-  points: { type: Number, required: true },
+  xpReward: { type: Number, required: true },
+  estimatedMinutes: { type: Number, required: true },
   order: { type: Number, required: true },
   tags: [{ type: String }],
   category: { type: String },
@@ -170,7 +172,8 @@ export interface IMedia extends Document {
   title: string;
   description: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  points: number;
+  xpReward: number;
+  estimatedMinutes: number;
   order: number;
   data: any; // Flexible data structure for different media types
   createdAt: Date;
@@ -183,7 +186,8 @@ const MediaSchema = new Schema<IMedia>({
   title: { type: String, required: true },
   description: { type: String, required: true },
   difficulty: { type: String, enum: ['Beginner', 'Intermediate', 'Advanced'], required: true },
-  points: { type: Number, required: true },
+  xpReward: { type: Number, required: true },
+  estimatedMinutes: { type: Number, required: true },
   order: { type: Number, required: true },
   data: { type: Schema.Types.Mixed, required: true },
 }, {

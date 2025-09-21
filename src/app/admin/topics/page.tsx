@@ -22,24 +22,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { 
-  Plus, 
-  Search, 
-  MoreVertical, 
-  Edit, 
-  Trash2, 
+import {
+  Plus,
+  Search,
+  MoreVertical,
+  Edit,
+  Trash2,
   Eye,
   FileText,
-  Clock,
-  Zap,
   BookOpen,
   CreditCard,
-  Play
+  Play,
+  ArrowUpDown
 } from 'lucide-react';
 import { ITopic, ISubject } from '@/models/database';
 import { Types } from 'mongoose';
 
-interface EnhancedTopic {
+interface TopicWithData {
   _id: Types.ObjectId;
   name: string;
   description: string;
@@ -58,12 +57,13 @@ interface EnhancedTopic {
     flashcards: number;
     media: number;
   };
+  totalContent: number;
 }
 
 export default function TopicsPage() {
-  const [topics, setTopics] = useState<EnhancedTopic[]>([]);
+  const [topics, setTopics] = useState<TopicWithData[]>([]);
   const [subjects, setSubjects] = useState<ISubject[]>([]);
-  const [filteredTopics, setFilteredTopics] = useState<EnhancedTopic[]>([]);
+  const [filteredTopics, setFilteredTopics] = useState<TopicWithData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
@@ -105,7 +105,7 @@ export default function TopicsPage() {
       setIsLoading(true);
       setError(null);
       
-      const response = await fetch('/api/admin/topics');
+      const response = await fetch('/api/topics');
       if (!response.ok) {
         throw new Error('Failed to fetch topics');
       }
@@ -163,11 +163,11 @@ export default function TopicsPage() {
     }
   };
 
-  const getTotalContent = (topic: EnhancedTopic) => {
+  const getTotalContent = (topic: TopicWithData) => {
     return topic.contentCounts.questions + topic.contentCounts.flashcards + topic.contentCounts.media;
   };
 
-  const getSubjectId = (topic: EnhancedTopic): string => {
+  const getSubjectId = (topic: TopicWithData): string => {
     return typeof topic.subjectId === 'object' && topic.subjectId._id 
       ? topic.subjectId._id.toString() 
       : topic.subjectId.toString();
@@ -222,57 +222,22 @@ export default function TopicsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Topics</h1>
           <p className="text-gray-600">Manage learning topics within subjects</p>
         </div>
-        <Button asChild>
-          <Link href="/admin/topics/new">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Topic
-          </Link>
-        </Button>
+        <div className="flex space-x-2">
+          <Button variant="outline" asChild>
+            <Link href="/admin/topics/reorder">
+              <ArrowUpDown className="w-4 h-4 mr-2" />
+              Reorder
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/admin/topics/new">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Topic
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Topics</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{topics.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Published</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{topics.filter(t => t.isUnlocked).length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Minutes</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {topics.reduce((sum, t) => sum + t.estimatedMinutes, 0)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total XP</CardTitle>
-            <Zap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {topics.reduce((sum, t) => sum + t.xpReward, 0)}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Filters and Search */}
       <Card>
@@ -365,7 +330,23 @@ export default function TopicsPage() {
               <TableBody>
                 {filteredTopics.map((topic) => (
                   <TableRow key={topic._id.toString()}>
-                    <TableCell className="font-medium">{topic.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center space-x-2">
+                        <span className="hover:text-blue-600 transition-colors duration-200">
+                          {topic.name}
+                        </span>
+                        {topic.totalContent === 0 && (
+                          <div className="relative group">
+                            <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block">
+                              <div className="bg-red-600 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                                No content added yet
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center space-x-2">
                         <BookOpen className="w-4 h-4 text-gray-400" />
@@ -383,8 +364,43 @@ export default function TopicsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm text-gray-600">
-                        {getTotalContent(topic)} items
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex items-center space-x-3 text-sm">
+                          <span className="flex items-center space-x-1 hover:bg-green-50 px-1 py-0.5 rounded transition-colors duration-200">
+                            <FileText className="w-3 h-3 text-green-500" />
+                            <span className="font-medium">{topic.contentCounts.questions}</span>
+                          </span>
+                          <span className="flex items-center space-x-1 hover:bg-purple-50 px-1 py-0.5 rounded transition-colors duration-200">
+                            <CreditCard className="w-3 h-3 text-purple-500" />
+                            <span className="font-medium">{topic.contentCounts.flashcards}</span>
+                          </span>
+                          <span className="flex items-center space-x-1 hover:bg-red-50 px-1 py-0.5 rounded transition-colors duration-200">
+                            <Play className="w-3 h-3 text-red-500" />
+                            <span className="font-medium">{topic.contentCounts.media}</span>
+                          </span>
+                        </div>
+
+                        {/* Content Progress Indicator */}
+                        {topic.totalContent > 0 ? (
+                          <div className="w-full">
+                            <div className="flex justify-between text-xs text-gray-500 mb-1">
+                              <span>Content</span>
+                              <span>{topic.totalContent} items</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                              <div
+                                className="h-1.5 rounded-full bg-gradient-to-r from-green-500 via-purple-500 to-red-500 transition-all duration-500"
+                                style={{
+                                  width: `${Math.min(100, Math.max(10, (topic.totalContent / 5) * 100))}%`
+                                }}
+                              ></div>
+                            </div>
+                          </div>
+                        ) : (
+                          <Badge variant="outline" className="text-xs w-fit animate-pulse border-red-300 text-red-600">
+                            No content
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>{topic.estimatedMinutes}m</TableCell>

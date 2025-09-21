@@ -12,16 +12,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Save, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ImageUpload } from '@/components/ui/image-upload';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { ISubject } from '@/models/database';
 
 interface TopicFormData {
   name: string;
   description: string;
   longDescription: string;
+  imageUrl: string;
   subjectId: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  estimatedMinutes: number;
-  xpReward: number;
   order: number;
   isUnlocked: boolean;
 }
@@ -36,10 +37,9 @@ export default function NewTopicPage() {
     name: '',
     description: '',
     longDescription: '',
+    imageUrl: '',
     subjectId: '',
     difficulty: 'Beginner',
-    estimatedMinutes: 30,
-    xpReward: 100,
     order: 1,
     isUnlocked: true,
   });
@@ -77,8 +77,6 @@ export default function NewTopicPage() {
     if (!formData.name.trim()) return 'Topic name is required';
     if (!formData.description.trim()) return 'Topic description is required';
     if (!formData.subjectId) return 'Please select a subject';
-    if (formData.estimatedMinutes < 1) return 'Estimated minutes must be at least 1';
-    if (formData.xpReward < 1) return 'XP reward must be at least 1';
     if (formData.order < 1) return 'Order must be at least 1';
     return null;
   };
@@ -232,58 +230,39 @@ export default function NewTopicPage() {
               />
             </div>
 
+            <RichTextEditor
+              label="Long Description (optional)"
+              value={formData.longDescription}
+              onChange={(value) => handleInputChange('longDescription', value)}
+              placeholder="Detailed description explaining what students will learn in this topic..."
+              disabled={isLoading}
+              rows={4}
+            />
+
+            <ImageUpload
+              label="Topic Image (optional)"
+              description="Upload an image to represent this topic"
+              value={formData.imageUrl}
+              onChange={(url) => handleInputChange('imageUrl', url)}
+              disabled={isLoading}
+              maxSizeKB={1024}
+            />
+
+            {/* Display Order */}
             <div className="space-y-2">
-              <Label htmlFor="longDescription">Long Description (optional)</Label>
-              <Textarea
-                id="longDescription"
-                value={formData.longDescription}
-                onChange={(e) => handleInputChange('longDescription', e.target.value)}
-                placeholder="Detailed description explaining what students will learn in this topic..."
-                rows={4}
+              <Label htmlFor="order">Display Order *</Label>
+              <Input
+                id="order"
+                type="number"
+                min="1"
+                max="100"
+                value={formData.order}
+                onChange={(e) => handleInputChange('order', parseInt(e.target.value) || 1)}
                 disabled={isLoading}
               />
-            </div>
-
-            {/* Numerical Settings */}
-            <div className="grid gap-6 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="estimatedMinutes">Estimated Minutes *</Label>
-                <Input
-                  id="estimatedMinutes"
-                  type="number"
-                  min="1"
-                  max="600"
-                  value={formData.estimatedMinutes}
-                  onChange={(e) => handleInputChange('estimatedMinutes', parseInt(e.target.value) || 30)}
-                  disabled={isLoading}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="xpReward">XP Reward *</Label>
-                <Input
-                  id="xpReward"
-                  type="number"
-                  min="1"
-                  max="1000"
-                  value={formData.xpReward}
-                  onChange={(e) => handleInputChange('xpReward', parseInt(e.target.value) || 100)}
-                  disabled={isLoading}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="order">Display Order *</Label>
-                <Input
-                  id="order"
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={formData.order}
-                  onChange={(e) => handleInputChange('order', parseInt(e.target.value) || 1)}
-                  disabled={isLoading}
-                />
-              </div>
+              <p className="text-sm text-gray-500">
+                Order in which this topic appears within the subject. Lower numbers appear first.
+              </p>
             </div>
 
             {/* Settings */}

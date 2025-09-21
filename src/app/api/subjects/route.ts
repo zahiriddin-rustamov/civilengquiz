@@ -29,9 +29,33 @@ export async function GET() {
           Media.countDocuments({ topicId: { $in: topicIds } })
         ]);
 
-        // Calculate totals from topics
-        const totalEstimatedMinutes = topics.reduce((sum, topic) => sum + (topic.estimatedMinutes || 0), 0);
-        const totalXpReward = topics.reduce((sum, topic) => sum + (topic.xpReward || 0), 0);
+        // Calculate totals from topics (which calculate from their content)
+        let totalEstimatedMinutes = 0;
+        let totalXpReward = 0;
+
+        for (const topic of topics) {
+          // Get all content for this topic
+          const [questions, flashcards, media] = await Promise.all([
+            Question.find({ topicId: topic._id }).lean(),
+            Flashcard.find({ topicId: topic._id }).lean(),
+            Media.find({ topicId: topic._id }).lean()
+          ]);
+
+          // Calculate totals from content
+          const topicXpReward =
+            questions.reduce((sum, q) => sum + (q.xpReward || 0), 0) +
+            flashcards.reduce((sum, f) => sum + (f.xpReward || 0), 0) +
+            media.reduce((sum, m) => sum + (m.xpReward || 0), 0);
+
+          const topicEstimatedMinutes =
+            questions.reduce((sum, q) => sum + (q.estimatedMinutes || 0), 0) +
+            flashcards.reduce((sum, f) => sum + (f.estimatedMinutes || 0), 0) +
+            media.reduce((sum, m) => sum + (m.estimatedMinutes || 0), 0);
+
+          totalXpReward += topicXpReward;
+          totalEstimatedMinutes += topicEstimatedMinutes;
+        }
+
         const estimatedHours = Math.round((totalEstimatedMinutes / 60) * 10) / 10; // Round to 1 decimal
 
         return {

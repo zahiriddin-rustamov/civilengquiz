@@ -21,7 +21,8 @@ interface QuestionData {
   text: string;
   imageUrl?: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  points: number;
+  xpReward: number;
+  estimatedMinutes: number;
   order: number;
   data: any;
   explanation?: string;
@@ -41,7 +42,8 @@ export default function NewQuestionPage() {
     text: '',
     imageUrl: '',
     difficulty: 'Beginner',
-    points: 10,
+    xpReward: 5,
+    estimatedMinutes: 2,
     order: 1,
     data: {},
     explanation: ''
