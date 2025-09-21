@@ -98,11 +98,11 @@ export function FillInBlankQuestion({
     let questionText = question.text;
     let blankIndex = 0;
     
-    // Replace blanks with input fields
-    const parts = questionText.split(/(_____|\{blank\})/g);
+    // Replace blanks with input fields (matches 3+ underscores or {blank})
+    const parts = questionText.split(/(___+|\{blank\})/g);
     
     return parts.map((part, index) => {
-      if (part === '_____' || part === '{blank}') {
+      if (part.match(/^___+$/) || part === '{blank}') {
         const currentBlankIndex = blankIndex++;
         return (
           <span key={index} className="inline-flex items-center gap-2 mx-1">
