@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { validateUAEUEmail } from '@/utils/validation';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -34,9 +35,8 @@ export default function RegisterPage() {
     }
 
     // Validate UAEU student email
-    const uaeuEmailRegex = /^\d+@uaeu\.ac\.ae$/;
-    if (!uaeuEmailRegex.test(email)) {
-      setError('Only UAEU student emails (e.g., 700011111@uaeu.ac.ae) are allowed');
+    if (!validateUAEUEmail(email)) {
+      setError('Only UAEU emails (e.g., username@uaeu.ac.ae) are allowed');
       return;
     }
 
@@ -111,12 +111,12 @@ export default function RegisterPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="700011111@uaeu.ac.ae"
+                placeholder="username@uaeu.ac.ae"
                 required
                 className="mt-1"
               />
               <p className="mt-1 text-xs text-gray-500">
-                Must be a valid UAEU student email (e.g., 700011111@uaeu.ac.ae)
+                Must be a valid UAEU email (e.g., username@uaeu.ac.ae)
               </p>
             </div>
             <div>

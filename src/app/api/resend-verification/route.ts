@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import clientPromise from '@/lib/mongodb';
 import { successResponse, errorResponse } from '@/utils/api';
-import { generateVerificationToken, sendVerificationEmail } from '@/utils/email';
+import { generateVerificationToken, sendVerificationEmail, validateUAEUEmail } from '@/utils/email';
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,8 +12,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate UAEU student email
-    const uaeuEmailRegex = /^\d+@uaeu\.ac\.ae$/;
-    if (!uaeuEmailRegex.test(email)) {
+    if (!validateUAEUEmail(email)) {
       return errorResponse('Invalid email format', 400);
     }
 

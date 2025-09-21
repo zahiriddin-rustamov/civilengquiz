@@ -33,6 +33,9 @@ const createTransporter = () => {
   throw new Error('Email server configuration is missing');
 };
 
+// Re-export validation for server-side use
+export { validateUAEUEmail } from './validation';
+
 // Generate verification token
 export const generateVerificationToken = (): string => {
   return randomBytes(32).toString('hex');
