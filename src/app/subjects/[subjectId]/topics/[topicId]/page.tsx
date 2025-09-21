@@ -522,21 +522,36 @@ function ContentTypeCard({
 
   const completionPercentage = getCompletionPercentage();
 
+  const hasContent = data.count > 0;
+  const isClickable = isUnlocked && hasContent;
+
   const CardContent = () => (
     <div className={`relative overflow-hidden rounded-xl border-2 bg-gradient-to-br ${color} p-6 text-white shadow-lg transition-all duration-300 ${
-      isUnlocked ? 'hover:shadow-xl hover:-translate-y-1 cursor-pointer' : 'opacity-75 cursor-not-allowed'
+      isClickable ? 'hover:shadow-xl hover:-translate-y-1 cursor-pointer' :
+      !hasContent ? 'opacity-50 cursor-not-allowed' :
+      'opacity-75 cursor-not-allowed'
     }`}>
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1)_0%,transparent_50%)]"></div>
       </div>
 
-      {/* Lock Overlay */}
+      {/* Lock/No Content Overlay */}
       {!isUnlocked && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-10">
           <div className="text-center text-white">
             <Lock className="w-8 h-8 mx-auto mb-2" />
             <p className="text-sm font-medium">Complete previous topics</p>
+          </div>
+        </div>
+      )}
+
+      {isUnlocked && !hasContent && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm z-10">
+          <div className="text-center text-white">
+            <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm font-medium">No content available</p>
+            <p className="text-xs opacity-80 mt-1">Content coming soon</p>
           </div>
         </div>
       )}
@@ -597,10 +612,18 @@ function ContentTypeCard({
         </div>
 
         {/* Action Button */}
-        {isUnlocked && (
+        {isUnlocked && hasContent && (
           <div className="mt-4">
             <div className="w-full bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg px-4 py-3 text-center font-medium hover:bg-white/30 transition-colors">
               {completionPercentage === 0 ? 'Start Learning' : 'Continue Learning'}
+            </div>
+          </div>
+        )}
+
+        {isUnlocked && !hasContent && (
+          <div className="mt-4">
+            <div className="w-full bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 py-3 text-center font-medium text-white/60 cursor-not-allowed">
+              No Content Available
             </div>
           </div>
         )}
@@ -608,7 +631,7 @@ function ContentTypeCard({
     </div>
   );
 
-  return isUnlocked ? (
+  return isClickable ? (
     <Link href={href}>
       <CardContent />
     </Link>
