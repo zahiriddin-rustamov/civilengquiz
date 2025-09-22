@@ -214,6 +214,12 @@ export default function MediaPage() {
       }
 
       const data = await response.json();
+
+      // Randomize shorts order for TikTok-style engagement
+      if (data.shorts && data.shorts.length > 0) {
+        data.shorts = [...data.shorts].sort(() => Math.random() - 0.5);
+      }
+
       setMediaData(data);
     } catch (err) {
       console.error('Error fetching media:', err);

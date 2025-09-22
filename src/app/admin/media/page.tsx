@@ -449,7 +449,11 @@ export default function MediaPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>{mediaItem.xpReward}</TableCell>
-                    <TableCell>{mediaItem.order}</TableCell>
+                    <TableCell>
+                      {mediaItem.videoType === 'video' ? mediaItem.order : (
+                        <span className="text-gray-400 text-sm">Random</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
