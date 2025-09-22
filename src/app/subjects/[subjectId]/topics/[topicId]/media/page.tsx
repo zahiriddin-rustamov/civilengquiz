@@ -157,6 +157,9 @@ export default function MediaPage() {
     watchTimeDelta: number;
   }>>({});
 
+  // Flag to prevent double-counting views from keyboard navigation
+  const [isKeyboardNavigation, setIsKeyboardNavigation] = useState(false);
+
   const subjectId = params.subjectId as string;
   const topicId = params.topicId as string;
 
@@ -179,6 +182,7 @@ export default function MediaPage() {
       if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
         // Go to next short
         if (currentShortIndex < mediaData.shorts.length - 1) {
+          setIsKeyboardNavigation(true);
           setCurrentShortIndex(prev => prev + 1);
           setShortsWatchedCount(prev => prev + 1);
 
@@ -197,6 +201,10 @@ export default function MediaPage() {
             shortsWatchedToday: prev.shortsWatchedToday + 1
           }));
 
+          // Track view count for keyboard navigation
+          const estimatedWatchTime = Math.floor(Math.random() * 6) + 5; // 5-10 seconds
+          handleViewCountIncrement(short.id, estimatedWatchTime);
+
           // Scroll to next video
           const container = document.querySelector('.snap-y');
           if (container) {
@@ -204,12 +212,20 @@ export default function MediaPage() {
               top: (currentShortIndex + 1) * container.clientHeight,
               behavior: 'smooth'
             });
+            // Reset flag after scroll completes
+            setTimeout(() => setIsKeyboardNavigation(false), 300);
           }
         }
       } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
         // Go to previous short
         if (currentShortIndex > 0) {
+          setIsKeyboardNavigation(true);
           setCurrentShortIndex(prev => prev - 1);
+
+          // Track view count for keyboard navigation (going back)
+          const short = mediaData.shorts[currentShortIndex - 1];
+          const estimatedWatchTime = Math.floor(Math.random() * 6) + 5; // 5-10 seconds
+          handleViewCountIncrement(short.id, estimatedWatchTime);
 
           // Scroll to previous video
           const container = document.querySelector('.snap-y');
@@ -218,6 +234,8 @@ export default function MediaPage() {
               top: (currentShortIndex - 1) * container.clientHeight,
               behavior: 'smooth'
             });
+            // Reset flag after scroll completes
+            setTimeout(() => setIsKeyboardNavigation(false), 300);
           }
         }
       }
@@ -1024,9 +1042,11 @@ export default function MediaPage() {
                     shortsWatchedToday: prev.shortsWatchedToday + 1
                   }));
 
-                  // Track view count with estimated watch time (for shorts, assume 5-10 seconds)
-                  const estimatedWatchTime = Math.floor(Math.random() * 6) + 5; // 5-10 seconds
-                  handleViewCountIncrement(short.id, estimatedWatchTime);
+                  // Only track view count if not from keyboard navigation (to avoid double-counting)
+                  if (!isKeyboardNavigation) {
+                    const estimatedWatchTime = Math.floor(Math.random() * 6) + 5; // 5-10 seconds
+                    handleViewCountIncrement(short.id, estimatedWatchTime);
+                  }
 
                   // Check for quiz trigger every 3-5 shorts
                   const triggerAt = 3 + Math.floor(Math.random() * 3); // Random between 3-5
