@@ -7,3 +7,5 @@ Check the admin page, I have completed the subjects, topics and questions, flash
 
 
 what do you suggest I do next. You may suggest next implementation steps, issues with current steps or improvements to the overall user experience to make it easier for data entry (crud operations).
+
+I am trying to correctly implement the Media logic for admin and students. One issue I am facing is that the engagement is not being properly saved/loaded to/from DB. We need to be clever here especially how we save/load so we avoid putting unnecessary load on the DB/crud operations. We also need to plan how to effectively save it to DB.

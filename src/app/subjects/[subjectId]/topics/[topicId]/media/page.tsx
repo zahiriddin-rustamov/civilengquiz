@@ -67,11 +67,15 @@ interface ShortItem {
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   points: number;
   order: number;
-  // Engagement tracking
+  // User engagement data
+  isLiked: boolean;
+  isSaved: boolean;
+  userViewCount: number;
+  userWatchTime: number;
+  // Global engagement stats
   likes: number;
   views: number;
-  isLiked?: boolean;
-  isSaved?: boolean;
+  saves: number;
   // Quiz data
   quizQuestions?: {
     question: string;
@@ -135,9 +139,23 @@ export default function MediaPage() {
   const [quizAnswered, setQuizAnswered] = useState(false);
   const [quizResult, setQuizResult] = useState<{ isCorrect: boolean; explanation: string } | null>(null);
 
-  // Engagement state
-  const [likedShorts, setLikedShorts] = useState<Set<string>>(new Set());
-  const [savedShorts, setSavedShorts] = useState<Set<string>>(new Set());
+  // Engagement queue for batching
+  const [engagementQueue, setEngagementQueue] = useState<Array<{
+    mediaId: string;
+    isLiked?: boolean;
+    isSaved?: boolean;
+    incrementViewCount?: boolean;
+    addWatchTime?: number;
+    timestamp: number;
+  }>>([]);
+
+  // Local engagement state for optimistic updates
+  const [localEngagements, setLocalEngagements] = useState<Record<string, {
+    isLiked: boolean;
+    isSaved: boolean;
+    viewsDelta: number;
+    watchTimeDelta: number;
+  }>>({});
 
   const subjectId = params.subjectId as string;
   const topicId = params.topicId as string;
@@ -208,6 +226,75 @@ export default function MediaPage() {
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [activeTab, currentShortIndex, mediaData, shortsWatchedCount]);
+
+  // Periodic sync for engagement queue
+  useEffect(() => {
+    const syncEngagements = async () => {
+      if (engagementQueue.length === 0) return;
+
+      try {
+        // Batch engagements by mediaId to avoid duplicate updates
+        const latestEngagements = new Map();
+
+        engagementQueue.forEach(engagement => {
+          const existing = latestEngagements.get(engagement.mediaId) || {
+            mediaId: engagement.mediaId,
+            isLiked: undefined,
+            isSaved: undefined,
+            incrementViewCount: false,
+            addWatchTime: 0
+          };
+
+          if (engagement.isLiked !== undefined) existing.isLiked = engagement.isLiked;
+          if (engagement.isSaved !== undefined) existing.isSaved = engagement.isSaved;
+          if (engagement.incrementViewCount) existing.incrementViewCount = true;
+          if (engagement.addWatchTime) existing.addWatchTime += engagement.addWatchTime;
+
+          latestEngagements.set(engagement.mediaId, existing);
+        });
+
+        const batchedEngagements = Array.from(latestEngagements.values());
+
+        const response = await fetch('/api/media/engage/batch', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ engagements: batchedEngagements }),
+        });
+
+        if (response.ok) {
+          // Clear the queue on successful sync
+          setEngagementQueue([]);
+          console.log(`Synced ${batchedEngagements.length} engagement updates`);
+        } else {
+          console.error('Failed to sync engagements:', await response.text());
+        }
+      } catch (error) {
+        console.error('Error syncing engagements:', error);
+      }
+    };
+
+    // Sync every 5 seconds if there are queued engagements
+    const interval = setInterval(syncEngagements, 5000);
+    return () => clearInterval(interval);
+  }, [engagementQueue]);
+
+  // Sync engagements when component unmounts
+  useEffect(() => {
+    return () => {
+      if (engagementQueue.length > 0) {
+        // Final sync attempt
+        fetch('/api/media/engage/batch', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ engagements: engagementQueue }),
+        }).catch(console.error);
+      }
+    };
+  }, [engagementQueue]);
 
   const fetchMedia = async () => {
     try {
@@ -310,80 +397,106 @@ export default function MediaPage() {
     setQuizResult(null);
   };
 
-  const handleEngagement = async (mediaId: string, action: 'like' | 'save') => {
-    try {
-      const response = await fetch(`/api/media/${mediaId}/engage`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ action }),
-      });
+  const handleEngagement = (mediaId: string, action: 'like' | 'save') => {
+    if (!mediaData) return;
 
-      if (!response.ok) {
-        throw new Error('Failed to process engagement');
-      }
+    // Get current engagement state
+    const currentLocal = localEngagements[mediaId] || {
+      isLiked: false,
+      isSaved: false,
+      viewsDelta: 0,
+      watchTimeDelta: 0
+    };
 
-      // Update local state
-      if (action === 'like') {
-        setLikedShorts(prev => {
-          const newSet = new Set(prev);
-          if (newSet.has(mediaId)) {
-            newSet.delete(mediaId);
-          } else {
-            newSet.add(mediaId);
-          }
-          return newSet;
-        });
+    // Update local state optimistically
+    const newLocal = { ...currentLocal };
 
-        // Update the shorts data to reflect the new like count
-        if (mediaData) {
-          setMediaData(prev => ({
-            ...prev!,
-            shorts: prev!.shorts.map(short => {
-              if (short.id === mediaId) {
-                const isLiked = !likedShorts.has(mediaId);
-                return {
-                  ...short,
-                  likes: isLiked ? short.likes + 1 : Math.max(0, short.likes - 1),
-                  isLiked
-                };
-              }
-              return short;
-            })
-          }));
-        }
-      } else if (action === 'save') {
-        setSavedShorts(prev => {
-          const newSet = new Set(prev);
-          if (newSet.has(mediaId)) {
-            newSet.delete(mediaId);
-          } else {
-            newSet.add(mediaId);
-          }
-          return newSet;
-        });
-
-        // Update the shorts data to reflect the saved state
-        if (mediaData) {
-          setMediaData(prev => ({
-            ...prev!,
-            shorts: prev!.shorts.map(short => {
-              if (short.id === mediaId) {
-                return {
-                  ...short,
-                  isSaved: !savedShorts.has(mediaId)
-                };
-              }
-              return short;
-            })
-          }));
-        }
-      }
-    } catch (error) {
-      console.error('Error handling engagement:', error);
-      // You could show a toast notification here
+    if (action === 'like') {
+      newLocal.isLiked = !newLocal.isLiked;
+    } else if (action === 'save') {
+      newLocal.isSaved = !newLocal.isSaved;
     }
+
+    setLocalEngagements(prev => ({
+      ...prev,
+      [mediaId]: newLocal
+    }));
+
+    // Queue the engagement update
+    setEngagementQueue(prev => [...prev, {
+      mediaId,
+      isLiked: action === 'like' ? newLocal.isLiked : undefined,
+      isSaved: action === 'save' ? newLocal.isSaved : undefined,
+      timestamp: Date.now()
+    }]);
+
+    // Update the UI immediately (optimistic update)
+    setMediaData(prev => ({
+      ...prev!,
+      shorts: prev!.shorts.map(short => {
+        if (short.id === mediaId) {
+          const update: any = {};
+
+          if (action === 'like') {
+            update.isLiked = newLocal.isLiked;
+            update.likes = newLocal.isLiked
+              ? short.likes + 1
+              : Math.max(0, short.likes - 1);
+          } else if (action === 'save') {
+            update.isSaved = newLocal.isSaved;
+          }
+
+          return { ...short, ...update };
+        }
+        return short;
+      })
+    }));
+  };
+
+  const handleViewCountIncrement = (mediaId: string, watchTime: number = 0) => {
+    if (!mediaData) return;
+
+    const currentLocal = localEngagements[mediaId] || {
+      isLiked: false,
+      isSaved: false,
+      viewsDelta: 0,
+      watchTimeDelta: 0
+    };
+
+    const newLocal = {
+      ...currentLocal,
+      viewsDelta: currentLocal.viewsDelta + 1,
+      watchTimeDelta: currentLocal.watchTimeDelta + watchTime
+    };
+
+    setLocalEngagements(prev => ({
+      ...prev,
+      [mediaId]: newLocal
+    }));
+
+    // Queue the view update
+    setEngagementQueue(prev => [...prev, {
+      mediaId,
+      incrementViewCount: true,
+      addWatchTime: watchTime,
+      timestamp: Date.now()
+    }]);
+
+    // Update UI optimistically
+    setMediaData(prev => ({
+      ...prev!,
+      shorts: prev!.shorts.map(short => {
+        if (short.id === mediaId) {
+          return {
+            ...short,
+            views: short.views + 1,
+            userViewCount: (short.userViewCount || 0) + 1,
+            userWatchTime: (short.userWatchTime || 0) + watchTime
+          };
+        }
+        return short;
+      })
+    }));
   };
 
 
@@ -911,15 +1024,9 @@ export default function MediaPage() {
                     shortsWatchedToday: prev.shortsWatchedToday + 1
                   }));
 
-                  // Increment view count in the UI (simulate real-time engagement)
-                  setMediaData(prev => ({
-                    ...prev!,
-                    shorts: prev!.shorts.map(s =>
-                      s.id === short.id
-                        ? { ...s, views: s.views + 1 }
-                        : s
-                    )
-                  }));
+                  // Track view count with estimated watch time (for shorts, assume 5-10 seconds)
+                  const estimatedWatchTime = Math.floor(Math.random() * 6) + 5; // 5-10 seconds
+                  handleViewCountIncrement(short.id, estimatedWatchTime);
 
                   // Check for quiz trigger every 3-5 shorts
                   const triggerAt = 3 + Math.floor(Math.random() * 3); // Random between 3-5
@@ -990,13 +1097,13 @@ export default function MediaPage() {
                       >
                         <div className="bg-white/10 backdrop-blur-sm rounded-full p-3 hover:bg-white/20 transition-colors">
                           <Heart className={`w-7 h-7 transition-all duration-200 ${
-                            likedShorts.has(short.id) || short.isLiked
+                            short.isLiked
                               ? 'fill-red-500 text-red-500 scale-110'
                               : 'text-white hover:text-red-300'
                           }`} />
                         </div>
                         <span className="text-xs text-white font-semibold">
-                          {short.likes + (likedShorts.has(short.id) && !short.isLiked ? 1 : 0)}
+                          {short.likes}
                         </span>
                       </button>
 
@@ -1007,13 +1114,13 @@ export default function MediaPage() {
                       >
                         <div className="bg-white/10 backdrop-blur-sm rounded-full p-3 hover:bg-white/20 transition-colors">
                           <Bookmark className={`w-7 h-7 transition-all duration-200 ${
-                            savedShorts.has(short.id) || short.isSaved
+                            short.isSaved
                               ? 'fill-yellow-500 text-yellow-500 scale-110'
                               : 'text-white hover:text-yellow-300'
                           }`} />
                         </div>
                         <span className="text-xs text-white font-semibold">
-                          {savedShorts.has(short.id) || short.isSaved ? 'Saved' : 'Save'}
+                          {short.isSaved ? 'Saved' : 'Save'}
                         </span>
                       </button>
 

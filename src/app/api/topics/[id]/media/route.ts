@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { MediaService, TopicService, SubjectService } from '@/lib/db-operations';
+import { MediaService, TopicService, SubjectService, MediaEngagementService } from '@/lib/db-operations';
 
 // GET /api/topics/[id]/media - Get all media for a topic
 export async function GET(
@@ -34,51 +34,94 @@ export async function GET(
     // Get subject information
     const subject = await SubjectService.getSubjectById(topic.subjectId as any);
 
+    // Get user's engagement data for all media items
+    const userId = (session.user as any).id;
+    const mediaIds = mediaItems.map(item => item._id.toString());
+    const userEngagements = await MediaEngagementService.getUserMediaEngagements(userId, mediaIds);
+
+    // Get engagement stats for all media items
+    const engagementStatsPromises = mediaItems.map(item =>
+      MediaEngagementService.getMediaEngagementStats(item._id.toString())
+    );
+    const engagementStats = await Promise.all(engagementStatsPromises);
+    const statsMap: Record<string, any> = {};
+    mediaItems.forEach((item, index) => {
+      statsMap[item._id.toString()] = engagementStats[index];
+    });
+
     // Separate videos and shorts
     const videos = mediaItems
       .filter(item => item.videoType === 'video')
-      .map(item => ({
-        id: item._id.toString(),
-        title: item.title,
-        description: item.description,
-        url: item.youtubeUrl,
-        youtubeId: item.youtubeId,
-        duration: item.duration || 0,
-        thumbnail: item.thumbnail,
-        difficulty: item.difficulty,
-        points: item.xpReward,
-        estimatedMinutes: item.estimatedMinutes,
-        order: item.order,
-        preVideoContent: item.preVideoContent || {
-          learningObjectives: [],
-          prerequisites: [],
-          keyTerms: []
-        },
-        postVideoContent: item.postVideoContent || {
-          keyConcepts: [],
-          reflectionQuestions: [],
-          practicalApplications: [],
-          additionalResources: []
-        }
-      }));
+      .map(item => {
+        const mediaId = item._id.toString();
+        const userEngagement = userEngagements[mediaId];
+        const stats = statsMap[mediaId];
+
+        return {
+          id: mediaId,
+          title: item.title,
+          description: item.description,
+          url: item.youtubeUrl,
+          youtubeId: item.youtubeId,
+          duration: item.duration || 0,
+          thumbnail: item.thumbnail,
+          difficulty: item.difficulty,
+          points: item.xpReward,
+          estimatedMinutes: item.estimatedMinutes,
+          order: item.order,
+          // User engagement data
+          isLiked: userEngagement?.isLiked || false,
+          isSaved: userEngagement?.isSaved || false,
+          userViewCount: userEngagement?.viewCount || 0,
+          userWatchTime: userEngagement?.totalWatchTime || 0,
+          // Global engagement stats
+          totalLikes: stats.totalLikes,
+          totalViews: stats.totalViews,
+          totalSaves: stats.totalSaves,
+          preVideoContent: item.preVideoContent || {
+            learningObjectives: [],
+            prerequisites: [],
+            keyTerms: []
+          },
+          postVideoContent: item.postVideoContent || {
+            keyConcepts: [],
+            reflectionQuestions: [],
+            practicalApplications: [],
+            additionalResources: []
+          }
+        };
+      });
 
     const shorts = mediaItems
       .filter(item => item.videoType === 'short')
-      .map(item => ({
-        id: item._id.toString(),
-        title: item.title,
-        description: item.description,
-        url: item.youtubeUrl,
-        youtubeId: item.youtubeId,
-        duration: item.duration || 0,
-        thumbnail: item.thumbnail,
-        difficulty: item.difficulty,
-        points: item.xpReward,
-        order: item.order,
-        likes: 0, // TODO: Implement like tracking
-        views: 0, // TODO: Implement view tracking
-        quizQuestions: item.quizQuestions || []
-      }));
+      .map(item => {
+        const mediaId = item._id.toString();
+        const userEngagement = userEngagements[mediaId];
+        const stats = statsMap[mediaId];
+
+        return {
+          id: mediaId,
+          title: item.title,
+          description: item.description,
+          url: item.youtubeUrl,
+          youtubeId: item.youtubeId,
+          duration: item.duration || 0,
+          thumbnail: item.thumbnail,
+          difficulty: item.difficulty,
+          points: item.xpReward,
+          order: item.order,
+          // User engagement data
+          isLiked: userEngagement?.isLiked || false,
+          isSaved: userEngagement?.isSaved || false,
+          userViewCount: userEngagement?.viewCount || 0,
+          userWatchTime: userEngagement?.totalWatchTime || 0,
+          // Global engagement stats (using legacy names for frontend compatibility)
+          likes: stats.totalLikes,
+          views: stats.totalViews,
+          saves: stats.totalSaves,
+          quizQuestions: item.quizQuestions || []
+        };
+      });
 
     // Calculate totals
     const totalXP = mediaItems.reduce((sum, m) => sum + m.xpReward, 0);

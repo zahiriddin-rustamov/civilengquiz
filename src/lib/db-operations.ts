@@ -1,5 +1,5 @@
 import connectToDatabase from './mongoose';
-import { Subject, Topic, Question, Flashcard, Media, UserProgress, ISubject, ITopic, IQuestion, IFlashcard, IMedia, IUserProgress } from '@/models/database';
+import { Subject, Topic, Question, Flashcard, Media, UserProgress, MediaEngagement, ISubject, ITopic, IQuestion, IFlashcard, IMedia, IUserProgress, IMediaEngagement } from '@/models/database';
 import { Types } from 'mongoose';
 
 // Subject Operations
@@ -305,5 +305,190 @@ export class ProgressService {
       earnedXP,
       progressPercentage
     };
+  }
+}
+
+// Media Engagement Operations
+export class MediaEngagementService {
+  static async getUserMediaEngagement(userId: string, mediaId: string): Promise<IMediaEngagement | null> {
+    await connectToDatabase();
+    if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(mediaId)) return null;
+    return MediaEngagement.findOne({ userId, mediaId }).lean();
+  }
+
+  static async getUserMediaEngagements(userId: string, mediaIds: string[]): Promise<Record<string, IMediaEngagement>> {
+    await connectToDatabase();
+    if (!Types.ObjectId.isValid(userId)) return {};
+
+    const validMediaIds = mediaIds.filter(id => Types.ObjectId.isValid(id));
+    if (validMediaIds.length === 0) return {};
+
+    const engagements = await MediaEngagement.find({
+      userId,
+      mediaId: { $in: validMediaIds }
+    }).lean();
+
+    const engagementMap: Record<string, IMediaEngagement> = {};
+    engagements.forEach(engagement => {
+      engagementMap[engagement.mediaId.toString()] = engagement;
+    });
+
+    return engagementMap;
+  }
+
+  static async updateEngagement(data: {
+    userId: string;
+    mediaId: string;
+    isLiked?: boolean;
+    isSaved?: boolean;
+    incrementViewCount?: boolean;
+    addWatchTime?: number;
+  }): Promise<IMediaEngagement> {
+    await connectToDatabase();
+
+    const filter = {
+      userId: data.userId,
+      mediaId: data.mediaId
+    };
+
+    const update: any = {
+      lastViewed: new Date()
+    };
+
+    if (data.isLiked !== undefined) {
+      update.isLiked = data.isLiked;
+    }
+
+    if (data.isSaved !== undefined) {
+      update.isSaved = data.isSaved;
+    }
+
+    if (data.incrementViewCount) {
+      update.$inc = { viewCount: 1 };
+    }
+
+    if (data.addWatchTime && data.addWatchTime > 0) {
+      if (update.$inc) {
+        update.$inc.totalWatchTime = data.addWatchTime;
+      } else {
+        update.$inc = { totalWatchTime: data.addWatchTime };
+      }
+    }
+
+    return MediaEngagement.findOneAndUpdate(
+      filter,
+      update,
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    ).lean() as Promise<IMediaEngagement>;
+  }
+
+  static async batchUpdateEngagements(engagements: Array<{
+    userId: string;
+    mediaId: string;
+    isLiked?: boolean;
+    isSaved?: boolean;
+    incrementViewCount?: boolean;
+    addWatchTime?: number;
+  }>): Promise<void> {
+    await connectToDatabase();
+
+    const bulkOps = engagements.map(data => {
+      const filter = {
+        userId: data.userId,
+        mediaId: data.mediaId
+      };
+
+      const update: any = {
+        lastViewed: new Date()
+      };
+
+      if (data.isLiked !== undefined) {
+        update.isLiked = data.isLiked;
+      }
+
+      if (data.isSaved !== undefined) {
+        update.isSaved = data.isSaved;
+      }
+
+      if (data.incrementViewCount) {
+        update.$inc = { viewCount: 1 };
+      }
+
+      if (data.addWatchTime && data.addWatchTime > 0) {
+        if (update.$inc) {
+          update.$inc.totalWatchTime = data.addWatchTime;
+        } else {
+          update.$inc = { totalWatchTime: data.addWatchTime };
+        }
+      }
+
+      return {
+        updateOne: {
+          filter,
+          update,
+          upsert: true
+        }
+      };
+    });
+
+    if (bulkOps.length > 0) {
+      await MediaEngagement.bulkWrite(bulkOps);
+    }
+  }
+
+  static async getMediaEngagementStats(mediaId: string): Promise<{
+    totalLikes: number;
+    totalViews: number;
+    totalSaves: number;
+    avgWatchTime: number;
+  }> {
+    await connectToDatabase();
+    if (!Types.ObjectId.isValid(mediaId)) {
+      return { totalLikes: 0, totalViews: 0, totalSaves: 0, avgWatchTime: 0 };
+    }
+
+    const stats = await MediaEngagement.aggregate([
+      { $match: { mediaId: new Types.ObjectId(mediaId) } },
+      {
+        $group: {
+          _id: null,
+          totalLikes: { $sum: { $cond: ['$isLiked', 1, 0] } },
+          totalSaves: { $sum: { $cond: ['$isSaved', 1, 0] } },
+          totalViews: { $sum: '$viewCount' },
+          avgWatchTime: { $avg: '$totalWatchTime' }
+        }
+      }
+    ]);
+
+    if (stats.length === 0) {
+      return { totalLikes: 0, totalViews: 0, totalSaves: 0, avgWatchTime: 0 };
+    }
+
+    return {
+      totalLikes: stats[0].totalLikes || 0,
+      totalViews: stats[0].totalViews || 0,
+      totalSaves: stats[0].totalSaves || 0,
+      avgWatchTime: Math.round(stats[0].avgWatchTime || 0)
+    };
+  }
+
+  static async getUserLikedMedia(userId: string): Promise<IMediaEngagement[]> {
+    await connectToDatabase();
+    if (!Types.ObjectId.isValid(userId)) return [];
+
+    return MediaEngagement.find({ userId, isLiked: true })
+      .populate('mediaId')
+      .sort({ updatedAt: -1 })
+      .lean();
+  }
+
+  static async getUserSavedMedia(userId: string): Promise<IMediaEngagement[]> {
+    await connectToDatabase();
+    if (!Types.ObjectId.isValid(userId)) return [];
+
+    return MediaEngagement.find({ userId, isSaved: true })
+      .populate('mediaId')
+      .sort({ updatedAt: -1 })
+      .lean();
   }
 }

@@ -294,6 +294,38 @@ UserProgressSchema.index({ userId: 1, contentId: 1, contentType: 1 }, { unique: 
 UserProgressSchema.index({ userId: 1, topicId: 1 });
 UserProgressSchema.index({ userId: 1, subjectId: 1 });
 
+// Media Engagement Schema
+export interface IMediaEngagement extends Document {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
+  mediaId: Types.ObjectId;
+  isLiked: boolean;
+  isSaved: boolean;
+  viewCount: number;
+  lastViewed: Date;
+  totalWatchTime: number; // in seconds
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const MediaEngagementSchema = new Schema<IMediaEngagement>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  mediaId: { type: Schema.Types.ObjectId, ref: 'Media', required: true },
+  isLiked: { type: Boolean, default: false },
+  isSaved: { type: Boolean, default: false },
+  viewCount: { type: Number, default: 0 },
+  lastViewed: { type: Date, default: Date.now },
+  totalWatchTime: { type: Number, default: 0 },
+}, {
+  timestamps: true
+});
+
+// Create compound indexes for better query performance
+MediaEngagementSchema.index({ userId: 1, mediaId: 1 }, { unique: true });
+MediaEngagementSchema.index({ userId: 1, isLiked: 1 });
+MediaEngagementSchema.index({ userId: 1, isSaved: 1 });
+MediaEngagementSchema.index({ mediaId: 1 });
+
 // Export models
 export const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 export const Subject = mongoose.models.Subject || mongoose.model<ISubject>('Subject', SubjectSchema);
@@ -310,3 +342,4 @@ export const Question = mongoose.model<IQuestion>('Question', QuestionSchema);
 export const Flashcard = mongoose.models.Flashcard || mongoose.model<IFlashcard>('Flashcard', FlashcardSchema);
 export const Media = mongoose.models.Media || mongoose.model<IMedia>('Media', MediaSchema);
 export const UserProgress = mongoose.models.UserProgress || mongoose.model<IUserProgress>('UserProgress', UserProgressSchema);
+export const MediaEngagement = mongoose.models.MediaEngagement || mongoose.model<IMediaEngagement>('MediaEngagement', MediaEngagementSchema);
