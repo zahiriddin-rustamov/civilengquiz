@@ -479,13 +479,13 @@ export default function MediaPage() {
                 return (
                   <div key={groupKey} className="border rounded-lg overflow-hidden">
                     {/* Group Header */}
-                    <div className="bg-gray-50 border-b p-4">
+                    <div
+                      className="bg-gray-50 border-b p-4 cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => toggleGroupExpansion(groupKey)}
+                    >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
-                          <button
-                            onClick={() => toggleGroupExpansion(groupKey)}
-                            className="flex items-center space-x-2 hover:text-blue-600 transition-colors"
-                          >
+                          <div className="flex items-center space-x-2">
                             {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                             <div className="text-left">
                               <div className="font-semibold text-gray-900">
@@ -495,11 +495,14 @@ export default function MediaPage() {
                                 {group.videoCount} videos, {group.shortCount} shorts • {group.totalXP} XP total
                               </div>
                             </div>
-                          </button>
+                          </div>
                         </div>
 
                         {/* Group Actions */}
-                        <div className="flex items-center space-x-2">
+                        <div
+                          className="flex items-center space-x-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm">
