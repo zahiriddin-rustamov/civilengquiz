@@ -34,54 +34,55 @@ export async function GET(
     // Get subject information
     const subject = await SubjectService.getSubjectById(topic.subjectId as any);
 
-    // Separate media by type
+    // Separate videos and shorts
     const videos = mediaItems
-      .filter(item => item.type === 'video')
+      .filter(item => item.videoType === 'video')
       .map(item => ({
         id: item._id.toString(),
         title: item.title,
         description: item.description,
-        url: item.data.url || '',
-        duration: item.data.duration || 0,
-        thumbnail: item.data.thumbnail,
+        url: item.youtubeUrl,
+        youtubeId: item.youtubeId,
+        duration: item.duration || 0,
+        thumbnail: item.thumbnail,
         difficulty: item.difficulty,
-        points: item.points,
-        topics: item.data.topics || []
+        points: item.xpReward,
+        estimatedMinutes: item.estimatedMinutes,
+        order: item.order,
+        preVideoContent: item.preVideoContent || {
+          learningObjectives: [],
+          prerequisites: [],
+          keyTerms: []
+        },
+        postVideoContent: item.postVideoContent || {
+          keyConcepts: [],
+          reflectionQuestions: [],
+          practicalApplications: [],
+          additionalResources: []
+        }
       }));
 
-    const simulations = mediaItems
-      .filter(item => item.type === 'simulation')
+    const shorts = mediaItems
+      .filter(item => item.videoType === 'short')
       .map(item => ({
         id: item._id.toString(),
         title: item.title,
         description: item.description,
-        type: item.data.simulationType || 'generic',
+        url: item.youtubeUrl,
+        youtubeId: item.youtubeId,
+        duration: item.duration || 0,
+        thumbnail: item.thumbnail,
         difficulty: item.difficulty,
-        points: item.points,
-        parameters: item.data.parameters || [],
-        learningObjectives: item.data.learningObjectives || []
-      }));
-
-    const galleries = mediaItems
-      .filter(item => item.type === 'gallery')
-      .map(item => ({
-        id: item._id.toString(),
-        title: item.title,
-        description: item.description,
-        category: item.data.category || 'photos',
-        difficulty: item.difficulty,
-        points: item.points,
-        images: item.data.images || []
+        points: item.xpReward,
+        order: item.order,
+        likes: 0, // TODO: Implement like tracking
+        views: 0, // TODO: Implement view tracking
+        quizQuestions: [] // TODO: Add quiz questions to Media model
       }));
 
     // Calculate totals
-    const totalXP = mediaItems.reduce((sum, m) => sum + m.points, 0);
-    const estimatedTime = mediaItems.reduce((sum, m) => {
-      if (m.type === 'video' && m.data.duration) {
-        return sum + Math.ceil(m.data.duration / 60); // Convert seconds to minutes
-      }
-      return sum + 5; // Default 5 minutes for other media types
-    }, 0);
+    const totalXP = mediaItems.reduce((sum, m) => sum + m.xpReward, 0);
+    const estimatedTime = mediaItems.reduce((sum, m) => sum + m.estimatedMinutes, 0);
 
     const response = {
       topicName: topic.name,
@@ -89,8 +90,7 @@ export async function GET(
       totalXP,
       estimatedTime: Math.max(estimatedTime, 10),
       videos,
-      simulations,
-      galleries
+      shorts
     };
 
     return NextResponse.json(response);
@@ -129,26 +129,75 @@ export async function POST(
     }
 
     const data = await request.json();
-    
+
     // Validate required fields
-    const { type, title, description, difficulty, points, order, data: mediaData } = data;
-    
-    if (!type || !title || !description || !difficulty || !points || order === undefined || !mediaData) {
+    const {
+      title,
+      description,
+      difficulty,
+      xpReward,
+      estimatedMinutes,
+      order,
+      youtubeUrl,
+      videoType,
+      preVideoContent,
+      postVideoContent
+    } = data;
+
+    if (!title || !description || !difficulty || xpReward === undefined || estimatedMinutes === undefined || order === undefined || !youtubeUrl || !videoType) {
       return NextResponse.json(
-        { error: 'Missing required fields: type, title, description, difficulty, points, order, data' },
+        { error: 'Missing required fields: title, description, difficulty, xpReward, estimatedMinutes, order, youtubeUrl, videoType' },
+        { status: 400 }
+      );
+    }
+
+    // Extract YouTube ID from URL
+    const extractYouTubeId = (url: string): string | null => {
+      const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+        /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+        /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
+      ];
+
+      for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match) {
+          return match[1];
+        }
+      }
+      return null;
+    };
+
+    const youtubeId = extractYouTubeId(youtubeUrl);
+    if (!youtubeId) {
+      return NextResponse.json(
+        { error: 'Invalid YouTube URL' },
         { status: 400 }
       );
     }
 
     const media = await MediaService.createMedia({
       topicId: id as any,
-      type,
       title,
       description,
       difficulty,
-      points,
+      xpReward,
+      estimatedMinutes,
       order,
-      data: mediaData
+      youtubeUrl,
+      youtubeId,
+      videoType,
+      preVideoContent: preVideoContent || {
+        learningObjectives: [],
+        prerequisites: [],
+        keyTerms: []
+      },
+      postVideoContent: postVideoContent || {
+        keyConcepts: [],
+        reflectionQuestions: [],
+        practicalApplications: [],
+        additionalResources: []
+      }
     });
 
     return NextResponse.json(media, { status: 201 });

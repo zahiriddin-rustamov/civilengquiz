@@ -3,4 +3,7 @@ I am working on this civil engineering quiz website for bachelor degree students
 For context: we have subjects (so for now just three), inside each subject, we have different topics.
 Inside each topic, there can be three types of content: questions (mcqs, t/f and so forth), flashcards and media (mainly videos from youtube/youtube shorts). Currently, the media is not correctly setup since when I demo'ed the website, I included simulation and gallery but I came to know we just need to put videos there but I am guessing even for videos it cannot just be watching but perhaps some text accompanying it? I don't know.
 
-Check the admin page, I have completed the subjects, topics and questions so far. Let's focus on the "flashcards" now only. what do you suggest I do next. You may suggest next implementation steps, issues with current steps or improvements to the overall user experience to make it easier for data entry (crud operations).
+Check the admin page, I have completed the subjects, topics and questions, flashcards and media. Let's focus on the "media" now only. Since I revised media to only display youtube videos/shorts. We need to adequately update the student media to match this change.
+
+
+what do you suggest I do next. You may suggest next implementation steps, issues with current steps or improvements to the overall user experience to make it easier for data entry (crud operations).
