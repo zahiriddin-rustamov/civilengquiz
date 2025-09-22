@@ -22,12 +22,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { 
-  Plus, 
-  Search, 
-  MoreVertical, 
-  Edit, 
-  Trash2, 
+import {
+  Plus,
+  Search,
+  MoreVertical,
+  Edit,
+  Trash2,
   Eye,
   Play,
   Zap,
@@ -36,7 +36,11 @@ import {
   MonitorSpeaker,
   ImageIcon,
   Clock,
-  ExternalLink
+  ExternalLink,
+  ChevronDown,
+  ChevronRight,
+  Move,
+  Users
 } from 'lucide-react';
 import { ISubject, ITopic, IMedia } from '@/models/database';
 import { Types } from 'mongoose';
@@ -45,6 +49,17 @@ interface EnhancedMedia extends IMedia {
   topicName: string;
   subjectName: string;
   subjectId: Types.ObjectId;
+}
+
+interface MediaGroup {
+  subjectId: string;
+  subjectName: string;
+  topicId: string;
+  topicName: string;
+  media: EnhancedMedia[];
+  videoCount: number;
+  shortCount: number;
+  totalXP: number;
 }
 
 export default function MediaPage() {
@@ -59,6 +74,8 @@ export default function MediaPage() {
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [groupedMedia, setGroupedMedia] = useState<MediaGroup[]>([]);
 
   useEffect(() => {
     fetchMedia();
@@ -108,7 +125,62 @@ export default function MediaPage() {
     }
 
     setFilteredMedia(filtered);
+
+    // Group filtered media by subject-topic combination
+    const groups = groupMediaByTopic(filtered);
+    setGroupedMedia(groups);
   }, [media, searchTerm, selectedSubject, selectedTopic, selectedVideoType, selectedDifficulty, subjects]);
+
+  const groupMediaByTopic = (mediaItems: EnhancedMedia[]): MediaGroup[] => {
+    const groupMap = new Map<string, MediaGroup>();
+
+    mediaItems.forEach(item => {
+      const key = `${item.subjectId}-${item.topicId}`;
+
+      if (!groupMap.has(key)) {
+        groupMap.set(key, {
+          subjectId: item.subjectId.toString(),
+          subjectName: item.subjectName,
+          topicId: item.topicId.toString(),
+          topicName: item.topicName,
+          media: [],
+          videoCount: 0,
+          shortCount: 0,
+          totalXP: 0,
+        });
+      }
+
+      const group = groupMap.get(key)!;
+      group.media.push(item);
+      group.totalXP += item.xpReward;
+
+      if (item.videoType === 'video') {
+        group.videoCount++;
+      } else {
+        group.shortCount++;
+      }
+    });
+
+    // Sort groups by subject name, then topic name
+    return Array.from(groupMap.values()).sort((a, b) => {
+      if (a.subjectName !== b.subjectName) {
+        return a.subjectName.localeCompare(b.subjectName);
+      }
+      return a.topicName.localeCompare(b.topicName);
+    });
+  };
+
+  const toggleGroupExpansion = (groupKey: string) => {
+    setExpandedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupKey)) {
+        newSet.delete(groupKey);
+      } else {
+        newSet.add(groupKey);
+      }
+      return newSet;
+    });
+  };
 
   const fetchMedia = async () => {
     try {
@@ -378,7 +450,7 @@ export default function MediaPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {filteredMedia.length === 0 ? (
+          {groupedMedia.length === 0 ? (
             <div className="text-center py-8">
               <Play className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No media found</h3>
@@ -399,103 +471,161 @@ export default function MediaPage() {
               )}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Topic</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Video Type</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Difficulty</TableHead>
-                  <TableHead>XP Reward</TableHead>
-                  <TableHead>Order</TableHead>
-                  <TableHead className="w-[70px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredMedia.map((mediaItem) => (
-                  <TableRow key={mediaItem._id.toString()}>
-                    <TableCell className="max-w-xs">
-                      <div className="font-medium truncate" title={mediaItem.title}>
-                        {truncateText(mediaItem.title)}
-                      </div>
-                    </TableCell>
-                    <TableCell className="max-w-xs">
-                      <div className="text-gray-600 truncate" title={mediaItem.description}>
-                        {truncateText(mediaItem.description)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <BookOpen className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm">{mediaItem.topicName}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-600">{mediaItem.subjectName}</TableCell>
-                    <TableCell>
-                      <Badge className={getVideoTypeColor(mediaItem.videoType)}>
-                        <div className="flex items-center space-x-1">
-                          {getVideoTypeIcon(mediaItem.videoType)}
-                          <span>{getVideoTypeLabel(mediaItem.videoType)}</span>
-                        </div>
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{getVideoPreview(mediaItem)}</TableCell>
-                    <TableCell>
-                      <Badge className={getDifficultyColor(mediaItem.difficulty)}>
-                        {mediaItem.difficulty}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{mediaItem.xpReward}</TableCell>
-                    <TableCell>
-                      {mediaItem.videoType === 'video' ? mediaItem.order : (
-                        <span className="text-gray-400 text-sm">Random</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="h-4 w-4" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/media/${mediaItem._id}`}>
-                              <Eye className="w-4 h-4 mr-2" />
-                              View
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <a href={mediaItem.youtubeUrl} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="w-4 h-4 mr-2" />
-                              Open YouTube
-                            </a>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/media/${mediaItem._id}/edit`}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(mediaItem._id.toString())}
-                            className="text-red-600 focus:text-red-600"
+            <div className="space-y-4">
+              {groupedMedia.map((group) => {
+                const groupKey = `${group.subjectId}-${group.topicId}`;
+                const isExpanded = expandedGroups.has(groupKey);
+
+                return (
+                  <div key={groupKey} className="border rounded-lg overflow-hidden">
+                    {/* Group Header */}
+                    <div className="bg-gray-50 border-b p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <button
+                            onClick={() => toggleGroupExpansion(groupKey)}
+                            className="flex items-center space-x-2 hover:text-blue-600 transition-colors"
                           >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                            {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                            <div className="text-left">
+                              <div className="font-semibold text-gray-900">
+                                {group.subjectName} → {group.topicName}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                {group.videoCount} videos, {group.shortCount} shorts • {group.totalXP} XP total
+                              </div>
+                            </div>
+                          </button>
+                        </div>
+
+                        {/* Group Actions */}
+                        <div className="flex items-center space-x-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreVertical className="h-4 w-4" />
+                                <span className="sr-only">Group actions</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {group.videoCount > 0 && (
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/admin/media/reorder?topicId=${group.topicId}`}>
+                                    <Move className="w-4 h-4 mr-2" />
+                                    Reorder Videos
+                                  </Link>
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem asChild>
+                                <Link href={`/admin/media/new?topicId=${group.topicId}`}>
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  Add Media to Topic
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedSubject(group.subjectId);
+                                  setSelectedTopic(group.topicId);
+                                }}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Only This Topic
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expanded Content */}
+                    {isExpanded && (
+                      <div className="p-4">
+                        <div className="space-y-3">
+                          {group.media
+                            .sort((a, b) => {
+                              // Sort videos by order, then shorts after
+                              if (a.videoType === 'video' && b.videoType === 'video') {
+                                return a.order - b.order;
+                              }
+                              if (a.videoType === 'video') return -1;
+                              if (b.videoType === 'video') return 1;
+                              return 0;
+                            })
+                            .map((mediaItem) => (
+                              <div key={mediaItem._id.toString()} className="flex items-center justify-between p-3 bg-white border rounded-lg hover:bg-gray-50 transition-colors">
+                                <div className="flex items-center space-x-3 flex-1">
+                                  <div className="flex items-center space-x-2">
+                                    {getVideoTypeIcon(mediaItem.videoType)}
+                                    <Badge className={getVideoTypeColor(mediaItem.videoType)} variant="outline">
+                                      {mediaItem.videoType === 'video' ? `#${mediaItem.order}` : 'Random'}
+                                    </Badge>
+                                  </div>
+
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-gray-900 truncate" title={mediaItem.title}>
+                                      {mediaItem.title}
+                                    </div>
+                                    <div className="text-sm text-gray-500 truncate" title={mediaItem.description}>
+                                      {truncateText(mediaItem.description, 60)}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center space-x-2">
+                                    <Badge className={getDifficultyColor(mediaItem.difficulty)} variant="outline">
+                                      {mediaItem.difficulty}
+                                    </Badge>
+                                    <span className="text-sm text-gray-600">{mediaItem.xpReward} XP</span>
+                                    {getVideoPreview(mediaItem)}
+                                  </div>
+                                </div>
+
+                                {/* Individual Media Actions */}
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm">
+                                      <MoreVertical className="h-4 w-4" />
+                                      <span className="sr-only">Media actions</span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/admin/media/${mediaItem._id}`}>
+                                        <Eye className="w-4 h-4 mr-2" />
+                                        View
+                                      </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem asChild>
+                                      <a href={mediaItem.youtubeUrl} target="_blank" rel="noopener noreferrer">
+                                        <ExternalLink className="w-4 h-4 mr-2" />
+                                        Open YouTube
+                                      </a>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/admin/media/${mediaItem._id}/edit`}>
+                                        <Edit className="w-4 h-4 mr-2" />
+                                        Edit
+                                      </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => handleDelete(mediaItem._id.toString())}
+                                      className="text-red-600 focus:text-red-600"
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </CardContent>
       </Card>

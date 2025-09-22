@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     // Build query
     const query: any = {};
     if (topicId) query.topicId = new Types.ObjectId(topicId);
-    if (type) query.type = type;
+    if (type) query.videoType = type;
     if (difficulty) query.difficulty = difficulty;
 
     // Get media with topic information
