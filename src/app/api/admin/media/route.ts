@@ -154,18 +154,23 @@ export async function POST(req: Request) {
 
       mediaData.preVideoContent = cleanPreVideoContent;
       mediaData.postVideoContent = cleanPostVideoContent;
-    } else if (videoType === 'short' && quizQuestions) {
-      // Filter out empty quiz questions for shorts
-      const cleanQuizQuestions = quizQuestions.filter((q: any) =>
-        q.question?.trim() &&
-        q.options?.length > 0 &&
-        q.options.every((o: string) => o?.trim()) &&
-        q.correctAnswer !== undefined
-      );
+    } else if (videoType === 'short') {
+      // For shorts, only add quiz questions if they exist
+      if (quizQuestions && Array.isArray(quizQuestions)) {
+        const cleanQuizQuestions = quizQuestions.filter((q: any) =>
+          q.question?.trim() &&
+          q.options?.length > 0 &&
+          q.options.every((o: string) => o?.trim()) &&
+          q.correctAnswer !== undefined
+        );
 
-      if (cleanQuizQuestions.length > 0) {
-        mediaData.quizQuestions = cleanQuizQuestions;
+        if (cleanQuizQuestions.length > 0) {
+          mediaData.quizQuestions = cleanQuizQuestions;
+        }
       }
+
+      // Explicitly DO NOT add preVideoContent and postVideoContent for shorts
+      // (The database schema allows them but we don't want them for shorts)
     }
 
     // Create media

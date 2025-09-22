@@ -20,7 +20,10 @@ import {
   Bookmark,
   ChevronLeft,
   ChevronRight,
-  Pause
+  Pause,
+  X,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { VideoPlayer } from '@/components/media/VideoPlayer';
@@ -128,6 +131,13 @@ export default function MediaPage() {
     correctAnswer: number;
     explanation?: string;
   } | null>(null);
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [quizAnswered, setQuizAnswered] = useState(false);
+  const [quizResult, setQuizResult] = useState<{ isCorrect: boolean; explanation: string } | null>(null);
+
+  // Engagement state
+  const [likedShorts, setLikedShorts] = useState<Set<string>>(new Set());
+  const [savedShorts, setSavedShorts] = useState<Set<string>>(new Set());
 
   const subjectId = params.subjectId as string;
   const topicId = params.topicId as string;
@@ -220,6 +230,13 @@ export default function MediaPage() {
         data.shorts = [...data.shorts].sort(() => Math.random() - 0.5);
       }
 
+      // Debug: Check if any shorts have quiz questions
+      console.log('Loaded media data:', {
+        videosCount: data.videos?.length || 0,
+        shortsCount: data.shorts?.length || 0,
+        shortsWithQuiz: data.shorts?.filter((s: any) => s.quizQuestions && s.quizQuestions.length > 0).length || 0
+      });
+
       setMediaData(data);
     } catch (err) {
       console.error('Error fetching media:', err);
@@ -237,6 +254,136 @@ export default function MediaPage() {
         [videoId]: { progress: progressValue, completed, points }
       }
     }));
+  };
+
+  const triggerRandomQuiz = () => {
+    if (!mediaData?.shorts || mediaData.shorts.length === 0) return;
+
+    // Find shorts with quiz questions
+    const shortsWithQuiz = mediaData.shorts.filter(short =>
+      short.quizQuestions && short.quizQuestions.length > 0
+    );
+
+    if (shortsWithQuiz.length === 0) return;
+
+    // Pick a random short with quiz
+    const randomShort = shortsWithQuiz[Math.floor(Math.random() * shortsWithQuiz.length)];
+
+    // Pick a random question from that short
+    const randomQuestion = randomShort.quizQuestions![Math.floor(Math.random() * randomShort.quizQuestions!.length)];
+
+    setCurrentQuiz(randomQuestion);
+    setSelectedAnswer(null);
+    setQuizAnswered(false);
+    setQuizResult(null);
+    setShowQuiz(true);
+  };
+
+  const handleQuizAnswer = (answerIndex: number) => {
+    if (quizAnswered || !currentQuiz) return;
+
+    setSelectedAnswer(answerIndex);
+    const isCorrect = answerIndex === currentQuiz.correctAnswer;
+
+    setQuizResult({
+      isCorrect,
+      explanation: currentQuiz.explanation || (isCorrect ? 'Correct!' : 'Incorrect, try again next time!')
+    });
+
+    setQuizAnswered(true);
+
+    // Update progress
+    if (isCorrect) {
+      setProgress(prev => ({
+        ...prev,
+        totalQuizCorrect: prev.totalQuizCorrect + 1,
+        currentStreak: prev.currentStreak + 1
+      }));
+    }
+  };
+
+  const closeQuiz = () => {
+    setShowQuiz(false);
+    setCurrentQuiz(null);
+    setSelectedAnswer(null);
+    setQuizAnswered(false);
+    setQuizResult(null);
+  };
+
+  const handleEngagement = async (mediaId: string, action: 'like' | 'save') => {
+    try {
+      const response = await fetch(`/api/media/${mediaId}/engage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to process engagement');
+      }
+
+      // Update local state
+      if (action === 'like') {
+        setLikedShorts(prev => {
+          const newSet = new Set(prev);
+          if (newSet.has(mediaId)) {
+            newSet.delete(mediaId);
+          } else {
+            newSet.add(mediaId);
+          }
+          return newSet;
+        });
+
+        // Update the shorts data to reflect the new like count
+        if (mediaData) {
+          setMediaData(prev => ({
+            ...prev!,
+            shorts: prev!.shorts.map(short => {
+              if (short.id === mediaId) {
+                const isLiked = !likedShorts.has(mediaId);
+                return {
+                  ...short,
+                  likes: isLiked ? short.likes + 1 : Math.max(0, short.likes - 1),
+                  isLiked
+                };
+              }
+              return short;
+            })
+          }));
+        }
+      } else if (action === 'save') {
+        setSavedShorts(prev => {
+          const newSet = new Set(prev);
+          if (newSet.has(mediaId)) {
+            newSet.delete(mediaId);
+          } else {
+            newSet.add(mediaId);
+          }
+          return newSet;
+        });
+
+        // Update the shorts data to reflect the saved state
+        if (mediaData) {
+          setMediaData(prev => ({
+            ...prev!,
+            shorts: prev!.shorts.map(short => {
+              if (short.id === mediaId) {
+                return {
+                  ...short,
+                  isSaved: !savedShorts.has(mediaId)
+                };
+              }
+              return short;
+            })
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error handling engagement:', error);
+      // You could show a toast notification here
+    }
   };
 
 
@@ -749,7 +896,7 @@ export default function MediaPage() {
                   setCurrentShortIndex(newIndex);
                   setShortsWatchedCount(prev => prev + 1);
 
-                  // Update progress
+                  // Update progress and view count
                   const short = mediaData.shorts[newIndex];
                   setProgress(prev => ({
                     ...prev,
@@ -764,9 +911,20 @@ export default function MediaPage() {
                     shortsWatchedToday: prev.shortsWatchedToday + 1
                   }));
 
-                  // Check for quiz trigger
-                  if ((shortsWatchedCount + 1) % 3 === 0) {
-                    setShowQuiz(true);
+                  // Increment view count in the UI (simulate real-time engagement)
+                  setMediaData(prev => ({
+                    ...prev!,
+                    shorts: prev!.shorts.map(s =>
+                      s.id === short.id
+                        ? { ...s, views: s.views + 1 }
+                        : s
+                    )
+                  }));
+
+                  // Check for quiz trigger every 3-5 shorts
+                  const triggerAt = 3 + Math.floor(Math.random() * 3); // Random between 3-5
+                  if ((shortsWatchedCount + 1) % triggerAt === 0) {
+                    setTimeout(() => triggerRandomQuiz(), 500); // Small delay after scroll
                   }
                 }
               }}
@@ -817,6 +975,9 @@ export default function MediaPage() {
                         <span className="text-xs bg-purple-600/80 backdrop-blur px-2 py-1 rounded-full">
                           +{short.points} XP
                         </span>
+                        <span className="text-xs bg-black/50 backdrop-blur px-2 py-1 rounded-full">
+                          👁 {short.views}
+                        </span>
                       </div>
                     </div>
 
@@ -825,41 +986,57 @@ export default function MediaPage() {
                       {/* Like Button */}
                       <button
                         className="flex flex-col items-center gap-1 transition-transform active:scale-110"
-                        onClick={() => {
-                          // Handle like
-                        }}
+                        onClick={() => handleEngagement(short.id, 'like')}
                       >
-                        <div className="bg-white/10 backdrop-blur-sm rounded-full p-3 hover:bg-white/20">
-                          <Heart className={`w-7 h-7 ${short.isLiked ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+                        <div className="bg-white/10 backdrop-blur-sm rounded-full p-3 hover:bg-white/20 transition-colors">
+                          <Heart className={`w-7 h-7 transition-all duration-200 ${
+                            likedShorts.has(short.id) || short.isLiked
+                              ? 'fill-red-500 text-red-500 scale-110'
+                              : 'text-white hover:text-red-300'
+                          }`} />
                         </div>
-                        <span className="text-xs text-white font-semibold">{short.likes || 0}</span>
+                        <span className="text-xs text-white font-semibold">
+                          {short.likes + (likedShorts.has(short.id) && !short.isLiked ? 1 : 0)}
+                        </span>
                       </button>
 
                       {/* Save Button */}
                       <button
                         className="flex flex-col items-center gap-1 transition-transform active:scale-110"
-                        onClick={() => {
-                          // Handle save
-                        }}
+                        onClick={() => handleEngagement(short.id, 'save')}
                       >
-                        <div className="bg-white/10 backdrop-blur-sm rounded-full p-3 hover:bg-white/20">
-                          <Bookmark className={`w-7 h-7 ${short.isSaved ? 'fill-yellow-500 text-yellow-500' : 'text-white'}`} />
+                        <div className="bg-white/10 backdrop-blur-sm rounded-full p-3 hover:bg-white/20 transition-colors">
+                          <Bookmark className={`w-7 h-7 transition-all duration-200 ${
+                            savedShorts.has(short.id) || short.isSaved
+                              ? 'fill-yellow-500 text-yellow-500 scale-110'
+                              : 'text-white hover:text-yellow-300'
+                          }`} />
                         </div>
-                        <span className="text-xs text-white font-semibold">Save</span>
+                        <span className="text-xs text-white font-semibold">
+                          {savedShorts.has(short.id) || short.isSaved ? 'Saved' : 'Save'}
+                        </span>
                       </button>
 
-                      {/* Quiz Button */}
-                      <button
-                        className="flex flex-col items-center gap-1 transition-transform active:scale-110"
-                        onClick={() => {
-                          setShowQuiz(true);
-                        }}
-                      >
-                        <div className="bg-purple-600 rounded-full p-3 hover:bg-purple-700">
-                          <Zap className="w-7 h-7 text-white" />
-                        </div>
-                        <span className="text-xs text-white font-semibold">Quiz</span>
-                      </button>
+                      {/* Quiz Button - Only show if this short has quiz questions */}
+                      {short.quizQuestions && short.quizQuestions.length > 0 && (
+                        <button
+                          className="flex flex-col items-center gap-1 transition-transform active:scale-110"
+                          onClick={() => {
+                            console.log('Quiz button clicked for short:', short);
+                            const randomQuestion = short.quizQuestions[Math.floor(Math.random() * short.quizQuestions.length)];
+                            setCurrentQuiz(randomQuestion);
+                            setSelectedAnswer(null);
+                            setQuizAnswered(false);
+                            setQuizResult(null);
+                            setShowQuiz(true);
+                          }}
+                        >
+                          <div className="bg-purple-600 rounded-full p-3 hover:bg-purple-700">
+                            <Zap className="w-7 h-7 text-white" />
+                          </div>
+                          <span className="text-xs text-white font-semibold">Quiz</span>
+                        </button>
+                      )}
                     </div>
 
                     {/* Progress Dots - Right Side */}
@@ -918,6 +1095,152 @@ export default function MediaPage() {
             <Smartphone className="mx-auto h-16 w-16 text-gray-400 mb-4" />
             <h3 className="text-xl font-medium text-gray-900 mb-2">No Shorts Available</h3>
             <p className="text-gray-600">Check back later for bite-sized learning content!</p>
+          </motion.div>
+        )}
+
+        {/* Mini-Quiz Modal */}
+        {showQuiz && currentQuiz && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+            onClick={(e) => e.target === e.currentTarget && closeQuiz()}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-hidden"
+            >
+              {/* Header */}
+              <div className="bg-gradient-to-r from-purple-600 to-blue-600 p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold">Quick Quiz! 🧠</h3>
+                    <p className="text-purple-100 text-sm">Test what you learned</p>
+                  </div>
+                  <button
+                    onClick={closeQuiz}
+                    className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Quiz Content */}
+              <div className="p-6">
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                    {currentQuiz.question}
+                  </h4>
+
+                  <div className="space-y-3">
+                    {currentQuiz.options.map((option, index) => {
+                      let buttonClass = "w-full p-4 text-left border-2 rounded-lg transition-all duration-200 ";
+
+                      if (!quizAnswered) {
+                        buttonClass += selectedAnswer === index
+                          ? "border-purple-500 bg-purple-50 text-purple-700"
+                          : "border-gray-200 hover:border-purple-300 hover:bg-purple-50";
+                      } else {
+                        if (index === currentQuiz.correctAnswer) {
+                          buttonClass += "border-green-500 bg-green-50 text-green-700";
+                        } else if (selectedAnswer === index && index !== currentQuiz.correctAnswer) {
+                          buttonClass += "border-red-500 bg-red-50 text-red-700";
+                        } else {
+                          buttonClass += "border-gray-200 bg-gray-50 text-gray-500";
+                        }
+                      }
+
+                      return (
+                        <button
+                          key={index}
+                          onClick={() => handleQuizAnswer(index)}
+                          disabled={quizAnswered}
+                          className={buttonClass}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className={`
+                              w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-semibold
+                              ${!quizAnswered
+                                ? selectedAnswer === index
+                                  ? 'border-purple-500 bg-purple-500 text-white'
+                                  : 'border-gray-300 text-gray-500'
+                                : index === currentQuiz.correctAnswer
+                                  ? 'border-green-500 bg-green-500 text-white'
+                                  : selectedAnswer === index && index !== currentQuiz.correctAnswer
+                                    ? 'border-red-500 bg-red-500 text-white'
+                                    : 'border-gray-300 text-gray-400'
+                              }
+                            `}>
+                              {String.fromCharCode(65 + index)}
+                            </div>
+                            <span className="flex-1">{option}</span>
+                            {quizAnswered && index === currentQuiz.correctAnswer && (
+                              <CheckCircle2 className="w-5 h-5 text-green-600" />
+                            )}
+                            {quizAnswered && selectedAnswer === index && index !== currentQuiz.correctAnswer && (
+                              <XCircle className="w-5 h-5 text-red-600" />
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Result and Explanation */}
+                {quizResult && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`p-4 rounded-lg ${
+                      quizResult.isCorrect ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+                    }`}
+                  >
+                    <div className="flex items-start space-x-3">
+                      {quizResult.isCorrect ? (
+                        <CheckCircle2 className="w-6 h-6 text-green-600 mt-0.5" />
+                      ) : (
+                        <XCircle className="w-6 h-6 text-red-600 mt-0.5" />
+                      )}
+                      <div>
+                        <p className={`font-semibold ${quizResult.isCorrect ? 'text-green-800' : 'text-red-800'}`}>
+                          {quizResult.isCorrect ? 'Correct! 🎉' : 'Not quite right 🤔'}
+                        </p>
+                        <p className={`text-sm mt-1 ${quizResult.isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                          {quizResult.explanation}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex space-x-3 mt-6">
+                  <Button
+                    variant="outline"
+                    onClick={closeQuiz}
+                    className="flex-1"
+                  >
+                    Continue Learning
+                  </Button>
+                  {quizAnswered && (
+                    <Button
+                      onClick={() => {
+                        closeQuiz();
+                        setTimeout(() => triggerRandomQuiz(), 1000);
+                      }}
+                      className="flex-1 bg-purple-600 hover:bg-purple-700"
+                    >
+                      Another Quiz
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
 
