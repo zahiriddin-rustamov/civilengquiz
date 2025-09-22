@@ -37,7 +37,10 @@ import {
   Tag,
   Clock,
   Copy,
-  Filter
+  Filter,
+  ChevronDown,
+  ChevronRight,
+  Move
 } from 'lucide-react';
 import { ISubject, ITopic } from '@/models/database';
 import { Types } from 'mongoose';
@@ -60,12 +63,24 @@ interface EnhancedFlashcard {
   subjectName: string;
 }
 
+interface FlashcardGroup {
+  subjectName: string;
+  topicId: string;
+  topicName: string;
+  flashcards: EnhancedFlashcard[];
+  totalFlashcards: number;
+  totalXP: number;
+  categoryBreakdown: { [key: string]: number };
+}
+
 export default function FlashcardsPage() {
   const [flashcards, setFlashcards] = useState<EnhancedFlashcard[]>([]);
   const [subjects, setSubjects] = useState<ISubject[]>([]);
   const [topics, setTopics] = useState<ITopic[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [filteredFlashcards, setFilteredFlashcards] = useState<EnhancedFlashcard[]>([]);
+  const [groupedFlashcards, setGroupedFlashcards] = useState<FlashcardGroup[]>([]);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [selectedTopic, setSelectedTopic] = useState<string>('all');
@@ -124,6 +139,12 @@ export default function FlashcardsPage() {
 
     setFilteredFlashcards(filtered);
   }, [flashcards, searchTerm, selectedSubject, selectedTopic, selectedCategory, selectedDifficulty, subjects]);
+
+  useEffect(() => {
+    // Group filtered flashcards by subject-topic combination
+    const groups = groupFlashcardsByTopic(filteredFlashcards);
+    setGroupedFlashcards(groups);
+  }, [filteredFlashcards, subjects]);
 
   const fetchFlashcards = async () => {
     try {
@@ -261,6 +282,62 @@ export default function FlashcardsPage() {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
 
+  const groupFlashcardsByTopic = (flashcardItems: EnhancedFlashcard[]): FlashcardGroup[] => {
+    const groupMap = new Map<string, FlashcardGroup>();
+
+    flashcardItems.forEach(item => {
+      // Handle missing properties safely
+      if (!item.topicId || !item.topicName || !item.subjectName) {
+        console.warn('Flashcard missing required properties:', item);
+        return;
+      }
+
+      const key = `${item.subjectName}-${item.topicId.toString()}`;
+
+      if (!groupMap.has(key)) {
+        groupMap.set(key, {
+          subjectName: item.subjectName,
+          topicId: item.topicId.toString(),
+          topicName: item.topicName,
+          flashcards: [],
+          totalFlashcards: 0,
+          totalXP: 0,
+          categoryBreakdown: {},
+        });
+      }
+
+      const group = groupMap.get(key)!;
+      group.flashcards.push(item);
+      group.totalFlashcards++;
+      group.totalXP += item.xpReward || 0;
+
+      // Count categories
+      if (item.category) {
+        group.categoryBreakdown[item.category] = (group.categoryBreakdown[item.category] || 0) + 1;
+      }
+    });
+
+    // Sort groups by subject name, then topic name
+    return Array.from(groupMap.values()).sort((a, b) => {
+      if (a.subjectName !== b.subjectName) {
+        return a.subjectName.localeCompare(b.subjectName);
+      }
+      return a.topicName.localeCompare(b.topicName);
+    });
+  };
+
+  const toggleGroupExpansion = (groupKey: string) => {
+    setExpandedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupKey)) {
+        newSet.delete(groupKey);
+      } else {
+        newSet.add(groupKey);
+      }
+      return newSet;
+    });
+  };
+
 
   if (isLoading) {
     return (
@@ -312,7 +389,7 @@ export default function FlashcardsPage() {
           <p className="text-gray-600">Manage flashcards for spaced repetition learning</p>
         </div>
         <div className="flex space-x-2">
-          {filteredFlashcards.length > 0 && (
+          {groupedFlashcards.length > 0 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -361,7 +438,7 @@ export default function FlashcardsPage() {
             <div>
               <CardTitle>All Flashcards</CardTitle>
               <CardDescription>
-                {filteredFlashcards.length} of {flashcards.length} flashcards
+                {filteredFlashcards.length} of {flashcards.length} flashcards • {groupedFlashcards.length} topic groups
               </CardDescription>
             </div>
             <div className="flex items-center space-x-2">
@@ -437,13 +514,13 @@ export default function FlashcardsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {filteredFlashcards.length === 0 ? (
+          {groupedFlashcards.length === 0 ? (
             <div className="text-center py-8">
               <CreditCard className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No flashcards found</h3>
               <p className="mt-1 text-sm text-gray-500">
                 {searchTerm || selectedSubject !== 'all' || selectedTopic !== 'all' || selectedCategory !== 'all' || selectedDifficulty !== 'all'
-                  ? 'Try adjusting your search or filters.' 
+                  ? 'Try adjusting your search or filters.'
                   : 'Get started by creating a new flashcard.'}
               </p>
               {!searchTerm && selectedSubject === 'all' && selectedTopic === 'all' && selectedCategory === 'all' && selectedDifficulty === 'all' && (
@@ -458,113 +535,193 @@ export default function FlashcardsPage() {
               )}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Front</TableHead>
-                  <TableHead>Back</TableHead>
-                  <TableHead>Topic</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Difficulty</TableHead>
-                  <TableHead>Tags</TableHead>
-                  <TableHead>XP</TableHead>
-                  <TableHead>Minutes</TableHead>
-                  <TableHead>Order</TableHead>
-                  <TableHead className="w-[70px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredFlashcards.map((flashcard) => (
-                  <TableRow key={flashcard._id.toString()}>
-                    <TableCell className="max-w-xs">
-                      <div className="font-medium truncate" title={flashcard.front}>
-                        {truncateText(flashcard.front)}
+            <div className="space-y-4">
+              {groupedFlashcards.map((group) => {
+                const groupKey = `${group.subjectName}-${group.topicId}`;
+                const isExpanded = expandedGroups.has(groupKey);
+
+                return (
+                  <div key={groupKey} className="border rounded-lg overflow-hidden">
+                    {/* Group Header */}
+                    <div
+                      className="bg-gray-50 border-b p-4 cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => toggleGroupExpansion(groupKey)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-2">
+                            {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                            <div className="text-left">
+                              <div className="font-semibold text-gray-900">
+                                {group.subjectName} → {group.topicName}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                {group.totalFlashcards} flashcards • {group.totalXP} XP total
+                                {Object.keys(group.categoryBreakdown).length > 0 && (
+                                  <span className="ml-2">
+                                    ({Object.entries(group.categoryBreakdown).map(([category, count]) => `${count} ${category}`).join(', ')})
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Group Actions */}
+                        <div
+                          className="flex items-center space-x-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreVertical className="h-4 w-4" />
+                                <span className="sr-only">Group actions</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem asChild>
+                                <Link href={`/admin/flashcards/bulk?topicId=${group.topicId}`}>
+                                  <Upload className="w-4 h-4 mr-2" />
+                                  Bulk Import to Topic
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link href={`/admin/flashcards/new?topicId=${group.topicId}`}>
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  Add Flashcard to Topic
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  // Find the subject ID by name
+                                  const subject = subjects.find(s => s.name === group.subjectName);
+                                  if (subject) {
+                                    setSelectedSubject(subject._id.toString());
+                                    setSelectedTopic(group.topicId);
+                                  }
+                                }}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Only This Topic
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
-                    </TableCell>
-                    <TableCell className="max-w-xs">
-                      <div className="text-gray-600 truncate" title={flashcard.back}>
-                        {truncateText(flashcard.back)}
+                    </div>
+
+                    {/* Expanded Content */}
+                    {isExpanded && (
+                      <div className="p-4">
+                        <div className="space-y-3">
+                          {group.flashcards
+                            .sort((a, b) => a.order - b.order)
+                            .map((flashcard) => (
+                              <div key={flashcard._id.toString()} className="flex items-center justify-between p-3 bg-white border rounded-lg hover:bg-gray-50 transition-colors">
+                                <div className="flex items-center space-x-3 flex-1">
+                                  <div className="flex items-center space-x-2">
+                                    <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                                      #{flashcard.order}
+                                    </Badge>
+                                  </div>
+
+                                  <div className="flex-1 min-w-0">
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <div>
+                                        <div className="font-medium text-gray-900 text-sm mb-1">Front</div>
+                                        <div className="text-sm text-gray-700 truncate" title={flashcard.front}>
+                                          {truncateText(flashcard.front, 40)}
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <div className="font-medium text-gray-900 text-sm mb-1">Back</div>
+                                        <div className="text-sm text-gray-600 truncate" title={flashcard.back}>
+                                          {truncateText(flashcard.back, 40)}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center space-x-2 mt-2">
+                                      {flashcard.category && (
+                                        <Badge variant="secondary" className="text-xs">
+                                          {flashcard.category}
+                                        </Badge>
+                                      )}
+                                      {flashcard.tags.slice(0, 2).map((tag, index) => (
+                                        <Badge key={index} variant="outline" className="text-xs">
+                                          {tag}
+                                        </Badge>
+                                      ))}
+                                      {flashcard.tags.length > 2 && (
+                                        <Badge variant="outline" className="text-xs">
+                                          +{flashcard.tags.length - 2}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center space-x-3">
+                                    <Badge className={getDifficultyColor(flashcard.difficulty)} variant="outline">
+                                      {flashcard.difficulty}
+                                    </Badge>
+                                    <div className="flex items-center space-x-1">
+                                      <Zap className="w-3 h-3 text-yellow-500" />
+                                      <span className="text-sm">{flashcard.xpReward} XP</span>
+                                    </div>
+                                    <div className="flex items-center space-x-1">
+                                      <Clock className="w-3 h-3 text-gray-500" />
+                                      <span className="text-sm">{flashcard.estimatedMinutes}m</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Individual Flashcard Actions */}
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm">
+                                      <MoreVertical className="h-4 w-4" />
+                                      <span className="sr-only">Flashcard actions</span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/admin/flashcards/${flashcard._id}`}>
+                                        <Eye className="w-4 h-4 mr-2" />
+                                        View
+                                      </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/admin/flashcards/${flashcard._id}/edit`}>
+                                        <Edit className="w-4 h-4 mr-2" />
+                                        Edit
+                                      </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/admin/flashcards/new?duplicate=${flashcard._id}`}>
+                                        <Copy className="w-4 h-4 mr-2" />
+                                        Duplicate
+                                      </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => handleDelete(flashcard._id.toString())}
+                                      className="text-red-600 focus:text-red-600"
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            ))}
+                        </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <BookOpen className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm">{flashcard.topicName}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-600">{flashcard.subjectName}</TableCell>
-                    <TableCell>
-                      {flashcard.category ? (
-                        <Badge variant="outline">{flashcard.category}</Badge>
-                      ) : (
-                        <span className="text-gray-400 text-sm">No category</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getDifficultyColor(flashcard.difficulty)}>
-                        {flashcard.difficulty}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {flashcard.tags.slice(0, 2).map((tag, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                        {flashcard.tags.length > 2 && (
-                          <Badge variant="secondary" className="text-xs">
-                            +{flashcard.tags.length - 2}
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{flashcard.xpReward}</TableCell>
-                    <TableCell>{flashcard.estimatedMinutes}</TableCell>
-                    <TableCell>{flashcard.order}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="h-4 w-4" />
-                            <span className="sr-only">Open menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/flashcards/${flashcard._id}`}>
-                              <Eye className="w-4 h-4 mr-2" />
-                              View
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/flashcards/${flashcard._id}/edit`}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/flashcards/new?duplicate=${flashcard._id}`}>
-                              <Copy className="w-4 h-4 mr-2" />
-                              Duplicate
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(flashcard._id.toString())}
-                            className="text-red-600 focus:text-red-600"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </CardContent>
       </Card>

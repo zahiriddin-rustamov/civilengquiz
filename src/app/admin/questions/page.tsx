@@ -38,7 +38,10 @@ import {
   Calculator,
   Shuffle,
   Clock,
-  ArrowUpDown
+  ArrowUpDown,
+  ChevronDown,
+  ChevronRight,
+  Move
 } from 'lucide-react';
 import { ISubject, ITopic } from '@/models/database';
 import { Types } from 'mongoose';
@@ -61,6 +64,16 @@ interface QuestionWithData {
   subjectName: string;
 }
 
+interface QuestionGroup {
+  subjectName: string;
+  topicId: string;
+  topicName: string;
+  questions: QuestionWithData[];
+  totalQuestions: number;
+  totalXP: number;
+  typeBreakdown: { [key: string]: number };
+}
+
 const questionTypeConfig = {
   'multiple-choice': { icon: CheckCircle, color: 'bg-blue-100 text-blue-800', label: 'Multiple Choice' },
   'true-false': { icon: CheckCircle, color: 'bg-green-100 text-green-800', label: 'True/False' },
@@ -74,6 +87,8 @@ export default function QuestionsPage() {
   const [subjects, setSubjects] = useState<ISubject[]>([]);
   const [topics, setTopics] = useState<ITopic[]>([]);
   const [filteredQuestions, setFilteredQuestions] = useState<QuestionWithData[]>([]);
+  const [groupedQuestions, setGroupedQuestions] = useState<QuestionGroup[]>([]);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [selectedTopic, setSelectedTopic] = useState<string>('all');
@@ -99,6 +114,12 @@ export default function QuestionsPage() {
   useEffect(() => {
     filterQuestions();
   }, [questions, searchTerm, selectedSubject, selectedTopic, selectedType, selectedDifficulty, subjects]);
+
+  useEffect(() => {
+    // Group filtered questions by subject-topic combination
+    const groups = groupQuestionsByTopic(filteredQuestions);
+    setGroupedQuestions(groups);
+  }, [filteredQuestions, subjects]);
 
   const fetchQuestions = async () => {
     try {
@@ -177,6 +198,61 @@ export default function QuestionsPage() {
     }
 
     setFilteredQuestions(filtered);
+  };
+
+  const groupQuestionsByTopic = (questionItems: QuestionWithData[]): QuestionGroup[] => {
+    const groupMap = new Map<string, QuestionGroup>();
+
+    questionItems.forEach(item => {
+      // Handle missing properties safely
+      if (!item.topicId || !item.topicName || !item.subjectName) {
+        console.warn('Question missing required properties:', item);
+        return;
+      }
+
+      const key = `${item.subjectName}-${item.topicId.toString()}`;
+
+      if (!groupMap.has(key)) {
+        groupMap.set(key, {
+          subjectName: item.subjectName,
+          topicId: item.topicId.toString(),
+          topicName: item.topicName,
+          questions: [],
+          totalQuestions: 0,
+          totalXP: 0,
+          typeBreakdown: {},
+        });
+      }
+
+      const group = groupMap.get(key)!;
+      group.questions.push(item);
+      group.totalQuestions++;
+      group.totalXP += item.xpReward || 0;
+
+      // Count question types
+      const typeLabel = questionTypeConfig[item.type]?.label || item.type;
+      group.typeBreakdown[typeLabel] = (group.typeBreakdown[typeLabel] || 0) + 1;
+    });
+
+    // Sort groups by subject name, then topic name
+    return Array.from(groupMap.values()).sort((a, b) => {
+      if (a.subjectName !== b.subjectName) {
+        return a.subjectName.localeCompare(b.subjectName);
+      }
+      return a.topicName.localeCompare(b.topicName);
+    });
+  };
+
+  const toggleGroupExpansion = (groupKey: string) => {
+    setExpandedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupKey)) {
+        newSet.delete(groupKey);
+      } else {
+        newSet.add(groupKey);
+      }
+      return newSet;
+    });
   };
 
   const handleDelete = async (questionId: string) => {
@@ -293,7 +369,7 @@ export default function QuestionsPage() {
             <div>
               <CardTitle>All Questions</CardTitle>
               <CardDescription>
-                {filteredQuestions.length} of {questions.length} questions
+                {filteredQuestions.length} of {questions.length} questions • {groupedQuestions.length} topic groups
               </CardDescription>
             </div>
             <div className="flex items-center space-x-2">
@@ -369,7 +445,7 @@ export default function QuestionsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {filteredQuestions.length === 0 ? (
+          {groupedQuestions.length === 0 ? (
             <div className="text-center py-8">
               <FileText className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No questions found</h3>
@@ -390,119 +466,187 @@ export default function QuestionsPage() {
               )}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Question</TableHead>
-                  <TableHead>Topic</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Difficulty</TableHead>
-                  <TableHead>XP</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Order</TableHead>
-                  <TableHead className="w-[70px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredQuestions.map((question) => {
-                  const typeConfig = questionTypeConfig[question.type];
-                  const IconComponent = typeConfig?.icon || FileText;
+            <div className="space-y-4">
+              {groupedQuestions.map((group) => {
+                const groupKey = `${group.subjectName}-${group.topicId}`;
+                const isExpanded = expandedGroups.has(groupKey);
 
-                  return (
-                    <TableRow key={question._id.toString()}>
-                      <TableCell className="max-w-xs">
-                        <div className="flex items-start space-x-3">
-                          {question.imageUrl && (
-                            <div className="w-8 h-8 bg-gray-100 rounded flex-shrink-0 flex items-center justify-center">
-                              <img
-                                src={question.imageUrl}
-                                alt=""
-                                className="w-full h-full object-cover rounded"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = 'none';
-                                }}
-                              />
+                return (
+                  <div key={groupKey} className="border rounded-lg overflow-hidden">
+                    {/* Group Header */}
+                    <div
+                      className="bg-gray-50 border-b p-4 cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => toggleGroupExpansion(groupKey)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-2">
+                            {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                            <div className="text-left">
+                              <div className="font-semibold text-gray-900">
+                                {group.subjectName} → {group.topicName}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                {group.totalQuestions} questions • {group.totalXP} XP total
+                                {Object.keys(group.typeBreakdown).length > 0 && (
+                                  <span className="ml-2">
+                                    ({Object.entries(group.typeBreakdown).map(([type, count]) => `${count} ${type}`).join(', ')})
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium truncate" title={question.text}>
-                              {question.text}
-                            </div>
-                            {question.explanation && (
-                              <div className="text-xs text-gray-500 mt-1">Has explanation</div>
-                            )}
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <BookOpen className="w-4 h-4 text-gray-400" />
-                          <span className="text-sm">{question.topicName}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-600">{question.subjectName}</TableCell>
-                      <TableCell>
-                        <Badge className={typeConfig?.color || 'bg-gray-100 text-gray-800'}>
-                          <IconComponent className="w-3 h-3 mr-1" />
-                          {typeConfig?.label || question.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getDifficultyColor(question.difficulty)}>
-                          {question.difficulty}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-1">
-                          <Zap className="w-3 h-3 text-yellow-500" />
-                          <span className="text-sm">{question.xpReward}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-1">
-                          <Clock className="w-3 h-3 text-gray-500" />
-                          <span className="text-sm">{question.estimatedMinutes}m</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{question.order}</TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreVertical className="h-4 w-4" />
-                              <span className="sr-only">Open menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                              <Link href={`/admin/questions/${question._id}`}>
+
+                        {/* Group Actions */}
+                        <div
+                          className="flex items-center space-x-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreVertical className="h-4 w-4" />
+                                <span className="sr-only">Group actions</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {group.totalQuestions > 0 && (
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/admin/questions/reorder?topicId=${group.topicId}`}>
+                                    <Move className="w-4 h-4 mr-2" />
+                                    Reorder Questions
+                                  </Link>
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem asChild>
+                                <Link href={`/admin/questions/new?topicId=${group.topicId}`}>
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  Add Question to Topic
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  // Find the subject ID by name
+                                  const subject = subjects.find(s => s.name === group.subjectName);
+                                  if (subject) {
+                                    setSelectedSubject(subject._id.toString());
+                                    setSelectedTopic(group.topicId);
+                                  }
+                                }}
+                              >
                                 <Eye className="w-4 h-4 mr-2" />
-                                View
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/admin/questions/${question._id}/edit`}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleDelete(question._id.toString())}
-                              className="text-red-600 focus:text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                                View Only This Topic
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expanded Content */}
+                    {isExpanded && (
+                      <div className="p-4">
+                        <div className="space-y-3">
+                          {group.questions
+                            .sort((a, b) => a.order - b.order)
+                            .map((question) => {
+                              const typeConfig = questionTypeConfig[question.type];
+                              const IconComponent = typeConfig?.icon || FileText;
+
+                              return (
+                                <div key={question._id.toString()} className="flex items-center justify-between p-3 bg-white border rounded-lg hover:bg-gray-50 transition-colors">
+                                  <div className="flex items-center space-x-3 flex-1">
+                                    <div className="flex items-center space-x-2">
+                                      <Badge className={typeConfig?.color || 'bg-gray-100 text-gray-800'} variant="outline">
+                                        <IconComponent className="w-3 h-3 mr-1" />
+                                        #{question.order}
+                                      </Badge>
+                                    </div>
+
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-start space-x-3">
+                                        {question.imageUrl && (
+                                          <div className="w-8 h-8 bg-gray-100 rounded flex-shrink-0 flex items-center justify-center">
+                                            <img
+                                              src={question.imageUrl}
+                                              alt=""
+                                              className="w-full h-full object-cover rounded"
+                                              onError={(e) => {
+                                                (e.target as HTMLImageElement).style.display = 'none';
+                                              }}
+                                            />
+                                          </div>
+                                        )}
+                                        <div className="min-w-0 flex-1">
+                                          <div className="font-medium text-gray-900 truncate" title={question.text}>
+                                            {question.text}
+                                          </div>
+                                          <div className="text-sm text-gray-500 flex items-center space-x-2 mt-1">
+                                            <span>{typeConfig?.label || question.type}</span>
+                                            {question.explanation && <span>• Has explanation</span>}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center space-x-3">
+                                      <Badge className={getDifficultyColor(question.difficulty)} variant="outline">
+                                        {question.difficulty}
+                                      </Badge>
+                                      <div className="flex items-center space-x-1">
+                                        <Zap className="w-3 h-3 text-yellow-500" />
+                                        <span className="text-sm">{question.xpReward} XP</span>
+                                      </div>
+                                      <div className="flex items-center space-x-1">
+                                        <Clock className="w-3 h-3 text-gray-500" />
+                                        <span className="text-sm">{question.estimatedMinutes}m</span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Individual Question Actions */}
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm">
+                                        <MoreVertical className="h-4 w-4" />
+                                        <span className="sr-only">Question actions</span>
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem asChild>
+                                        <Link href={`/admin/questions/${question._id}`}>
+                                          <Eye className="w-4 h-4 mr-2" />
+                                          View
+                                        </Link>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem asChild>
+                                        <Link href={`/admin/questions/${question._id}/edit`}>
+                                          <Edit className="w-4 h-4 mr-2" />
+                                          Edit
+                                        </Link>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        onClick={() => handleDelete(question._id.toString())}
+                                        className="text-red-600 focus:text-red-600"
+                                      >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </CardContent>
       </Card>
