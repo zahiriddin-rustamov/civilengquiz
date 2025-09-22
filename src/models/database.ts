@@ -183,18 +183,26 @@ export interface IMedia extends Document {
   duration?: number; // in seconds
 
   // Educational content structure
-  preVideoContent: {
+  preVideoContent?: {
     learningObjectives: string[];
     prerequisites: string[];
     keyTerms: { term: string; definition: string }[];
   };
 
-  postVideoContent: {
+  postVideoContent?: {
     keyConcepts: string[];
     reflectionQuestions: string[];
     practicalApplications: string[];
     additionalResources?: { title: string; url: string }[];
   };
+
+  // Quiz questions for shorts
+  quizQuestions?: {
+    question: string;
+    options: string[];
+    correctAnswer: number;
+    explanation?: string;
+  }[];
 
   createdAt: Date;
   updatedAt: Date;
@@ -216,13 +224,13 @@ const MediaSchema = new Schema<IMedia>({
   thumbnail: { type: String },
   duration: { type: Number },
 
-  // Educational content structure
+  // Educational content structure (optional based on videoType)
   preVideoContent: {
     learningObjectives: [{ type: String }],
     prerequisites: [{ type: String }],
     keyTerms: [{
-      term: { type: String, required: true },
-      definition: { type: String, required: true }
+      term: { type: String },
+      definition: { type: String }
     }]
   },
 
@@ -231,10 +239,18 @@ const MediaSchema = new Schema<IMedia>({
     reflectionQuestions: [{ type: String }],
     practicalApplications: [{ type: String }],
     additionalResources: [{
-      title: { type: String, required: true },
-      url: { type: String, required: true }
+      title: { type: String },
+      url: { type: String }
     }]
-  }
+  },
+
+  // Quiz questions for shorts
+  quizQuestions: [{
+    question: { type: String },
+    options: [{ type: String }],
+    correctAnswer: { type: Number },
+    explanation: { type: String }
+  }]
 }, {
   timestamps: true
 });

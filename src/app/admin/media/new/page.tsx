@@ -24,17 +24,23 @@ interface MediaData {
   order: number;
   youtubeUrl: string;
   videoType: 'video' | 'short';
-  preVideoContent: {
+  preVideoContent?: {
     learningObjectives: string[];
     prerequisites: string[];
     keyTerms: { term: string; definition: string }[];
   };
-  postVideoContent: {
+  postVideoContent?: {
     keyConcepts: string[];
     reflectionQuestions: string[];
     practicalApplications: string[];
     additionalResources: { title: string; url: string }[];
   };
+  quizQuestions?: {
+    question: string;
+    options: string[];
+    correctAnswer: number;
+    explanation: string;
+  }[];
 }
 
 const videoTypes = [
@@ -82,7 +88,8 @@ export default function NewMediaPage() {
       reflectionQuestions: [''],
       practicalApplications: [''],
       additionalResources: [{ title: '', url: '' }]
-    }
+    },
+    quizQuestions: []
   });
 
   useEffect(() => {
@@ -234,16 +241,56 @@ export default function NewMediaPage() {
       return;
     }
 
+    // Validate quiz questions for shorts
+    if (formData.videoType === 'short' && formData.quizQuestions) {
+      const hasValidQuiz = formData.quizQuestions.some(q =>
+        q.question.trim() &&
+        q.options.every(o => o.trim()) &&
+        q.explanation.trim()
+      );
+      if (formData.quizQuestions.length > 0 && !hasValidQuiz) {
+        setError('Please complete at least one quiz question with all fields filled');
+        return;
+      }
+    }
+
     try {
       setIsLoading(true);
       setError(null);
+
+      // Prepare data based on video type
+      const submitData: any = {
+        topicId: formData.topicId,
+        title: formData.title,
+        description: formData.description,
+        difficulty: formData.difficulty,
+        xpReward: formData.xpReward,
+        estimatedMinutes: formData.estimatedMinutes,
+        order: formData.order,
+        youtubeUrl: formData.youtubeUrl,
+        videoType: formData.videoType
+      };
+
+      // Add appropriate content based on type
+      if (formData.videoType === 'video') {
+        submitData.preVideoContent = formData.preVideoContent;
+        submitData.postVideoContent = formData.postVideoContent;
+      } else if (formData.videoType === 'short') {
+        // Filter out empty quiz questions
+        const validQuizQuestions = (formData.quizQuestions || []).filter(q =>
+          q.question.trim() && q.options.every(o => o.trim())
+        );
+        if (validQuizQuestions.length > 0) {
+          submitData.quizQuestions = validQuizQuestions;
+        }
+      }
 
       const response = await fetch('/api/admin/media', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       if (!response.ok) {
@@ -401,7 +448,34 @@ export default function NewMediaPage() {
                   <button
                     key={type.id}
                     type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, videoType: type.id as any }))}
+                    onClick={() => {
+                      const isShort = type.id === 'short';
+                      setFormData(prev => ({
+                        ...prev,
+                        videoType: type.id as any,
+                        // Adjust defaults based on type
+                        estimatedMinutes: isShort ? 1 : 5,
+                        xpReward: isShort ? 25 : 50,
+                        // Initialize appropriate content structures
+                        preVideoContent: isShort ? undefined : (prev.preVideoContent || {
+                          learningObjectives: [''],
+                          prerequisites: [''],
+                          keyTerms: [{ term: '', definition: '' }]
+                        }),
+                        postVideoContent: isShort ? undefined : (prev.postVideoContent || {
+                          keyConcepts: [''],
+                          reflectionQuestions: [''],
+                          practicalApplications: [''],
+                          additionalResources: [{ title: '', url: '' }]
+                        }),
+                        quizQuestions: isShort ? (prev.quizQuestions || [{
+                          question: '',
+                          options: ['', '', '', ''],
+                          correctAnswer: 0,
+                          explanation: ''
+                        }]) : undefined
+                      }));
+                    }}
                     className={`
                       flex items-center space-x-2 px-4 py-2 rounded-md border transition-all
                       ${formData.videoType === type.id
@@ -417,6 +491,7 @@ export default function NewMediaPage() {
               </div>
               <p className="text-sm text-gray-500 mt-2">
                 {videoTypes.find(t => t.id === formData.videoType)?.description}
+                {formData.videoType === 'short' && ' (Typically under 60 seconds with quiz questions)'}
               </p>
             </div>
           </CardContent>
@@ -479,32 +554,142 @@ export default function NewMediaPage() {
           </CardContent>
         </Card>
 
-        {/* Pre-Video Content */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Pre-Video Content</CardTitle>
-            <CardDescription>Content to show before the video to prepare students</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {renderArraySection('Learning Objectives', 'preVideoContent', 'learningObjectives', 'What will students learn from this video?', '')}
-            {renderArraySection('Prerequisites', 'preVideoContent', 'prerequisites', 'What should students know before watching?', '')}
-            {renderArraySection('Key Terms', 'preVideoContent', 'keyTerms', 'Important terms in this video', { term: '', definition: '' })}
-          </CardContent>
-        </Card>
+        {/* Pre-Video Content - Only for Long Videos */}
+        {formData.videoType === 'video' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Pre-Video Content</CardTitle>
+              <CardDescription>Content to show before the video to prepare students</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {renderArraySection('Learning Objectives', 'preVideoContent', 'learningObjectives', 'What will students learn from this video?', '')}
+              {renderArraySection('Prerequisites', 'preVideoContent', 'prerequisites', 'What should students know before watching?', '')}
+              {renderArraySection('Key Terms', 'preVideoContent', 'keyTerms', 'Important terms in this video', { term: '', definition: '' })}
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Post-Video Content */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Post-Video Content</CardTitle>
-            <CardDescription>Content to reinforce learning after watching the video</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {renderArraySection('Key Concepts', 'postVideoContent', 'keyConcepts', 'Main takeaways from the video', '')}
-            {renderArraySection('Reflection Questions', 'postVideoContent', 'reflectionQuestions', 'Questions to help students reflect', '')}
-            {renderArraySection('Practical Applications', 'postVideoContent', 'practicalApplications', 'How to apply this knowledge', '')}
-            {renderArraySection('Additional Resources', 'postVideoContent', 'additionalResources', 'Related learning materials', { title: '', url: '' })}
-          </CardContent>
-        </Card>
+        {/* Post-Video Content - Only for Long Videos */}
+        {formData.videoType === 'video' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Post-Video Content</CardTitle>
+              <CardDescription>Content to reinforce learning after watching the video</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {renderArraySection('Key Concepts', 'postVideoContent', 'keyConcepts', 'Main takeaways from the video', '')}
+              {renderArraySection('Reflection Questions', 'postVideoContent', 'reflectionQuestions', 'Questions to help students reflect', '')}
+              {renderArraySection('Practical Applications', 'postVideoContent', 'practicalApplications', 'How to apply this knowledge', '')}
+              {renderArraySection('Additional Resources', 'postVideoContent', 'additionalResources', 'Related learning materials', { title: '', url: '' })}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Quiz Questions - Only for Shorts */}
+        {formData.videoType === 'short' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Quiz Questions</CardTitle>
+              <CardDescription>Mini-quiz questions to test understanding after watching the short</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(formData.quizQuestions || []).map((quiz, qIndex) => (
+                <div key={qIndex} className="p-4 border rounded-lg space-y-3">
+                  <div className="flex items-start justify-between">
+                    <Label className="text-sm font-medium">Question {qIndex + 1}</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        quizQuestions: prev.quizQuestions?.filter((_, i) => i !== qIndex)
+                      }))}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  <Input
+                    value={quiz.question}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      quizQuestions: prev.quizQuestions?.map((q, i) =>
+                        i === qIndex ? { ...q, question: e.target.value } : q
+                      )
+                    }))}
+                    placeholder="Enter the quiz question..."
+                  />
+
+                  <div className="space-y-2">
+                    <Label className="text-xs">Answer Options</Label>
+                    {quiz.options.map((option, oIndex) => (
+                      <div key={oIndex} className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name={`correct-${qIndex}`}
+                          checked={quiz.correctAnswer === oIndex}
+                          onChange={() => setFormData(prev => ({
+                            ...prev,
+                            quizQuestions: prev.quizQuestions?.map((q, i) =>
+                              i === qIndex ? { ...q, correctAnswer: oIndex } : q
+                            )
+                          }))}
+                        />
+                        <Input
+                          value={option}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            quizQuestions: prev.quizQuestions?.map((q, i) =>
+                              i === qIndex ? {
+                                ...q,
+                                options: q.options.map((o, j) => j === oIndex ? e.target.value : o)
+                              } : q
+                            )
+                          }))}
+                          placeholder={`Option ${oIndex + 1}`}
+                          className="flex-1"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">Explanation (shown after answer)</Label>
+                    <Input
+                      value={quiz.explanation}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        quizQuestions: prev.quizQuestions?.map((q, i) =>
+                          i === qIndex ? { ...q, explanation: e.target.value } : q
+                        )
+                      }))}
+                      placeholder="Explain why this is the correct answer..."
+                    />
+                  </div>
+                </div>
+              ))}
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setFormData(prev => ({
+                  ...prev,
+                  quizQuestions: [...(prev.quizQuestions || []), {
+                    question: '',
+                    options: ['', '', '', ''],
+                    correctAnswer: 0,
+                    explanation: ''
+                  }]
+                }))}
+                className="w-full"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Quiz Question
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Preview */}
         {(formData.title || formData.description) && (
@@ -540,7 +725,10 @@ export default function NewMediaPage() {
         <Card>
           <CardHeader>
             <CardTitle>Settings</CardTitle>
-            <CardDescription>Configure difficulty, XP reward, and time estimate</CardDescription>
+            <CardDescription>
+              Configure difficulty, XP reward, and time estimate
+              {formData.videoType === 'short' && ' (Shorts are typically under 60 seconds)'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <SettingsSection
@@ -551,6 +739,11 @@ export default function NewMediaPage() {
               onXpRewardChange={(xpReward) => setFormData(prev => ({ ...prev, xpReward }))}
               onEstimatedMinutesChange={(estimatedMinutes) => setFormData(prev => ({ ...prev, estimatedMinutes }))}
             />
+            {formData.videoType === 'short' && formData.estimatedMinutes > 2 && (
+              <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+                ⚠️ Shorts are typically under 60 seconds. Consider reducing the estimated time.
+              </div>
+            )}
           </CardContent>
         </Card>
 

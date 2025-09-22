@@ -77,7 +77,7 @@ export async function GET(
         order: item.order,
         likes: 0, // TODO: Implement like tracking
         views: 0, // TODO: Implement view tracking
-        quizQuestions: [] // TODO: Add quiz questions to Media model
+        quizQuestions: item.quizQuestions || []
       }));
 
     // Calculate totals

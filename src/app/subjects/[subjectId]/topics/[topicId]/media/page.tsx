@@ -772,6 +772,7 @@ export default function MediaPage() {
                 >
                   {/* Video Player */}
                   <ReactPlayer
+                    key={`short-${short.id}-${index === currentShortIndex ? 'active' : 'inactive'}`}
                     url={short.url}
                     width="100%"
                     height="100%"
@@ -788,7 +789,8 @@ export default function MediaPage() {
                           modestbranding: 1,
                           rel: 0,
                           autoplay: 1,
-                          playsinline: 1
+                          playsinline: 1,
+                          start: 0
                         }
                       }
                     }}

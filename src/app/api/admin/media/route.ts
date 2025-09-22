@@ -101,7 +101,8 @@ export async function POST(req: Request) {
       youtubeUrl,
       videoType,
       preVideoContent,
-      postVideoContent
+      postVideoContent,
+      quizQuestions
     } = body;
 
     // Validate required fields
@@ -121,22 +122,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400 });
     }
 
-    // Filter out empty entries from educational content
-    const cleanPreVideoContent = {
-      learningObjectives: preVideoContent?.learningObjectives?.filter((obj: string) => obj.trim()) || [],
-      prerequisites: preVideoContent?.prerequisites?.filter((obj: string) => obj.trim()) || [],
-      keyTerms: preVideoContent?.keyTerms?.filter((obj: any) => obj.term.trim() && obj.definition.trim()) || []
-    };
-
-    const cleanPostVideoContent = {
-      keyConcepts: postVideoContent?.keyConcepts?.filter((obj: string) => obj.trim()) || [],
-      reflectionQuestions: postVideoContent?.reflectionQuestions?.filter((obj: string) => obj.trim()) || [],
-      practicalApplications: postVideoContent?.practicalApplications?.filter((obj: string) => obj.trim()) || [],
-      additionalResources: postVideoContent?.additionalResources?.filter((obj: any) => obj.title.trim() && obj.url.trim()) || []
-    };
-
-    // Create media
-    const media = new Media({
+    // Prepare media data based on videoType
+    const mediaData: any = {
       topicId: new Types.ObjectId(topicId),
       title: title.trim(),
       description: description.trim(),
@@ -146,10 +133,43 @@ export async function POST(req: Request) {
       order,
       youtubeUrl: youtubeUrl.trim(),
       youtubeId,
-      videoType,
-      preVideoContent: cleanPreVideoContent,
-      postVideoContent: cleanPostVideoContent
-    });
+      videoType
+    };
+
+    // Add content based on video type
+    if (videoType === 'video') {
+      // Filter out empty entries from educational content for videos
+      const cleanPreVideoContent = {
+        learningObjectives: preVideoContent?.learningObjectives?.filter((obj: string) => obj.trim()) || [],
+        prerequisites: preVideoContent?.prerequisites?.filter((obj: string) => obj.trim()) || [],
+        keyTerms: preVideoContent?.keyTerms?.filter((obj: any) => obj.term?.trim() && obj.definition?.trim()) || []
+      };
+
+      const cleanPostVideoContent = {
+        keyConcepts: postVideoContent?.keyConcepts?.filter((obj: string) => obj.trim()) || [],
+        reflectionQuestions: postVideoContent?.reflectionQuestions?.filter((obj: string) => obj.trim()) || [],
+        practicalApplications: postVideoContent?.practicalApplications?.filter((obj: string) => obj.trim()) || [],
+        additionalResources: postVideoContent?.additionalResources?.filter((obj: any) => obj.title?.trim() && obj.url?.trim()) || []
+      };
+
+      mediaData.preVideoContent = cleanPreVideoContent;
+      mediaData.postVideoContent = cleanPostVideoContent;
+    } else if (videoType === 'short' && quizQuestions) {
+      // Filter out empty quiz questions for shorts
+      const cleanQuizQuestions = quizQuestions.filter((q: any) =>
+        q.question?.trim() &&
+        q.options?.length > 0 &&
+        q.options.every((o: string) => o?.trim()) &&
+        q.correctAnswer !== undefined
+      );
+
+      if (cleanQuizQuestions.length > 0) {
+        mediaData.quizQuestions = cleanQuizQuestions;
+      }
+    }
+
+    // Create media
+    const media = new Media(mediaData);
 
     await media.save();
 
