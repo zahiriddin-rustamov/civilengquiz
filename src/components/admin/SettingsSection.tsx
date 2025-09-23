@@ -67,9 +67,10 @@ export function SettingsSection({
         <Input
           id="estimatedMinutes"
           type="number"
-          min="1"
+          min="0.5"
+          step="0.5"
           value={estimatedMinutes}
-          onChange={(e) => onEstimatedMinutesChange(parseInt(e.target.value) || 0)}
+          onChange={(e) => onEstimatedMinutesChange(parseFloat(e.target.value) || 0)}
           className="mt-2"
         />
       </div>
