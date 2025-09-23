@@ -22,6 +22,7 @@ interface NavigationItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   children?: NavigationItem[];
+  disabled?: boolean;
 }
 
 const navigation: NavigationItem[] = [
@@ -46,16 +47,19 @@ const navigation: NavigationItem[] = [
     name: 'User Management',
     href: '/admin/users',
     icon: Users,
+    disabled: true,
   },
   {
     name: 'Analytics',
     href: '/admin/analytics',
     icon: BarChart3,
+    disabled: true,
   },
   {
     name: 'Settings',
     href: '/admin/settings',
     icon: Settings,
+    disabled: true,
   },
 ];
 
@@ -91,6 +95,8 @@ export function AdminSidebar() {
             depth > 0 && 'ml-4',
             active
               ? 'bg-blue-100 text-blue-700'
+              : item.disabled
+              ? 'text-gray-400'
               : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
           )}
         >
@@ -102,6 +108,11 @@ export function AdminSidebar() {
               <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
               {item.name}
             </button>
+          ) : item.disabled ? (
+            <div className="flex items-center flex-1 cursor-not-allowed opacity-50">
+              <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
+              {item.name}
+            </div>
           ) : (
             <Link href={item.href} className="flex items-center flex-1">
               <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
