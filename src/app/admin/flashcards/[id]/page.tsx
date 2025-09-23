@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -39,8 +39,9 @@ interface FlashcardData {
   updatedAt: string;
 }
 
-export default function ViewFlashcardPage({ params }: { params: { id: string } }) {
+export default function ViewFlashcardPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const resolvedParams = use(params);
   const [flashcard, setFlashcard] = useState<FlashcardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,12 +49,12 @@ export default function ViewFlashcardPage({ params }: { params: { id: string } }
 
   useEffect(() => {
     fetchFlashcard();
-  }, [params.id]);
+  }, [resolvedParams.id]);
 
   const fetchFlashcard = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/admin/flashcards/${params.id}`);
+      const response = await fetch(`/api/admin/flashcards/${resolvedParams.id}`);
       if (!response.ok) {
         throw new Error('Failed to fetch flashcard');
       }
@@ -74,7 +75,7 @@ export default function ViewFlashcardPage({ params }: { params: { id: string } }
     }
 
     try {
-      const response = await fetch(`/api/admin/flashcards/${params.id}`, {
+      const response = await fetch(`/api/admin/flashcards/${resolvedParams.id}`, {
         method: 'DELETE',
       });
 
@@ -173,7 +174,7 @@ export default function ViewFlashcardPage({ params }: { params: { id: string } }
 
         <div className="flex space-x-2">
           <Button variant="outline" asChild>
-            <Link href={`/admin/flashcards/${params.id}/edit`}>
+            <Link href={`/admin/flashcards/${resolvedParams.id}/edit`}>
               <Edit className="w-4 h-4 mr-2" />
               Edit
             </Link>

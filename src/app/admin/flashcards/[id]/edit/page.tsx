@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -29,8 +29,9 @@ interface FlashcardData {
   category?: string;
 }
 
-export default function EditFlashcardPage({ params }: { params: { id: string } }) {
+export default function EditFlashcardPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const resolvedParams = use(params);
   const [subjects, setSubjects] = useState<ISubject[]>([]);
   const [topics, setTopics] = useState<ITopic[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -56,7 +57,7 @@ export default function EditFlashcardPage({ params }: { params: { id: string } }
   useEffect(() => {
     fetchFlashcard();
     fetchSubjects();
-  }, [params.id]);
+  }, [resolvedParams.id]);
 
   useEffect(() => {
     if (selectedSubject) {
@@ -67,7 +68,7 @@ export default function EditFlashcardPage({ params }: { params: { id: string } }
   const fetchFlashcard = async () => {
     try {
       setIsFetching(true);
-      const response = await fetch(`/api/admin/flashcards/${params.id}`);
+      const response = await fetch(`/api/admin/flashcards/${resolvedParams.id}`);
       if (!response.ok) {
         throw new Error('Failed to fetch flashcard');
       }
@@ -175,7 +176,7 @@ export default function EditFlashcardPage({ params }: { params: { id: string } }
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/admin/flashcards/${params.id}`, {
+      const response = await fetch(`/api/admin/flashcards/${resolvedParams.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
