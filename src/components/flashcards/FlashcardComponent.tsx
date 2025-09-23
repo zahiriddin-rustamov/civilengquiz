@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { RotateCcw, Eye, EyeOff, Star, Zap, Brain } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { RotateCcw, Star, Zap, Brain, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface FlashcardProps {
@@ -20,7 +20,6 @@ interface FlashcardProps {
   };
   onMasteryUpdate: (flashcardId: string, newLevel: 'Again' | 'Hard' | 'Good' | 'Easy') => void;
   showControls?: boolean;
-  autoFlip?: boolean;
   showHeader?: boolean;
 }
 
@@ -28,29 +27,17 @@ export function FlashcardComponent({
   flashcard,
   onMasteryUpdate,
   showControls = true,
-  autoFlip = false,
   showHeader = true
 }: FlashcardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
-  const [showAnswer, setShowAnswer] = useState(false);
 
   const handleFlip = () => {
-    if (!autoFlip) {
-      setIsFlipped(!isFlipped);
-    }
-  };
-
-  const handleShowAnswer = () => {
-    setShowAnswer(true);
-    if (autoFlip) {
-      setIsFlipped(true);
-    }
+    setIsFlipped(!isFlipped);
   };
 
   const handleMasteryClick = (level: 'Again' | 'Hard' | 'Good' | 'Easy') => {
     onMasteryUpdate(flashcard.id, level);
-    setIsFlipped(false);
-    setShowAnswer(false);
+    // Keep card flipped - let the parent component handle progression
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -207,21 +194,8 @@ export function FlashcardComponent({
         </motion.div>
       </div>
 
-      {/* Study Mode Controls */}
-      {showControls && !autoFlip && (
-        <div className="mt-6">
-          <Button
-            onClick={handleShowAnswer}
-            className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-600 hover:from-indigo-700 hover:via-purple-700 hover:to-cyan-700 text-white font-semibold py-3 rounded-lg transition-all duration-200"
-          >
-            <Eye className="w-4 h-4 mr-2" />
-            Show Answer
-          </Button>
-        </div>
-      )}
-
       {/* Mastery Controls */}
-      {showControls && (isFlipped || showAnswer) && (
+      {showControls && isFlipped && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

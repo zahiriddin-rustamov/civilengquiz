@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Shuffle, RotateCcw, Star, Target, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,16 +23,23 @@ interface FlashcardDeckProps {
   mode?: 'study' | 'review' | 'browse';
 }
 
-export function FlashcardDeck({ 
-  flashcards, 
-  onMasteryUpdate, 
+export function FlashcardDeck({
+  flashcards,
+  onMasteryUpdate,
   onComplete,
-  mode = 'study' 
+  mode = 'study'
 }: FlashcardDeckProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [shuffledCards, setShuffledCards] = useState(flashcards);
   const [studiedCards, setStudiedCards] = useState<Set<string>>(new Set());
   const [direction, setDirection] = useState(0);
+
+  // Update shuffled cards when flashcards prop changes
+  useEffect(() => {
+    setShuffledCards(flashcards);
+    setCurrentIndex(0);
+    setStudiedCards(new Set());
+  }, [flashcards]);
 
   const currentCard = shuffledCards[currentIndex];
   const progress = ((currentIndex + 1) / shuffledCards.length) * 100;

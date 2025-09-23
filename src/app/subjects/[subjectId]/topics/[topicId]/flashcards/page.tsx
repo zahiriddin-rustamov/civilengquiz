@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FlashcardDeck } from '@/components/flashcards/FlashcardDeck';
+import { FlashcardTable } from '@/components/flashcards/FlashcardTable';
 
 // Enhanced flashcards data type for UI
 interface FlashcardsData {
@@ -59,6 +60,7 @@ export default function FlashcardsPage() {
   const [studyMode, setStudyMode] = useState<'menu' | 'study' | 'review' | 'browse'>('menu');
   const [studySession, setStudySession] = useState<StudySession | null>(null);
   const [sessionCompleted, setSessionCompleted] = useState(false);
+  const [sessionCards, setSessionCards] = useState<typeof flashcardsData.flashcards>([]);
 
   const subjectId = params.subjectId as string;
   const topicId = params.topicId as string;
@@ -99,6 +101,9 @@ export default function FlashcardsPage() {
   };
 
   const handleStartStudy = (mode: 'study' | 'review' | 'browse') => {
+    // Scroll to top when starting a new session
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
     setStudyMode(mode);
     setStudySession({
       mode,
@@ -107,6 +112,30 @@ export default function FlashcardsPage() {
       xpEarned: 0
     });
     setSessionCompleted(false);
+
+    // Generate session cards once when starting
+    if (flashcardsData) {
+      let cards = [];
+      switch (mode) {
+        case 'review':
+          cards = flashcardsData.flashcards.filter(card =>
+            card.masteryLevel === 'Learning' || card.masteryLevel === 'Familiar'
+          );
+          break;
+        case 'study':
+        case 'browse':
+        default:
+          cards = flashcardsData.flashcards;
+          break;
+      }
+
+      // Randomize for study and review modes
+      if (mode === 'study' || mode === 'review') {
+        cards = [...cards].sort(() => Math.random() - 0.5);
+      }
+
+      setSessionCards(cards);
+    }
   };
 
   const handleMasteryUpdate = (flashcardId: string, newLevel: 'Again' | 'Hard' | 'Good' | 'Easy') => {
@@ -115,7 +144,7 @@ export default function FlashcardsPage() {
       const updatedFlashcards = flashcardsData.flashcards.map(card => {
         if (card.id === flashcardId) {
           let newMasteryLevel: 'New' | 'Learning' | 'Familiar' | 'Mastered' = card.masteryLevel;
-          
+
           switch (newLevel) {
             case 'Again':
               newMasteryLevel = 'New';
@@ -143,10 +172,18 @@ export default function FlashcardsPage() {
         return card;
       });
 
+      // Update both the main flashcards data and session cards
       setFlashcardsData({
         ...flashcardsData,
         flashcards: updatedFlashcards
       });
+
+      // Also update the session cards to reflect the changes
+      const updatedSessionCards = sessionCards.map(card => {
+        const updatedCard = updatedFlashcards.find(fc => fc.id === card.id);
+        return updatedCard || card;
+      });
+      setSessionCards(updatedSessionCards);
 
       // Update session stats
       if (studySession) {
@@ -163,21 +200,19 @@ export default function FlashcardsPage() {
   const handleSessionComplete = () => {
     setSessionCompleted(true);
     setStudyMode('menu');
+    // Scroll to top when completing session
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const getFilteredCards = () => {
-    if (!flashcardsData) return [];
-    
-    switch (studyMode) {
-      case 'review':
-        return flashcardsData.flashcards.filter(card => 
-          card.masteryLevel === 'Learning' || card.masteryLevel === 'Familiar'
-        );
-      case 'study':
-      case 'browse':
-      default:
-        return flashcardsData.flashcards;
+    // Return the stable session cards if we're in a study session
+    if (studyMode !== 'menu' && sessionCards.length > 0) {
+      return sessionCards;
     }
+
+    // Fallback for menu mode or if session cards aren't set yet
+    if (!flashcardsData) return [];
+    return flashcardsData.flashcards;
   };
 
   const getStudyStats = () => {
@@ -194,10 +229,14 @@ export default function FlashcardsPage() {
 
   if (status === 'loading' || isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading flashcards...</p>
+      <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 p-4 pb-16">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading flashcards...</p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -205,17 +244,21 @@ export default function FlashcardsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-500 text-xl mb-4">⚠️ Error Loading Flashcards</div>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <div className="space-x-4">
-            <Button onClick={fetchFlashcards} variant="outline">
-              Try Again
-            </Button>
-            <Button asChild>
-              <Link href={`/subjects/${subjectId}/topics/${topicId}`}>Back to Topic</Link>
-            </Button>
+      <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 p-4 pb-16">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <div className="text-red-500 text-xl mb-4">⚠️ Error Loading Flashcards</div>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <div className="space-x-4">
+                <Button onClick={fetchFlashcards} variant="outline">
+                  Try Again
+                </Button>
+                <Button asChild>
+                  <Link href={`/subjects/${subjectId}/topics/${topicId}`}>Back to Topic</Link>
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -224,12 +267,16 @@ export default function FlashcardsPage() {
 
   if (!flashcardsData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">Flashcards not found</p>
-          <Button asChild className="mt-4">
-            <Link href={`/subjects/${subjectId}/topics/${topicId}`}>Back to Topic</Link>
-          </Button>
+      <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 p-4 pb-16">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <p className="text-gray-600">Flashcards not found</p>
+              <Button asChild className="mt-4">
+                <Link href={`/subjects/${subjectId}/topics/${topicId}`}>Back to Topic</Link>
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -237,9 +284,9 @@ export default function FlashcardsPage() {
 
   if (sessionCompleted && studySession) {
     const timeSpent = Math.round((Date.now() - studySession.startTime) / 1000 / 60);
-    
+
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 p-4">
+      <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 p-4 pb-16">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="mb-8">
@@ -308,7 +355,7 @@ export default function FlashcardsPage() {
 
   if (studyMode !== 'menu') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 p-4">
+      <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 p-4 pb-16">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-8">
@@ -336,13 +383,17 @@ export default function FlashcardsPage() {
             </div>
           </div>
 
-          {/* Flashcard Deck */}
-          <FlashcardDeck
-            flashcards={getFilteredCards()}
-            onMasteryUpdate={handleMasteryUpdate}
-            onComplete={handleSessionComplete}
-            mode={studyMode}
-          />
+          {/* Flashcard Content */}
+          {studyMode === 'browse' ? (
+            <FlashcardTable flashcards={getFilteredCards()} />
+          ) : (
+            <FlashcardDeck
+              flashcards={getFilteredCards()}
+              onMasteryUpdate={handleMasteryUpdate}
+              onComplete={handleSessionComplete}
+              mode={studyMode}
+            />
+          )}
         </div>
       </div>
     );
@@ -351,7 +402,7 @@ export default function FlashcardsPage() {
   const stats = getStudyStats();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 p-4">
+    <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 p-4 pb-16">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -413,17 +464,17 @@ export default function FlashcardsPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <div className="bg-gradient-to-br from-indigo-500 via-purple-600 to-cyan-600 rounded-xl shadow-lg border border-indigo-200 p-6 text-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+            <div className="bg-gradient-to-br from-indigo-500 via-purple-600 to-cyan-600 rounded-xl shadow-lg border border-indigo-200 p-6 text-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer h-44 flex flex-col justify-between"
                  onClick={() => handleStartStudy('study')}>
               <div className="text-center">
-                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Brain className="w-8 h-8 text-white" />
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Brain className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl font-bold mb-2">Study All Cards</h3>
-                <p className="text-white/90 text-sm mb-4">Learn new cards and review all flashcards</p>
-                <div className="text-sm text-white/80">
-                  {stats.total} cards • ~{flashcardsData.estimatedTime} min
-                </div>
+                <h3 className="text-lg font-bold mb-1">Study All Cards</h3>
+                <p className="text-white/90 text-sm">Learn new and review cards</p>
+              </div>
+              <div className="text-sm text-white/80 text-center">
+                {stats.total} cards • ~{flashcardsData.estimatedTime} min
               </div>
             </div>
           </motion.div>
@@ -434,17 +485,17 @@ export default function FlashcardsPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <div className="bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 rounded-xl shadow-lg border border-emerald-200 p-6 text-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+            <div className="bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 rounded-xl shadow-lg border border-emerald-200 p-6 text-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer h-44 flex flex-col justify-between"
                  onClick={() => handleStartStudy('review')}>
               <div className="text-center">
-                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <RotateCcw className="w-8 h-8 text-white" />
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <RotateCcw className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl font-bold mb-2">Review Session</h3>
-                <p className="text-white/90 text-sm mb-4">Focus on learning and familiar cards</p>
-                <div className="text-sm text-white/80">
-                  {stats.learning + stats.familiar} cards • ~{Math.round((stats.learning + stats.familiar) * 2)} min
-                </div>
+                <h3 className="text-lg font-bold mb-1">Review Session</h3>
+                <p className="text-white/90 text-sm">Focus on cards needing practice</p>
+              </div>
+              <div className="text-sm text-white/80 text-center">
+                {stats.learning + stats.familiar} cards • ~{Math.round((stats.learning + stats.familiar) * 2)} min
               </div>
             </div>
           </motion.div>
@@ -455,17 +506,17 @@ export default function FlashcardsPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <div className="bg-gradient-to-br from-orange-500 via-amber-600 to-yellow-600 rounded-xl shadow-lg border border-orange-200 p-6 text-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+            <div className="bg-gradient-to-br from-orange-500 via-amber-600 to-yellow-600 rounded-xl shadow-lg border border-orange-200 p-6 text-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer h-44 flex flex-col justify-between"
                  onClick={() => handleStartStudy('browse')}>
               <div className="text-center">
-                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <BookOpen className="w-8 h-8 text-white" />
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <BookOpen className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl font-bold mb-2">Browse Cards</h3>
-                <p className="text-white/90 text-sm mb-4">Explore cards without tracking progress</p>
-                <div className="text-sm text-white/80">
-                  {stats.total} cards • No time limit
-                </div>
+                <h3 className="text-lg font-bold mb-1">Browse Cards</h3>
+                <p className="text-white/90 text-sm">Explore cards in table format</p>
+              </div>
+              <div className="text-sm text-white/80 text-center">
+                {stats.total} cards • Reference mode
               </div>
             </div>
           </motion.div>
