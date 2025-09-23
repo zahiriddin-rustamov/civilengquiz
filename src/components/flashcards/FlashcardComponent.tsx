@@ -13,6 +13,7 @@ interface FlashcardProps {
     difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
     category?: string;
     tags?: string[];
+    imageUrl?: string;
     masteryLevel: 'New' | 'Learning' | 'Familiar' | 'Mastered';
     reviewCount: number;
     lastReviewed?: Date;
@@ -20,13 +21,15 @@ interface FlashcardProps {
   onMasteryUpdate: (flashcardId: string, newLevel: 'Again' | 'Hard' | 'Good' | 'Easy') => void;
   showControls?: boolean;
   autoFlip?: boolean;
+  showHeader?: boolean;
 }
 
-export function FlashcardComponent({ 
-  flashcard, 
-  onMasteryUpdate, 
+export function FlashcardComponent({
+  flashcard,
+  onMasteryUpdate,
   showControls = true,
-  autoFlip = false 
+  autoFlip = false,
+  showHeader = true
 }: FlashcardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -82,20 +85,22 @@ export function FlashcardComponent({
   return (
     <div className="w-full max-w-2xl mx-auto">
       {/* Flashcard Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${getDifficultyColor(flashcard.difficulty)}`}>
-            {flashcard.difficulty}
+      {showHeader && (
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${getDifficultyColor(flashcard.difficulty)}`}>
+              {flashcard.difficulty}
+            </div>
+            <div className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${getMasteryColor(flashcard.masteryLevel)} flex items-center gap-1`}>
+              {getMasteryIcon(flashcard.masteryLevel)}
+              {flashcard.masteryLevel}
+            </div>
           </div>
-          <div className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${getMasteryColor(flashcard.masteryLevel)} flex items-center gap-1`}>
-            {getMasteryIcon(flashcard.masteryLevel)}
-            {flashcard.masteryLevel}
+          <div className="text-sm text-gray-600">
+            Reviewed {flashcard.reviewCount} times
           </div>
         </div>
-        <div className="text-sm text-gray-600">
-          Reviewed {flashcard.reviewCount} times
-        </div>
-      </div>
+      )}
 
       {/* Flashcard Container */}
       <div className="relative h-80 perspective-1000">
@@ -128,7 +133,17 @@ export function FlashcardComponent({
                 <h3 className="text-2xl font-bold mb-4 leading-relaxed">
                   {flashcard.front}
                 </h3>
-                
+
+                {flashcard.imageUrl && (
+                  <div className="mb-4">
+                    <img
+                      src={flashcard.imageUrl}
+                      alt="Flashcard illustration"
+                      className="max-w-full h-32 object-contain mx-auto rounded-lg shadow-lg"
+                    />
+                  </div>
+                )}
+
                 {flashcard.category && (
                   <div className="inline-block px-3 py-1 bg-white/20 rounded-full text-sm font-medium mb-4">
                     {flashcard.category}

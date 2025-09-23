@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { FlashcardComponent } from '@/components/flashcards/FlashcardComponent';
 import {
   ArrowLeft,
   Edit,
@@ -45,7 +46,6 @@ export default function ViewFlashcardPage({ params }: { params: Promise<{ id: st
   const [flashcard, setFlashcard] = useState<FlashcardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isFlipped, setIsFlipped] = useState(false);
 
   useEffect(() => {
     fetchFlashcard();
@@ -191,46 +191,33 @@ export default function ViewFlashcardPage({ params }: { params: Promise<{ id: st
         <div className="lg:col-span-2 space-y-6">
           {/* Interactive Flashcard */}
           <Card className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
-              <div className="flex justify-between items-center">
-                <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="w-5 h-5" />
-                  Flashcard Preview
-                </CardTitle>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => setIsFlipped(!isFlipped)}
-                >
-                  <RotateCw className="w-4 h-4 mr-2" />
-                  Flip Card
-                </Button>
-              </div>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5" />
+                Flashcard Preview
+              </CardTitle>
+              <CardDescription>
+                Interactive preview with the same experience students will have
+              </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
-              <div className="min-h-[200px] flex items-center justify-center p-6 bg-gray-50 rounded-lg">
-                {!isFlipped ? (
-                  <div className="text-center">
-                    <div className="text-xs font-semibold text-indigo-600 mb-3">FRONT SIDE</div>
-                    <div className="text-xl font-medium text-gray-900">{flashcard.front}</div>
-                    {flashcard.imageUrl && (
-                      <img
-                        src={flashcard.imageUrl}
-                        alt="Flashcard image"
-                        className="mt-4 max-w-full h-40 object-contain mx-auto rounded"
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <div className="text-xs font-semibold text-green-600 mb-3">BACK SIDE</div>
-                    <div className="text-lg text-gray-800">{flashcard.back}</div>
-                  </div>
-                )}
-              </div>
-              <div className="mt-4 text-center text-sm text-gray-500">
-                Click "Flip Card" to see the {isFlipped ? 'front' : 'back'} side
-              </div>
+              <FlashcardComponent
+                flashcard={{
+                  id: flashcard._id,
+                  front: flashcard.front,
+                  back: flashcard.back,
+                  difficulty: flashcard.difficulty,
+                  category: flashcard.category,
+                  tags: flashcard.tags,
+                  imageUrl: flashcard.imageUrl,
+                  masteryLevel: 'New',
+                  reviewCount: 0
+                }}
+                onMasteryUpdate={() => {}}
+                showControls={false}
+                autoFlip={false}
+                showHeader={false}
+              />
             </CardContent>
           </Card>
 
