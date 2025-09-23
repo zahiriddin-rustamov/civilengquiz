@@ -122,7 +122,7 @@ export default function NewQuestionPage() {
     // Pre-select topic if provided in URL
     const topicId = searchParams?.get('topicId');
     if (topicId) {
-      setFormData(prev => ({ ...prev, topicId }));
+      // Don't set formData.topicId here - let fetchTopicAndSubject do it after topics are loaded
       fetchTopicAndSubject(topicId);
     }
   }, [searchParams]);
@@ -169,11 +169,14 @@ export default function NewQuestionPage() {
       const response = await fetch(`/api/topics/${topicId}`);
       if (response.ok) {
         const topic = await response.json();
-        setSelectedSubject(topic.subjectId);
+        setSelectedSubject(topic.subjectId.toString());
         const subjectResponse = await fetch(`/api/subjects/${topic.subjectId}/topics`);
         if (subjectResponse.ok) {
           const topicsData = await subjectResponse.json();
           setTopics(topicsData);
+
+          // Re-set the topic selection AFTER topics are loaded to ensure it appears in dropdown
+          setFormData(prev => ({ ...prev, topicId }));
         }
       }
     } catch (err) {

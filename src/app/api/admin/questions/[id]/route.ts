@@ -6,7 +6,7 @@ import { Question } from '@/models/database';
 import { Types } from 'mongoose';
 
 // GET /api/admin/questions/[id] - Get single question
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user || (session.user as any).role !== 'admin') {
@@ -15,7 +15,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     await connectToDatabase();
 
-    const questionId = params.id;
+    const { id } = await params;
+    const questionId = id;
 
     if (!Types.ObjectId.isValid(questionId)) {
       return NextResponse.json({ error: 'Invalid question ID' }, { status: 400 });
@@ -61,7 +62,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 }
 
 // PUT /api/admin/questions/[id] - Update question
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user || (session.user as any).role !== 'admin') {
@@ -70,7 +71,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     await connectToDatabase();
 
-    const questionId = params.id;
+    const { id } = await params;
+    const questionId = id;
 
     if (!Types.ObjectId.isValid(questionId)) {
       return NextResponse.json({ error: 'Invalid question ID' }, { status: 400 });
@@ -156,7 +158,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 }
 
 // DELETE /api/admin/questions/[id] - Delete question
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user || (session.user as any).role !== 'admin') {
@@ -165,7 +167,8 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
 
     await connectToDatabase();
 
-    const questionId = params.id;
+    const { id } = await params;
+    const questionId = id;
 
     if (!Types.ObjectId.isValid(questionId)) {
       return NextResponse.json({ error: 'Invalid question ID' }, { status: 400 });

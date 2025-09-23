@@ -23,6 +23,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   Plus,
   Search,
   MoreVertical,
@@ -569,45 +575,58 @@ export default function FlashcardsPage() {
 
                         {/* Group Actions */}
                         <div
-                          className="flex items-center space-x-2"
+                          className="flex items-center"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreVertical className="h-4 w-4" />
-                                <span className="sr-only">Group actions</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem asChild>
-                                <Link href={`/admin/flashcards/bulk?topicId=${group.topicId}`}>
-                                  <Upload className="w-4 h-4 mr-2" />
-                                  Bulk Import to Topic
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem asChild>
-                                <Link href={`/admin/flashcards/new?topicId=${group.topicId}`}>
-                                  <Plus className="w-4 h-4 mr-2" />
-                                  Add Flashcard to Topic
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  // Find the subject ID by name
-                                  const subject = subjects.find(s => s.name === group.subjectName);
-                                  if (subject) {
-                                    setSelectedSubject(subject._id.toString());
-                                    setSelectedTopic(group.topicId);
-                                  }
-                                }}
-                              >
-                                <Eye className="w-4 h-4 mr-2" />
-                                View Only This Topic
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <TooltipProvider>
+                            <div className="flex items-center">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" asChild>
+                                    <Link href={`/admin/flashcards/bulk?topicId=${group.topicId}`}>
+                                      <Upload className="h-4 w-4" />
+                                    </Link>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Bulk import to topic</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" asChild>
+                                    <Link href={`/admin/flashcards/new?topicId=${group.topicId}`}>
+                                      <Plus className="h-4 w-4" />
+                                    </Link>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Add flashcard to topic</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      // Find the subject ID by name
+                                      const subject = subjects.find(s => s.name === group.subjectName);
+                                      if (subject) {
+                                        setSelectedSubject(subject._id.toString());
+                                        setSelectedTopic(group.topicId);
+                                      }
+                                    }}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>View only this topic</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TooltipProvider>
                         </div>
                       </div>
                     </div>
@@ -676,43 +695,65 @@ export default function FlashcardsPage() {
                                   </div>
                                 </div>
 
-                                {/* Individual Flashcard Actions */}
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm">
-                                      <MoreVertical className="h-4 w-4" />
-                                      <span className="sr-only">Flashcard actions</span>
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem asChild>
-                                      <Link href={`/admin/flashcards/${flashcard._id}`}>
-                                        <Eye className="w-4 h-4 mr-2" />
-                                        View
-                                      </Link>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem asChild>
-                                      <Link href={`/admin/flashcards/${flashcard._id}/edit`}>
-                                        <Edit className="w-4 h-4 mr-2" />
-                                        Edit
-                                      </Link>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem asChild>
-                                      <Link href={`/admin/flashcards/new?duplicate=${flashcard._id}`}>
-                                        <Copy className="w-4 h-4 mr-2" />
-                                        Duplicate
-                                      </Link>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={() => handleDelete(flashcard._id.toString())}
-                                      className="text-red-600 focus:text-red-600"
-                                    >
-                                      <Trash2 className="w-4 h-4 mr-2" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                {/* Separator and Individual Flashcard Actions */}
+                                <div className="flex items-center">
+                                  <div className="w-px h-6 bg-gray-200 mx-3"></div>
+                                  <TooltipProvider>
+                                    <div className="flex items-center">
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button variant="ghost" size="sm" asChild>
+                                            <Link href={`/admin/flashcards/${flashcard._id}`}>
+                                              <Eye className="h-4 w-4" />
+                                            </Link>
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>View flashcard</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button variant="ghost" size="sm" asChild>
+                                            <Link href={`/admin/flashcards/${flashcard._id}/edit`}>
+                                              <Edit className="h-4 w-4" />
+                                            </Link>
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Edit flashcard</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button variant="ghost" size="sm" asChild>
+                                            <Link href={`/admin/flashcards/new?duplicate=${flashcard._id}`}>
+                                              <Copy className="h-4 w-4" />
+                                            </Link>
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Duplicate flashcard</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleDelete(flashcard._id.toString())}
+                                            className="text-red-600 hover:text-red-600 hover:bg-red-50"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Delete flashcard</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </div>
+                                  </TooltipProvider>
+                                </div>
                               </div>
                             ))}
                         </div>

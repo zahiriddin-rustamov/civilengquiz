@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +26,7 @@ interface BulkFlashcard {
 
 export default function BulkFlashcardsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [subjects, setSubjects] = useState<ISubject[]>([]);
   const [topics, setTopics] = useState<ITopic[]>([]);
   const [selectedSubject, setSelectedSubject] = useState('');
@@ -53,7 +54,14 @@ export default function BulkFlashcardsPage() {
 
   useEffect(() => {
     fetchSubjects();
-  }, []);
+
+    // Pre-select topic if provided in URL
+    const topicId = searchParams?.get('topicId');
+    if (topicId) {
+      // Don't set selectedTopic here - let fetchTopicAndSubject do it after topics are loaded
+      fetchTopicAndSubject(topicId);
+    }
+  }, [searchParams]);
 
   const fetchSubjects = async () => {
     try {
@@ -77,6 +85,26 @@ export default function BulkFlashcardsPage() {
       }
     } catch (err) {
       console.error('Error fetching topics:', err);
+    }
+  };
+
+  const fetchTopicAndSubject = async (topicId: string) => {
+    try {
+      const response = await fetch(`/api/topics/${topicId}`);
+      if (response.ok) {
+        const topic = await response.json();
+        setSelectedSubject(topic.subjectId.toString());
+        const subjectResponse = await fetch(`/api/subjects/${topic.subjectId}/topics`);
+        if (subjectResponse.ok) {
+          const topicsData = await subjectResponse.json();
+          setTopics(topicsData);
+
+          // Re-set the topic selection AFTER topics are loaded to ensure it appears in dropdown
+          setSelectedTopic(topicId);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching topic and subject:', err);
     }
   };
 

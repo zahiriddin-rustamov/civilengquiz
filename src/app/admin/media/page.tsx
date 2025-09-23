@@ -23,6 +23,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   Plus,
   Search,
   MoreVertical,
@@ -500,43 +506,56 @@ export default function MediaPage() {
 
                         {/* Group Actions */}
                         <div
-                          className="flex items-center space-x-2"
+                          className="flex items-center"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreVertical className="h-4 w-4" />
-                                <span className="sr-only">Group actions</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                          <TooltipProvider>
+                            <div className="flex items-center">
                               {group.videoCount > 0 && (
-                                <DropdownMenuItem asChild>
-                                  <Link href={`/admin/media/reorder?topicId=${group.topicId}`}>
-                                    <Move className="w-4 h-4 mr-2" />
-                                    Reorder Videos
-                                  </Link>
-                                </DropdownMenuItem>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="sm" asChild>
+                                      <Link href={`/admin/media/reorder?topicId=${group.topicId}`}>
+                                        <Move className="h-4 w-4" />
+                                      </Link>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Reorder videos</p>
+                                  </TooltipContent>
+                                </Tooltip>
                               )}
-                              <DropdownMenuItem asChild>
-                                <Link href={`/admin/media/new?topicId=${group.topicId}`}>
-                                  <Plus className="w-4 h-4 mr-2" />
-                                  Add Media to Topic
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedSubject(group.subjectId);
-                                  setSelectedTopic(group.topicId);
-                                }}
-                              >
-                                <Eye className="w-4 h-4 mr-2" />
-                                View Only This Topic
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" asChild>
+                                    <Link href={`/admin/media/new?topicId=${group.topicId}`}>
+                                      <Plus className="h-4 w-4" />
+                                    </Link>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Add media to topic</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedSubject(group.subjectId);
+                                      setSelectedTopic(group.topicId);
+                                    }}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>View only this topic</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TooltipProvider>
                         </div>
                       </div>
                     </div>
@@ -583,43 +602,65 @@ export default function MediaPage() {
                                   </div>
                                 </div>
 
-                                {/* Individual Media Actions */}
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm">
-                                      <MoreVertical className="h-4 w-4" />
-                                      <span className="sr-only">Media actions</span>
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem asChild>
-                                      <Link href={`/admin/media/${mediaItem._id}`}>
-                                        <Eye className="w-4 h-4 mr-2" />
-                                        View
-                                      </Link>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem asChild>
-                                      <a href={mediaItem.youtubeUrl} target="_blank" rel="noopener noreferrer">
-                                        <ExternalLink className="w-4 h-4 mr-2" />
-                                        Open YouTube
-                                      </a>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem asChild>
-                                      <Link href={`/admin/media/${mediaItem._id}/edit`}>
-                                        <Edit className="w-4 h-4 mr-2" />
-                                        Edit
-                                      </Link>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={() => handleDelete(mediaItem._id.toString())}
-                                      className="text-red-600 focus:text-red-600"
-                                    >
-                                      <Trash2 className="w-4 h-4 mr-2" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                {/* Separator and Individual Media Actions */}
+                                <div className="flex items-center">
+                                  <div className="w-px h-6 bg-gray-200 mx-3"></div>
+                                  <TooltipProvider>
+                                    <div className="flex items-center">
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button variant="ghost" size="sm" asChild>
+                                            <Link href={`/admin/media/${mediaItem._id}`}>
+                                              <Eye className="h-4 w-4" />
+                                            </Link>
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>View media</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button variant="ghost" size="sm" asChild>
+                                            <a href={mediaItem.youtubeUrl} target="_blank" rel="noopener noreferrer">
+                                              <ExternalLink className="h-4 w-4" />
+                                            </a>
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Open YouTube</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button variant="ghost" size="sm" asChild>
+                                            <Link href={`/admin/media/${mediaItem._id}/edit`}>
+                                              <Edit className="h-4 w-4" />
+                                            </Link>
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Edit media</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleDelete(mediaItem._id.toString())}
+                                            className="text-red-600 hover:text-red-600 hover:bg-red-50"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Delete media</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </div>
+                                  </TooltipProvider>
+                                </div>
                               </div>
                             ))}
                         </div>
