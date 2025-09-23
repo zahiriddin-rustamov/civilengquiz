@@ -35,7 +35,6 @@ import {
   CreditCard,
   Play,
   ArrowUpDown,
-  Lock
 } from 'lucide-react';
 import { ISubject } from '@/models/database';
 
@@ -47,10 +46,6 @@ interface EnhancedSubject extends ISubject {
   totalContent: number;
   estimatedHours: number; // Calculated from topics
   xpReward: number; // Calculated from topics
-  prerequisiteId?: {
-    _id: string;
-    name: string;
-  };
 }
 
 export default function SubjectsPage() {
@@ -241,7 +236,6 @@ export default function SubjectsPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Content</TableHead>
-                  <TableHead>Prerequisite</TableHead>
                   <TableHead>Difficulty</TableHead>
                   <TableHead>
                     <div className="relative group">
@@ -284,16 +278,6 @@ export default function SubjectsPage() {
                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block">
                               <div className="bg-red-600 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
                                 No content added yet
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        {subject.prerequisiteId && (
-                          <div className="relative group">
-                            <Lock className="w-4 h-4 text-amber-500" />
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block">
-                              <div className="bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
-                                Requires: {subject.prerequisiteId.name}
                               </div>
                             </div>
                           </div>
@@ -348,15 +332,6 @@ export default function SubjectsPage() {
                           </Badge>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      {subject.prerequisiteId ? (
-                        <Badge variant="outline" className="text-xs">
-                          {subject.prerequisiteId.name}
-                        </Badge>
-                      ) : (
-                        <span className="text-gray-400 text-sm">None</span>
-                      )}
                     </TableCell>
                     <TableCell>
                       <Badge className={getDifficultyColor(subject.difficulty)}>

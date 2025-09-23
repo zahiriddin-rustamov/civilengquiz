@@ -225,7 +225,7 @@ export default function ReorderSubjectsPage() {
           <CardTitle>Instructions</CardTitle>
           <CardDescription>
             Drag subjects up or down to reorder them. The order will determine how subjects appear to students.
-            Subjects with prerequisites should typically come after their prerequisite subjects.
+            Arrange subjects in a logical learning progression from basic to advanced topics.
           </CardDescription>
         </CardHeader>
       </Card>

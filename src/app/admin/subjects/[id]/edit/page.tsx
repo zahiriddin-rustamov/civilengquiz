@@ -6,7 +6,6 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,7 +22,6 @@ interface SubjectFormData {
   imageUrl: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   isUnlocked: boolean;
-  prerequisiteId: string;
 }
 
 export default function EditSubjectPage() {
@@ -35,38 +33,19 @@ export default function EditSubjectPage() {
   const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [originalSubject, setOriginalSubject] = useState<ISubject | null>(null);
-  const [availableSubjects, setAvailableSubjects] = useState<{ _id: string; name: string }[]>([]);
   const [formData, setFormData] = useState<SubjectFormData>({
     name: '',
     description: '',
     imageUrl: '',
     difficulty: 'Beginner',
     isUnlocked: true,
-    prerequisiteId: 'none',
   });
 
   useEffect(() => {
     if (subjectId) {
       fetchSubject();
-      fetchAvailableSubjects();
     }
   }, [subjectId]);
-
-  const fetchAvailableSubjects = async () => {
-    try {
-      const response = await fetch('/api/subjects');
-      if (response.ok) {
-        const subjects = await response.json();
-        // Filter out the current subject to prevent self-reference
-        const filtered = subjects
-          .filter((s: any) => s._id !== subjectId)
-          .map((s: any) => ({ _id: s._id, name: s.name }));
-        setAvailableSubjects(filtered);
-      }
-    } catch (err) {
-      console.error('Error fetching available subjects:', err);
-    }
-  };
 
   const fetchSubject = async () => {
     try {
@@ -92,7 +71,6 @@ export default function EditSubjectPage() {
         imageUrl: subject.imageUrl || '',
         difficulty: subject.difficulty,
         isUnlocked: subject.isUnlocked,
-        prerequisiteId: subject.prerequisiteId?.toString() || 'none',
       });
     } catch (err) {
       console.error('Error fetching subject:', err);
@@ -126,10 +104,8 @@ export default function EditSubjectPage() {
     setError(null);
 
     try {
-      // Prepare the data, converting "none" or empty prerequisiteId to undefined
       const submitData = {
-        ...formData,
-        prerequisiteId: formData.prerequisiteId && formData.prerequisiteId !== 'none' ? formData.prerequisiteId : undefined
+        ...formData
       };
 
       const response = await fetch(`/api/subjects/${subjectId}`, {
@@ -286,30 +262,6 @@ export default function EditSubjectPage() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="prerequisite">Prerequisite Subject (optional)</Label>
-              <Select
-                value={formData.prerequisiteId}
-                onValueChange={(value) => handleInputChange('prerequisiteId', value)}
-                disabled={isLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select prerequisite subject (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No prerequisite</SelectItem>
-                  {availableSubjects.map(subject => (
-                    <SelectItem key={subject._id} value={subject._id}>
-                      {subject.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-gray-500">
-                Students must complete this subject before accessing this subject
-              </p>
             </div>
 
             <RichTextEditor

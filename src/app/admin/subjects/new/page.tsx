@@ -21,38 +21,21 @@ interface SubjectFormData {
   imageUrl: string;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   isUnlocked: boolean;
-  prerequisiteId: string;
 }
 
 export default function NewSubjectPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [availableSubjects, setAvailableSubjects] = useState<{ _id: string; name: string }[]>([]);
   const [formData, setFormData] = useState<SubjectFormData>({
     name: '',
     description: '',
     imageUrl: '',
     difficulty: 'Beginner',
     isUnlocked: true,
-    prerequisiteId: 'none',
   });
 
-  useEffect(() => {
-    fetchAvailableSubjects();
-  }, []);
 
-  const fetchAvailableSubjects = async () => {
-    try {
-      const response = await fetch('/api/subjects');
-      if (response.ok) {
-        const subjects = await response.json();
-        setAvailableSubjects(subjects.map((s: any) => ({ _id: s._id, name: s.name })));
-      }
-    } catch (err) {
-      console.error('Error fetching subjects:', err);
-    }
-  };
 
 
   const handleInputChange = (field: keyof SubjectFormData, value: string | number | boolean) => {
@@ -79,10 +62,8 @@ export default function NewSubjectPage() {
     setError(null);
 
     try {
-      // Prepare the data, converting "none" or empty prerequisiteId to undefined
       const submitData = {
-        ...formData,
-        prerequisiteId: formData.prerequisiteId && formData.prerequisiteId !== 'none' ? formData.prerequisiteId : undefined
+        ...formData
       };
 
       const response = await fetch('/api/subjects', {
@@ -180,29 +161,6 @@ export default function NewSubjectPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="prerequisite">Prerequisite Subject (optional)</Label>
-              <Select
-                value={formData.prerequisiteId}
-                onValueChange={(value) => handleInputChange('prerequisiteId', value)}
-                disabled={isLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select prerequisite subject (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No prerequisite</SelectItem>
-                  {availableSubjects.map(subject => (
-                    <SelectItem key={subject._id} value={subject._id}>
-                      {subject.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-gray-500">
-                Students must complete this subject before accessing the new subject
-              </p>
-            </div>
 
             <RichTextEditor
               label="Description *"

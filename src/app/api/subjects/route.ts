@@ -11,7 +11,6 @@ export async function GET() {
     await connectToDatabase();
 
     const subjects = await Subject.find({})
-      .populate('prerequisiteId', 'name')
       .sort({ order: 1 })
       .lean();
 
@@ -115,8 +114,7 @@ export async function POST(request: NextRequest) {
       imageUrl: data.imageUrl,
       isUnlocked: data.isUnlocked ?? true,
       order: nextOrder,
-      difficulty,
-      prerequisiteId: data.prerequisiteId
+      difficulty
     });
 
     return NextResponse.json(subject, { status: 201 });
