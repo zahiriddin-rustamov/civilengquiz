@@ -88,7 +88,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       youtubeUrl,
       videoType,
       preVideoContent,
-      postVideoContent
+      postVideoContent,
+      quizQuestions
     } = body;
 
     // Validate required fields
@@ -126,6 +127,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           practicalApplications: [],
           additionalResources: []
         },
+        quizQuestions: quizQuestions || [],
         updatedAt: new Date()
       },
       { new: true, runValidators: true }
