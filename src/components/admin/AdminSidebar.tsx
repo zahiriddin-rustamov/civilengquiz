@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -12,16 +11,13 @@ import {
   Play,
   Users,
   BarChart3,
-  Settings,
-  ChevronDown,
-  ChevronRight
+  Settings
 } from 'lucide-react';
 
 interface NavigationItem {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  children?: NavigationItem[];
   disabled?: boolean;
 }
 
@@ -31,18 +27,11 @@ const navigation: NavigationItem[] = [
     href: '/admin',
     icon: LayoutDashboard,
   },
-  {
-    name: 'Content Management',
-    href: '/admin/content',
-    icon: BookOpen,
-    children: [
-      { name: 'Subjects', href: '/admin/subjects', icon: BookOpen },
-      { name: 'Topics', href: '/admin/topics', icon: FileText },
-      { name: 'Questions', href: '/admin/questions', icon: FileText },
-      { name: 'Flashcards', href: '/admin/flashcards', icon: CreditCard },
-      { name: 'Media', href: '/admin/media', icon: Play },
-    ],
-  },
+  { name: 'Subjects', href: '/admin/subjects', icon: BookOpen },
+  { name: 'Topics', href: '/admin/topics', icon: FileText },
+  { name: 'Questions', href: '/admin/questions', icon: FileText },
+  { name: 'Flashcards', href: '/admin/flashcards', icon: CreditCard },
+  { name: 'Media', href: '/admin/media', icon: Play },
   {
     name: 'User Management',
     href: '/admin/users',
@@ -65,15 +54,6 @@ const navigation: NavigationItem[] = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
-  const [expandedItems, setExpandedItems] = useState<string[]>(['/admin/content']);
-
-  const toggleExpanded = (href: string) => {
-    setExpandedItems(prev =>
-      prev.includes(href)
-        ? prev.filter(item => item !== href)
-        : [...prev, href]
-    );
-  };
 
   const isActive = (href: string) => {
     if (href === '/admin') {
@@ -82,17 +62,14 @@ export function AdminSidebar() {
     return pathname.startsWith(href);
   };
 
-  const renderNavItem = (item: NavigationItem, depth = 0) => {
-    const hasChildren = item.children && item.children.length > 0;
-    const isExpanded = expandedItems.includes(item.href);
+  const renderNavItem = (item: NavigationItem) => {
     const active = isActive(item.href);
 
     return (
       <div key={item.href}>
         <div
           className={cn(
-            'flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors',
-            depth > 0 && 'ml-4',
+            'flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
             active
               ? 'bg-blue-100 text-blue-700'
               : item.disabled
@@ -100,15 +77,7 @@ export function AdminSidebar() {
               : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
           )}
         >
-          {hasChildren ? (
-            <button
-              onClick={() => toggleExpanded(item.href)}
-              className="flex items-center flex-1 text-left"
-            >
-              <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
-              {item.name}
-            </button>
-          ) : item.disabled ? (
+          {item.disabled ? (
             <div className="flex items-center flex-1 cursor-not-allowed opacity-50">
               <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
               {item.name}
@@ -119,26 +88,7 @@ export function AdminSidebar() {
               {item.name}
             </Link>
           )}
-          
-          {hasChildren && (
-            <button
-              onClick={() => toggleExpanded(item.href)}
-              className="p-1 hover:bg-gray-200 rounded"
-            >
-              {isExpanded ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-            </button>
-          )}
         </div>
-
-        {hasChildren && isExpanded && (
-          <div className="mt-1 space-y-1">
-            {item.children.map(child => renderNavItem(child, depth + 1))}
-          </div>
-        )}
       </div>
     );
   };
@@ -159,7 +109,24 @@ export function AdminSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-        {navigation.map(item => renderNavItem(item))}
+        {/* Dashboard */}
+        {renderNavItem(navigation[0])}
+
+        {/* Content Management Section */}
+        <div className="pt-4">
+          <div className="px-3 py-2">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Content Management
+            </h3>
+          </div>
+          {navigation.slice(1, 6).map(item => renderNavItem(item))}
+        </div>
+
+        {/* Separator */}
+        <div className="border-t border-gray-200 my-4"></div>
+
+        {/* Other sections */}
+        {navigation.slice(6).map(item => renderNavItem(item))}
       </nav>
 
       {/* User Info */}
