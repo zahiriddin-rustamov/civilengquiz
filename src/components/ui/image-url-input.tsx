@@ -96,39 +96,40 @@ export function ImageUrlInput({
               </div>
             )}
 
-            {!imageLoading && !imageError && (
-              <div className="space-y-2">
-                <img
-                  src={value}
-                  alt="Preview"
-                  onLoad={handleImageLoad}
-                  onError={handleImageError}
-                  className="max-w-full h-auto max-h-48 rounded border object-cover mx-auto"
-                />
-                <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
-                  <span>Image preview</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => window.open(value, '_blank')}
-                    className="h-auto p-1"
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                  </Button>
+            {/* Always render the image element but hide it during loading */}
+            <div className={imageLoading ? 'hidden' : ''}>
+              {!imageError ? (
+                <div className="space-y-2">
+                  <img
+                    src={value}
+                    alt="Preview"
+                    onLoad={handleImageLoad}
+                    onError={handleImageError}
+                    className="max-w-full h-auto max-h-48 rounded border object-cover mx-auto"
+                  />
+                  <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+                    <span>Image preview</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => window.open(value, '_blank')}
+                      className="h-auto p-1"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {imageError && (
-              <div className="flex items-center justify-center h-32 bg-red-50 rounded border-red-200">
-                <div className="text-center">
-                  <X className="w-8 h-8 text-red-400 mx-auto mb-2" />
-                  <p className="text-sm text-red-600">Failed to load image</p>
-                  <p className="text-xs text-red-500">Please check the URL</p>
+              ) : (
+                <div className="flex items-center justify-center h-32 bg-red-50 rounded border-red-200">
+                  <div className="text-center">
+                    <X className="w-8 h-8 text-red-400 mx-auto mb-2" />
+                    <p className="text-sm text-red-600">Failed to load image</p>
+                    <p className="text-xs text-red-500">Please check the URL</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
       </div>
