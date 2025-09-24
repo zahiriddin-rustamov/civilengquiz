@@ -192,24 +192,6 @@ export default function StudyWorldsPage() {
           </div>
         </motion.div>
 
-        {/* Admin Button */}
-        {session?.user?.role === 'admin' && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mb-8 flex justify-end"
-          >
-            <Button 
-              asChild
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg"
-            >
-              <Link href="/admin/subjects/new">
-                <Star className="w-4 h-4 mr-2" />
-                Add New World
-              </Link>
-            </Button>
-          </motion.div>
-        )}
 
         {/* Study Worlds Grid */}
         {studyWorlds.length === 0 ? (
