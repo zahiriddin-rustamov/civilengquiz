@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import connectToDatabase from '@/lib/mongoose';
-import { QuestionSection, Question } from '@/models/database';
+import { SectionService } from '@/lib/db-operations';
 
 // GET /api/sections/[id] - Get section by ID
 export async function GET(
@@ -116,29 +115,16 @@ export async function DELETE(
       );
     }
 
-    await connectToDatabase();
-
     const { id } = await params;
 
-    // Check if section exists
-    const section = await QuestionSection.findById(id);
-    if (!section) {
+    const deleted = await SectionService.deleteSection(id);
+
+    if (!deleted) {
       return NextResponse.json(
         { error: 'Section not found' },
         { status: 404 }
       );
     }
-
-    // Check if section has questions
-    const questionCount = await Question.countDocuments({ sectionId: id });
-    if (questionCount > 0) {
-      return NextResponse.json(
-        { error: `Cannot delete section. It contains ${questionCount} questions. Please move or delete the questions first.` },
-        { status: 400 }
-      );
-    }
-
-    await QuestionSection.findByIdAndDelete(id);
 
     return NextResponse.json({ message: 'Section deleted successfully' });
   } catch (error) {

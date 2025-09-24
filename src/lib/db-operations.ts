@@ -1,5 +1,5 @@
 import connectToDatabase from './mongoose';
-import { Subject, Topic, Question, Flashcard, Media, UserProgress, MediaEngagement, ISubject, ITopic, IQuestion, IFlashcard, IMedia, IUserProgress, IMediaEngagement } from '@/models/database';
+import { Subject, Topic, Question, Flashcard, Media, UserProgress, MediaEngagement, QuestionSection, ISubject, ITopic, IQuestion, IFlashcard, IMedia, IUserProgress, IMediaEngagement } from '@/models/database';
 import { Types } from 'mongoose';
 
 // Subject Operations
@@ -30,6 +30,19 @@ export class SubjectService {
   static async deleteSubject(id: string): Promise<boolean> {
     await connectToDatabase();
     if (!Types.ObjectId.isValid(id)) return false;
+
+    // Get all topics under this subject
+    const topics = await Topic.find({ subjectId: id }).lean();
+
+    // Delete all topics and their cascaded content
+    for (const topic of topics) {
+      await TopicService.deleteTopic(topic._id.toString());
+    }
+
+    // Delete any remaining UserProgress entries for this subject
+    await UserProgress.deleteMany({ subjectId: id });
+
+    // Finally delete the subject
     const result = await Subject.findByIdAndDelete(id);
     return !!result;
   }
@@ -64,7 +77,76 @@ export class TopicService {
   static async deleteTopic(id: string): Promise<boolean> {
     await connectToDatabase();
     if (!Types.ObjectId.isValid(id)) return false;
+
+    // Get all sections under this topic
+    const sections = await QuestionSection.find({ topicId: id }).lean();
+
+    // Delete all sections and their questions
+    for (const section of sections) {
+      await SectionService.deleteSection(section._id.toString());
+    }
+
+    // Delete all flashcards under this topic
+    const flashcards = await Flashcard.find({ topicId: id }).lean();
+    for (const flashcard of flashcards) {
+      await FlashcardService.deleteFlashcard(flashcard._id.toString());
+    }
+
+    // Delete all media under this topic
+    const mediaItems = await Media.find({ topicId: id }).lean();
+    for (const media of mediaItems) {
+      await MediaService.deleteMedia(media._id.toString());
+    }
+
+    // Delete any remaining UserProgress entries for this topic
+    await UserProgress.deleteMany({ topicId: id });
+
+    // Finally delete the topic
     const result = await Topic.findByIdAndDelete(id);
+    return !!result;
+  }
+}
+
+// Section Operations
+export class SectionService {
+  static async getSectionById(id: string): Promise<any | null> {
+    await connectToDatabase();
+    if (!Types.ObjectId.isValid(id)) return null;
+    return QuestionSection.findById(id).lean();
+  }
+
+  static async getSectionsByTopic(topicId: string): Promise<any[]> {
+    await connectToDatabase();
+    if (!Types.ObjectId.isValid(topicId)) return [];
+    return QuestionSection.find({ topicId }).sort({ order: 1 }).lean();
+  }
+
+  static async createSection(data: any): Promise<any> {
+    await connectToDatabase();
+    const section = new QuestionSection(data);
+    return section.save();
+  }
+
+  static async updateSection(id: string, data: any): Promise<any | null> {
+    await connectToDatabase();
+    if (!Types.ObjectId.isValid(id)) return null;
+    return QuestionSection.findByIdAndUpdate(id, data, { new: true }).lean();
+  }
+
+  static async deleteSection(id: string): Promise<boolean> {
+    await connectToDatabase();
+    if (!Types.ObjectId.isValid(id)) return false;
+
+    // Delete all questions in this section
+    const questions = await Question.find({ sectionId: id }).lean();
+    for (const question of questions) {
+      await QuestionService.deleteQuestion(question._id.toString());
+    }
+
+    // Delete any remaining UserProgress entries for this section
+    await UserProgress.deleteMany({ contentId: id, contentType: 'section' });
+
+    const result = await QuestionSection.findByIdAndDelete(id);
     return !!result;
   }
 }
@@ -98,6 +180,10 @@ export class QuestionService {
   static async deleteQuestion(id: string): Promise<boolean> {
     await connectToDatabase();
     if (!Types.ObjectId.isValid(id)) return false;
+
+    // Delete related user progress entries
+    await UserProgress.deleteMany({ contentId: id, contentType: 'question' });
+
     const result = await Question.findByIdAndDelete(id);
     return !!result;
   }
@@ -132,6 +218,10 @@ export class FlashcardService {
   static async deleteFlashcard(id: string): Promise<boolean> {
     await connectToDatabase();
     if (!Types.ObjectId.isValid(id)) return false;
+
+    // Delete related user progress entries
+    await UserProgress.deleteMany({ contentId: id, contentType: 'flashcard' });
+
     const result = await Flashcard.findByIdAndDelete(id);
     return !!result;
   }
@@ -166,6 +256,13 @@ export class MediaService {
   static async deleteMedia(id: string): Promise<boolean> {
     await connectToDatabase();
     if (!Types.ObjectId.isValid(id)) return false;
+
+    // Delete related user progress entries
+    await UserProgress.deleteMany({ contentId: id, contentType: 'media' });
+
+    // Delete related media engagement entries
+    await MediaEngagement.deleteMany({ mediaId: id });
+
     const result = await Media.findByIdAndDelete(id);
     return !!result;
   }

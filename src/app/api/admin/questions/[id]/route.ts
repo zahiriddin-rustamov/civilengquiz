@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectToDatabase from '@/lib/mongoose';
 import { Question, QuestionSection } from '@/models/database';
+import { QuestionService } from '@/lib/db-operations';
 import { Types } from 'mongoose';
 
 // GET /api/admin/questions/[id] - Get single question
@@ -210,14 +211,11 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       return NextResponse.json({ error: 'Invalid question ID' }, { status: 400 });
     }
 
-    const deletedQuestion = await Question.findByIdAndDelete(questionId);
+    const deleted = await QuestionService.deleteQuestion(questionId);
 
-    if (!deletedQuestion) {
+    if (!deleted) {
       return NextResponse.json({ error: 'Question not found' }, { status: 404 });
     }
-
-    // TODO: Also delete related user progress entries
-    // await UserProgress.deleteMany({ contentId: questionId, contentType: 'question' });
 
     return NextResponse.json({ message: 'Question deleted successfully' });
 

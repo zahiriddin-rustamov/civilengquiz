@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectToDatabase from '@/lib/mongoose';
 import { Media } from '@/models/database';
+import { MediaService } from '@/lib/db-operations';
 import { Types } from 'mongoose';
 
 // GET /api/admin/media/[id] - Get single media
@@ -189,14 +190,11 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       return NextResponse.json({ error: 'Invalid media ID' }, { status: 400 });
     }
 
-    const deletedMedia = await Media.findByIdAndDelete(mediaId);
+    const deleted = await MediaService.deleteMedia(mediaId);
 
-    if (!deletedMedia) {
+    if (!deleted) {
       return NextResponse.json({ error: 'Media not found' }, { status: 404 });
     }
-
-    // TODO: Also delete related user progress entries
-    // await UserProgress.deleteMany({ contentId: mediaId, contentType: 'media' });
 
     return NextResponse.json({ message: 'Media deleted successfully' });
 

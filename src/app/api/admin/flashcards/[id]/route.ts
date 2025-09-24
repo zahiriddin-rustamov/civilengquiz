@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectToDatabase from '@/lib/mongoose';
 import { Flashcard } from '@/models/database';
+import { FlashcardService } from '@/lib/db-operations';
 import { Types } from 'mongoose';
 
 // GET /api/admin/flashcards/[id] - Get single flashcard
@@ -171,14 +172,11 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       return NextResponse.json({ error: 'Invalid flashcard ID' }, { status: 400 });
     }
 
-    const deletedFlashcard = await Flashcard.findByIdAndDelete(flashcardId);
+    const deleted = await FlashcardService.deleteFlashcard(flashcardId);
 
-    if (!deletedFlashcard) {
+    if (!deleted) {
       return NextResponse.json({ error: 'Flashcard not found' }, { status: 404 });
     }
-
-    // TODO: Also delete related user progress entries
-    // await UserProgress.deleteMany({ contentId: flashcardId, contentType: 'flashcard' });
 
     return NextResponse.json({ message: 'Flashcard deleted successfully' });
 
