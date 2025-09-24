@@ -72,6 +72,7 @@ export default function NewQuestionPage() {
   const [sections, setSections] = useState<any[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [sectionsLoading, setSectionsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<QuestionData>({
@@ -124,15 +125,10 @@ export default function NewQuestionPage() {
 
     // Pre-select topic if provided in URL
     const topicId = searchParams?.get('topicId');
-    const sectionId = searchParams?.get('sectionId');
 
     if (topicId) {
       // Don't set formData.topicId here - let fetchTopicAndSubject do it after topics are loaded
       fetchTopicAndSubject(topicId);
-    }
-
-    if (sectionId) {
-      setFormData(prev => ({ ...prev, sectionId }));
     }
   }, [searchParams]);
 
@@ -142,9 +138,23 @@ export default function NewQuestionPage() {
       fetchSectionsForTopic(formData.topicId);
     } else {
       setSections([]);
+      setSectionsLoading(false);
       setFormData(prev => ({ ...prev, sectionId: '' }));
     }
   }, [formData.topicId]);
+
+  // Auto-select section from URL params after sections are loaded
+  useEffect(() => {
+    const sectionId = searchParams?.get('sectionId');
+
+    if (sectionId && sections.length > 0 && formData.sectionId !== sectionId) {
+      // Verify that the section exists in the loaded sections
+      const sectionExists = sections.some(section => section._id.toString() === sectionId);
+      if (sectionExists) {
+        setFormData(prev => ({ ...prev, sectionId }));
+      }
+    }
+  }, [sections, searchParams, formData.sectionId]);
 
   // Update XP and time estimates when difficulty or type changes
   useEffect(() => {
@@ -205,6 +215,7 @@ export default function NewQuestionPage() {
 
   const fetchSectionsForTopic = async (topicId: string) => {
     try {
+      setSectionsLoading(true);
       const response = await fetch(`/api/sections?topicId=${topicId}`);
       if (response.ok) {
         const data = await response.json();
@@ -212,6 +223,8 @@ export default function NewQuestionPage() {
       }
     } catch (err) {
       console.error('Error fetching sections:', err);
+    } finally {
+      setSectionsLoading(false);
     }
   };
 
@@ -776,10 +789,10 @@ export default function NewQuestionPage() {
                 <Select
                   value={formData.sectionId}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, sectionId: value }))}
-                  disabled={sections.length === 0}
+                  disabled={sections.length === 0 || sectionsLoading}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select section" />
+                    <SelectValue placeholder={sectionsLoading ? "Loading sections..." : "Select section"} />
                   </SelectTrigger>
                   <SelectContent>
                     {sections.map(section => (
@@ -789,7 +802,7 @@ export default function NewQuestionPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                {sections.length === 0 && formData.topicId && (
+                {sections.length === 0 && formData.topicId && !sectionsLoading && (
                   <p className="text-sm text-amber-600 mt-1">
                     No sections found. <Link href={`/admin/sections/new?topicId=${formData.topicId}`} className="underline">Create a section first</Link>.
                   </p>
