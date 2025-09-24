@@ -33,6 +33,7 @@ interface EnhancedTopic {
   name: string;
   description: string;
   longDescription?: string;
+  imageUrl?: string;
   subjectId: any;
   order: number;
   isUnlocked: boolean;
@@ -130,6 +131,7 @@ export default function SubjectPage() {
         name: topic.name,
         description: topic.description,
         longDescription: topic.longDescription,
+        imageUrl: (topic as any).imageUrl,
         subjectId: topic.subjectId,
         order: topic.order,
         isUnlocked: topic.isUnlocked,
@@ -243,72 +245,74 @@ export default function SubjectPage() {
         </motion.div>
 
         {/* Subject Header */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${getSubjectColor(subjectInfo.name)} p-8 text-white shadow-xl mb-8`}
+          className="relative overflow-hidden rounded-3xl shadow-2xl mb-8"
+          style={{ minHeight: '300px' }}
         >
-          {/* Background Pattern */}
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1)_0%,transparent_50%)]"></div>
-          </div>
+          {/* Background Image or Gradient */}
+          {subjectInfo.imageUrl ? (
+            <>
+              <div
+                className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                style={{
+                  backgroundImage: `url(${subjectInfo.imageUrl})`
+                }}
+              />
+              {/* Dark overlay for text readability */}
+              <div className="absolute inset-0 bg-gradient-to-br from-black/75 via-black/60 to-black/80" />
+            </>
+          ) : (
+            /* Fallback gradient background */
+            <div className={`absolute inset-0 bg-gradient-to-br ${getSubjectColor(subjectInfo.name)}`} />
+          )}
 
-          <div className="relative">
+          {/* Subtle overlay patterns */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1)_0%,transparent_50%)] opacity-60" />
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.1)_0%,transparent_50%)] opacity-40" />
+
+          <div className="relative z-10 p-8 h-full flex flex-col justify-between text-white">
             <div className="flex items-center space-x-6 mb-6">
-              <div className="flex-shrink-0 w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 overflow-hidden">
-                {subjectInfo.imageUrl ? (
-                  <img
-                    src={subjectInfo.imageUrl}
-                    alt={subjectInfo.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      // Fallback to icon if image fails to load
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      target.nextElementSibling?.classList.remove('hidden');
-                    }}
-                  />
-                ) : null}
-                <div className={subjectInfo.imageUrl ? 'hidden' : ''}>
-                  {getSubjectIcon(subjectInfo.name)}
-                </div>
+              <div className="flex-shrink-0 w-20 h-20 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center border border-white/20 shadow-lg">
+                {getSubjectIcon(subjectInfo.name)}
               </div>
-              <div>
-                <h1 className="text-3xl font-bold mb-2">{subjectInfo.name}</h1>
-                <p className="text-white/90 text-lg">{subjectInfo.description}</p>
+              <div className="flex-1">
+                <h1 className="text-4xl font-bold mb-3 drop-shadow-lg">{subjectInfo.name}</h1>
+                <p className="text-white/90 text-lg leading-relaxed drop-shadow-sm">{subjectInfo.description}</p>
               </div>
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
                 <div className="flex items-center space-x-2 mb-2">
                   <Target className="w-5 h-5" />
-                  <span className="text-white/80">Progress</span>
+                  <span className="text-white/90 font-medium">Progress</span>
                 </div>
                 <div className="text-2xl font-bold">{completedTopics}/{topics.length}</div>
               </div>
-              
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+
+              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
                 <div className="flex items-center space-x-2 mb-2">
                   <Zap className="w-5 h-5" />
-                  <span className="text-white/80">Total XP</span>
+                  <span className="text-white/90 font-medium">Total XP</span>
                 </div>
                 <div className="text-2xl font-bold">{totalXP}</div>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
                 <div className="flex items-center space-x-2 mb-2">
                   <Clock className="w-5 h-5" />
-                  <span className="text-white/80">Est. Time</span>
+                  <span className="text-white/90 font-medium">Est. Time</span>
                 </div>
                 <div className="text-2xl font-bold">{totalTime}min</div>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
                 <div className="flex items-center space-x-2 mb-2">
                   <Award className="w-5 h-5" />
-                  <span className="text-white/80">Mastery</span>
+                  <span className="text-white/90 font-medium">Mastery</span>
                 </div>
                 <div className="text-2xl font-bold">
                   {topics.length > 0 ? Math.round((completedTopics / topics.length) * 100) : 0}%
@@ -338,7 +342,7 @@ export default function SubjectPage() {
               <p className="mt-2 text-gray-600">Topics are being prepared for this subject.</p>
             </motion.div>
           ) : (
-            <div className="grid gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {topics.map((topic, index) => (
                 <motion.div
                   key={topic._id.toString()}
@@ -358,173 +362,173 @@ export default function SubjectPage() {
   );
 }
 
+// Helper function to get topic color based on difficulty
+const getTopicColor = (difficulty: string) => {
+  switch (difficulty) {
+    case 'Beginner': return 'from-emerald-500 to-green-600';
+    case 'Intermediate': return 'from-amber-500 to-orange-600';
+    case 'Advanced': return 'from-red-500 to-rose-600';
+    default: return 'from-slate-500 to-gray-600';
+  }
+};
+
 // Topic Card Component
-function TopicCard({ topic, subjectId }: { 
-  topic: EnhancedTopic; 
+function TopicCard({ topic, subjectId }: {
+  topic: EnhancedTopic;
   subjectId: string;
 }) {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case 'Beginner': return 'text-green-600 bg-green-100 border-green-200';
-      case 'Intermediate': return 'text-yellow-600 bg-yellow-100 border-yellow-200';
-      case 'Advanced': return 'text-red-600 bg-red-100 border-red-200';
-      default: return 'text-gray-600 bg-gray-100 border-gray-200';
+      case 'Beginner': return 'text-emerald-700 bg-emerald-100/95 backdrop-blur-sm border-emerald-200';
+      case 'Intermediate': return 'text-amber-700 bg-amber-100/95 backdrop-blur-sm border-amber-200';
+      case 'Advanced': return 'text-red-700 bg-red-100/95 backdrop-blur-sm border-red-200';
+      default: return 'text-slate-700 bg-slate-100/95 backdrop-blur-sm border-slate-200';
     }
   };
 
   const getProgressColor = (percentage: number) => {
-    if (percentage >= 80) return 'from-green-500 to-emerald-600';
-    if (percentage >= 60) return 'from-blue-500 to-cyan-600';
-    if (percentage >= 40) return 'from-yellow-500 to-orange-600';
-    return 'from-gray-400 to-gray-500';
+    if (percentage >= 80) return 'from-emerald-400 to-green-500';
+    if (percentage >= 60) return 'from-blue-400 to-cyan-500';
+    if (percentage >= 40) return 'from-amber-400 to-orange-500';
+    return 'from-slate-300 to-slate-400';
   };
 
   return (
-    <div className={`group relative overflow-hidden rounded-xl border-2 bg-white shadow-sm transition-all duration-300 ${
-      topic.isUnlocked 
-        ? 'border-gray-200 hover:shadow-lg hover:-translate-y-1 hover:border-indigo-300' 
-        : 'border-gray-200 opacity-75'
-    }`}>
-      {/* Lock Overlay */}
-      {!topic.isUnlocked && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80 backdrop-blur-sm z-10">
-          <div className="text-center text-gray-600">
-            <Lock className="w-8 h-8 mx-auto mb-2" />
-            <p className="text-sm font-medium">Complete previous topics</p>
-          </div>
-        </div>
-      )}
+    <Link href={topic.isUnlocked ? `/subjects/${subjectId}/topics/${topic._id}` : '#'}>
+      <div className={`group relative overflow-hidden rounded-3xl transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+        topic.isUnlocked
+          ? 'shadow-xl hover:shadow-2xl cursor-pointer border border-white/30'
+          : 'opacity-75 border border-gray-300 cursor-not-allowed'
+      }`}
+           style={{ minHeight: '380px' }}>
 
-      <div className="p-6">
-        {/* Header - Now clickable to go to topic overview */}
-        <Link 
-          href={topic.isUnlocked ? `/subjects/${subjectId}/topics/${topic._id}` : '#'}
-          className={`block ${topic.isUnlocked ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-        >
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex-1">
-              <div className="flex items-center space-x-3 mb-2">
-                <h3 className={`text-xl font-bold transition-colors ${
-                  topic.isUnlocked 
-                    ? 'text-gray-800 group-hover:text-indigo-600' 
-                    : 'text-gray-800'
-                }`}>
-                  {topic.name}
-                </h3>
-                {topic.progress === 100 && (
-                  <Trophy className="w-5 h-5 text-yellow-500" />
-                )}
-              </div>
-              <p className="text-gray-600 mb-3">{topic.description}</p>
-              <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getDifficultyColor(topic.difficulty)}`}>
-                {topic.difficulty}
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-2 text-sm text-gray-500">
-              <Clock className="w-4 h-4" />
-              <span>{topic.estimatedMinutes || 0}min</span>
-            </div>
-          </div>
-        </Link>
+        {/* Background Image or Gradient */}
+        {topic.imageUrl ? (
+          <>
+            <div
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] group-hover:scale-108"
+              style={{
+                backgroundImage: `url(${topic.imageUrl})`,
+                filter: topic.isUnlocked ? 'none' : 'grayscale(100%)'
+              }}
+            />
+            {/* Dark overlay for text readability */}
+            <div className="absolute inset-0 bg-gradient-to-br from-black/75 via-black/60 to-black/80" />
+          </>
+        ) : (
+          /* Fallback gradient background */
+          <div className={`absolute inset-0 bg-gradient-to-br ${getTopicColor(topic.difficulty)}`} />
+        )}
 
-        {/* Progress Bar */}
-        {topic.isUnlocked && (
-          <div className="mb-4">
-            <div className="flex justify-between text-sm mb-2">
-              <span className="text-gray-600">Progress</span>
-              <span className="font-medium text-gray-800">{topic.progress}%</span>
-            </div>
-            <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${topic.progress}%` }}
-                transition={{ duration: 1, ease: "easeOut" }}
-                className={`h-full bg-gradient-to-r ${getProgressColor(topic.progress)} rounded-full`}
-              />
+        {/* Subtle overlay patterns */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1)_0%,transparent_50%)] opacity-60" />
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.1)_0%,transparent_50%)] opacity-40" />
+
+        {/* Additional dark overlay for gradient backgrounds */}
+        {!topic.imageUrl && (
+          <div className="absolute inset-0 bg-black/30" />
+        )}
+
+        {/* Lock Overlay */}
+        {!topic.isUnlocked && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-20">
+            <div className="text-center text-white">
+              <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center mx-auto mb-4 border border-white/20">
+                <Lock className="w-10 h-10" />
+              </div>
+              <h4 className="text-lg font-bold mb-1">Locked</h4>
+              <p className="text-sm font-medium opacity-90">Complete Previous Topics</p>
+              <p className="text-xs opacity-75 mt-2">Continue your learning path</p>
             </div>
           </div>
         )}
 
-        {/* Content Types */}
-        <div className="grid grid-cols-3 gap-4 mb-4">
-          <Link 
-            href={`/subjects/${subjectId}/topics/${topic._id}/questions`}
-            className={`flex flex-col items-center p-3 rounded-lg border transition-colors ${
-              topic.isUnlocked 
-                ? 'border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700' 
-                : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            <FileText className="w-6 h-6 mb-2" />
-            <span className="text-xs font-medium">Questions</span>
-            <span className="text-xs">{topic.contentCounts.questions}</span>
-          </Link>
+        <div className="relative z-10 p-6 h-full flex flex-col text-white">
+          {/* Header */}
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold border ${getDifficultyColor(topic.difficulty)}`}>
+                {topic.difficulty}
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-white/80">
+                <Clock className="w-4 h-4" />
+                <span>{topic.estimatedMinutes || 0}min</span>
+              </div>
+            </div>
 
-          <Link 
-            href={`/subjects/${subjectId}/topics/${topic._id}/flashcards`}
-            className={`flex flex-col items-center p-3 rounded-lg border transition-colors ${
-              topic.isUnlocked 
-                ? 'border-green-200 bg-green-50 hover:bg-green-100 text-green-700' 
-                : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            <BookOpen className="w-6 h-6 mb-2" />
-            <span className="text-xs font-medium">Flashcards</span>
-            <span className="text-xs">{topic.contentCounts.flashcards}</span>
-          </Link>
-
-          <Link 
-            href={`/subjects/${subjectId}/topics/${topic._id}/media`}
-            className={`flex flex-col items-center p-3 rounded-lg border transition-colors ${
-              topic.isUnlocked 
-                ? 'border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700' 
-                : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            <Play className="w-6 h-6 mb-2" />
-            <span className="text-xs font-medium">Media</span>
-            <span className="text-xs">{topic.contentCounts.media}</span>
-          </Link>
-        </div>
-
-        {/* XP Reward and Actions */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
-            <Zap className="w-4 h-4 text-yellow-500" />
-            <span>+{topic.xpReward || 0} XP</span>
-          </div>
-          
-          <div className="flex items-center space-x-3">
-            {topic.isUnlocked && (
-              <div className="flex items-center space-x-1 text-sm">
-                {topic.progress === 100 ? (
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                ) : (
-                  <Circle className="w-4 h-4 text-gray-400" />
-                )}
-                <span className="text-gray-600">
-                  {topic.progress === 100 ? 'Completed' : 'In Progress'}
-                </span>
+            {topic.progress === 100 && (
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-lg border-2 border-yellow-300/50">
+                  <Trophy className="w-5 h-5 text-yellow-900" />
+                </div>
               </div>
             )}
-            
-            {/* View Overview Button */}
-            {topic.isUnlocked && (
-              <Button 
-                asChild
-                size="sm"
-                className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-sm"
-              >
-                <Link href={`/subjects/${subjectId}/topics/${topic._id}`}>
-                  <Target className="w-4 h-4 mr-1" />
-                  Overview
-                </Link>
-              </Button>
-            )}
           </div>
+
+          {/* Title & Description */}
+          <div className="flex-1 mb-6">
+            <h3 className="text-2xl font-bold mb-3 leading-tight drop-shadow-lg">{topic.name}</h3>
+            <p className="text-white/90 text-sm leading-relaxed drop-shadow-sm" style={{
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden'
+            }}>
+              {topic.description}
+            </p>
+          </div>
+
+          {/* Progress Section */}
+          {topic.isUnlocked && (
+            <div className="space-y-4">
+              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
+                <div className="flex items-center justify-between text-sm mb-3">
+                  <span className="font-semibold text-white/90">Progress</span>
+                  <span className="font-bold text-lg">{topic.progress}%</span>
+                </div>
+                <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${topic.progress}%` }}
+                    transition={{ duration: 1.5, ease: "easeOut", delay: 0.3 }}
+                    className={`h-full bg-gradient-to-r ${getProgressColor(topic.progress)} rounded-full shadow-sm`}
+                  />
+                </div>
+              </div>
+
+              {/* Content Stats */}
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/20">
+                  <FileText className="w-4 h-4" />
+                  <span className="font-semibold">{topic.contentCounts.questions} Questions</span>
+                </div>
+                <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/20">
+                  <BookOpen className="w-4 h-4" />
+                  <span className="font-semibold">{topic.contentCounts.flashcards} Cards</span>
+                </div>
+                <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/20">
+                  <Play className="w-4 h-4" />
+                  <span className="font-semibold">{topic.contentCounts.media} Media</span>
+                </div>
+              </div>
+
+              {/* XP Reward and Action Button */}
+              <div className="flex items-center justify-between pt-2">
+                <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/20">
+                  <Zap className="w-4 h-4" />
+                  <span className="font-semibold text-sm">+{topic.xpReward || 0} XP</span>
+                </div>
+                <div className="bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl px-4 py-2 text-center font-bold hover:bg-white/30 transition-all duration-300 shadow-lg text-sm">
+                  <span className="flex items-center space-x-2">
+                    <span>Start Learning</span>
+                    <Target className="w-4 h-4" />
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </Link>
   );
 } 
