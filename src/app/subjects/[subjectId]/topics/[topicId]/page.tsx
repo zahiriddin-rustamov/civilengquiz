@@ -34,6 +34,7 @@ interface EnhancedTopicData {
   name: string;
   description: string;
   longDescription?: string;
+  imageUrl?: string;
   subjectId: any;
   order: number;
   isUnlocked: boolean;
@@ -122,6 +123,7 @@ export default function TopicOverviewPage() {
         name: topicApiData.name,
         description: topicApiData.description,
         longDescription: topicApiData.longDescription,
+        imageUrl: topicApiData.imageUrl,
         subjectId: topicApiData.subjectId,
         order: topicApiData.order,
         isUnlocked: topicApiData.isUnlocked,
@@ -150,12 +152,22 @@ export default function TopicOverviewPage() {
     }
   };
 
+  // Helper function to get topic color based on difficulty
+  const getTopicColor = (difficulty: string) => {
+    switch (difficulty) {
+      case 'Beginner': return 'from-emerald-500 to-green-600';
+      case 'Intermediate': return 'from-amber-500 to-orange-600';
+      case 'Advanced': return 'from-red-500 to-rose-600';
+      default: return 'from-slate-500 to-gray-600';
+    }
+  };
+
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case 'Beginner': return 'text-green-600 bg-green-100 border-green-200';
-      case 'Intermediate': return 'text-yellow-600 bg-yellow-100 border-yellow-200';
-      case 'Advanced': return 'text-red-600 bg-red-100 border-red-200';
-      default: return 'text-gray-600 bg-gray-100 border-gray-200';
+      case 'Beginner': return 'text-emerald-700 bg-emerald-100/95 backdrop-blur-sm border-emerald-200';
+      case 'Intermediate': return 'text-amber-700 bg-amber-100/95 backdrop-blur-sm border-amber-200';
+      case 'Advanced': return 'text-red-700 bg-red-100/95 backdrop-blur-sm border-red-200';
+      default: return 'text-slate-700 bg-slate-100/95 backdrop-blur-sm border-slate-200';
     }
   };
 
@@ -252,85 +264,118 @@ export default function TopicOverviewPage() {
         </motion.div>
 
         {/* Topic Header */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-cyan-600 p-8 text-white shadow-xl mb-8"
+          className="relative overflow-hidden rounded-3xl shadow-2xl mb-8"
+          style={{ minHeight: '350px' }}
         >
-          {/* Background Pattern */}
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1)_0%,transparent_50%)]"></div>
-          </div>
+          {/* Background Image or Gradient */}
+          {topicData.imageUrl ? (
+            <>
+              <div
+                className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                style={{
+                  backgroundImage: `url(${topicData.imageUrl})`
+                }}
+              />
+              {/* Dark overlay for text readability */}
+              <div className="absolute inset-0 bg-gradient-to-br from-black/75 via-black/60 to-black/80" />
+            </>
+          ) : (
+            /* Fallback gradient background */
+            <div className={`absolute inset-0 bg-gradient-to-br ${getTopicColor(topicData.difficulty)}`} />
+          )}
 
-          <div className="relative">
+          {/* Subtle overlay patterns */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1)_0%,transparent_50%)] opacity-60" />
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.1)_0%,transparent_50%)] opacity-40" />
+
+          {/* Additional dark overlay for gradient backgrounds */}
+          {!topicData.imageUrl && (
+            <div className="absolute inset-0 bg-black/30" />
+          )}
+
+          <div className="relative z-10 p-8 h-full flex flex-col justify-between text-white">
             <div className="flex items-start justify-between mb-6">
               <div className="flex-1">
                 <div className="flex items-center space-x-4 mb-4">
-                  <h1 className="text-3xl font-bold">{topicData.name}</h1>
-                  <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getDifficultyColor(topicData.difficulty)}`}>
+                  <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold border ${getDifficultyColor(topicData.difficulty)}`}>
                     {topicData.difficulty}
                   </div>
                   {topicData.streakDays > 0 && (
-                    <div className="flex items-center space-x-1 bg-orange-500/20 px-3 py-1 rounded-full">
+                    <div className="flex items-center space-x-1 bg-orange-500/20 px-3 py-1.5 rounded-full backdrop-blur-sm border border-orange-300/20">
                       <Flame className="w-4 h-4 text-orange-300" />
                       <span className="text-sm font-medium">{topicData.streakDays} day streak</span>
                     </div>
                   )}
                 </div>
-                <p className="text-white/90 text-lg mb-4">{topicData.description}</p>
-                <p className="text-white/80 text-sm leading-relaxed">{topicData.longDescription}</p>
+                <h1 className="text-4xl font-bold mb-4 drop-shadow-lg">{topicData.name}</h1>
+                <p className="text-white/90 text-lg mb-4 leading-relaxed drop-shadow-sm">{topicData.description}</p>
+                {topicData.longDescription && (
+                  <p className="text-white/80 text-sm leading-relaxed drop-shadow-sm" style={{
+                    display: '-webkit-box',
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden'
+                  }}>
+                    {topicData.longDescription}
+                  </p>
+                )}
               </div>
             </div>
 
             {/* Progress Section */}
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-white/80">Overall Progress</span>
-                <span className="font-bold text-xl">{topicData.progress}%</span>
-              </div>
-              <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${topicData.progress}%` }}
-                  transition={{ duration: 1.5, ease: "easeOut" }}
-                  className={`h-full bg-gradient-to-r ${getProgressColor(topicData.progress)} rounded-full`}
-                />
-              </div>
-            </div>
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Target className="w-5 h-5" />
-                  <span className="text-white/80">Completed</span>
+            <div className="space-y-6">
+              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-white/90 font-semibold">Overall Progress</span>
+                  <span className="font-bold text-xl">{topicData.progress}%</span>
                 </div>
-                <div className="text-2xl font-bold">{completedContentItems}/{totalContentItems}</div>
-              </div>
-              
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Zap className="w-5 h-5" />
-                  <span className="text-white/80">XP Reward</span>
+                <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${topicData.progress}%` }}
+                    transition={{ duration: 1.5, ease: "easeOut", delay: 0.3 }}
+                    className={`h-full bg-gradient-to-r ${getProgressColor(topicData.progress)} rounded-full shadow-sm`}
+                  />
                 </div>
-                <div className="text-2xl font-bold">{topicData.xpReward}</div>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Clock className="w-5 h-5" />
-                  <span className="text-white/80">Est. Time</span>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Target className="w-5 h-5" />
+                    <span className="text-white/90 font-medium">Completed</span>
+                  </div>
+                  <div className="text-2xl font-bold">{completedContentItems}/{totalContentItems}</div>
                 </div>
-                <div className="text-2xl font-bold">{topicData.estimatedMinutes}min</div>
-              </div>
 
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Award className="w-5 h-5" />
-                  <span className="text-white/80">Achievements</span>
+                <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Zap className="w-5 h-5" />
+                    <span className="text-white/90 font-medium">XP Reward</span>
+                  </div>
+                  <div className="text-2xl font-bold">{topicData.xpReward}</div>
                 </div>
-                <div className="text-2xl font-bold">
-                  {topicData.achievements.filter(a => a.unlocked).length}/{topicData.achievements.length}
+
+                <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Clock className="w-5 h-5" />
+                    <span className="text-white/90 font-medium">Est. Time</span>
+                  </div>
+                  <div className="text-2xl font-bold">{topicData.estimatedMinutes}min</div>
+                </div>
+
+                <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Award className="w-5 h-5" />
+                    <span className="text-white/90 font-medium">Achievements</span>
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {topicData.achievements.filter(a => a.unlocked).length}/{topicData.achievements.length}
+                  </div>
                 </div>
               </div>
             </div>
@@ -341,8 +386,8 @@ export default function TopicOverviewPage() {
           {/* Content Types Section */}
           <div className="lg:col-span-2">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Choose Your Learning Path</h2>
-            
-            <div className="grid gap-6">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {/* Questions Card */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -534,22 +579,29 @@ function ContentTypeCard({
   const isClickable = isUnlocked && hasContent;
 
   const CardContent = () => (
-    <div className={`relative overflow-hidden rounded-xl border-2 bg-gradient-to-br ${color} p-6 text-white shadow-lg transition-all duration-300 ${
-      isClickable ? 'hover:shadow-xl hover:-translate-y-1 cursor-pointer' :
-      !hasContent ? 'opacity-50 cursor-not-allowed' :
-      'opacity-75 cursor-not-allowed'
-    }`}>
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1)_0%,transparent_50%)]"></div>
-      </div>
+    <div className={`group relative overflow-hidden rounded-3xl bg-gradient-to-br ${color} text-white transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+      isClickable ? 'shadow-xl hover:shadow-2xl cursor-pointer border border-white/30' :
+      !hasContent ? 'opacity-50 cursor-not-allowed border border-gray-300' :
+      'opacity-75 cursor-not-allowed border border-gray-300'
+    }`}
+         style={{ minHeight: '320px' }}>
+      {/* Subtle overlay patterns */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1)_0%,transparent_50%)] opacity-60" />
+      <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.1)_0%,transparent_50%)] opacity-40" />
 
-      {/* Lock/No Content Overlay */}
+      {/* Dark overlay for better text contrast */}
+      <div className="absolute inset-0 bg-black/20" />
+
+      {/* Lock Overlay */}
       {!isUnlocked && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-20">
           <div className="text-center text-white">
-            <Lock className="w-8 h-8 mx-auto mb-2" />
-            <p className="text-sm font-medium">Complete previous topics</p>
+            <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center mx-auto mb-4 border border-white/20">
+              <Lock className="w-8 h-8" />
+            </div>
+            <h4 className="text-lg font-bold mb-1">Locked</h4>
+            <p className="text-sm font-medium opacity-90">Complete Previous Topics</p>
+            <p className="text-xs opacity-75 mt-2">Continue your learning journey</p>
           </div>
         </div>
       )}
@@ -564,21 +616,30 @@ function ContentTypeCard({
         </div>
       )}
 
-      <div className="relative">
+      <div className="relative z-10 p-6 h-full flex flex-col text-white">
+        {/* Header */}
         <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center space-x-4">
-            <div className="flex-shrink-0 w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
-              {icon}
-            </div>
-            <div>
-              <h3 className="text-xl font-bold mb-1">{title}</h3>
-              <p className="text-white/90 text-sm">{description}</p>
-            </div>
+          <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center border border-white/20 shadow-lg">
+            {icon}
           </div>
-          
           {completionPercentage === 100 && (
-            <Trophy className="w-6 h-6 text-yellow-300" />
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-lg border-2 border-yellow-300/50">
+              <Trophy className="w-5 h-5 text-yellow-900" />
+            </div>
           )}
+        </div>
+
+        {/* Title & Description */}
+        <div className="flex-1 mb-4">
+          <h3 className="text-xl font-bold mb-2 drop-shadow-lg">{title}</h3>
+          <p className="text-white/90 text-sm leading-relaxed drop-shadow-sm" style={{
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden'
+          }}>
+            {description}
+          </p>
         </div>
 
         {/* Progress Bar */}
@@ -597,41 +658,36 @@ function ContentTypeCard({
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 text-sm">
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20 text-center">
-            <div className="font-bold text-lg">{data.count}</div>
-            <div className="text-white/80">Total</div>
-          </div>
-          
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20 text-center">
-            <div className="font-bold text-lg">
-              {type === 'flashcards' ? data.mastered : data.completed}
+        {/* Stats - Compact Layout */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-sm">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/20">
+              <span className="font-semibold">{data.count} Total</span>
             </div>
-            <div className="text-white/80">
-              {type === 'flashcards' ? 'Mastered' : 'Completed'}
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/20">
+              <span className="font-semibold">
+                {type === 'flashcards' ? data.mastered : data.completed} Done
+              </span>
             </div>
-          </div>
-
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20 text-center">
-            <div className="font-bold text-lg">{data.timeSpent}m</div>
-            <div className="text-white/80">Time Spent</div>
           </div>
         </div>
 
         {/* Action Button */}
         {isUnlocked && hasContent && (
-          <div className="mt-4">
-            <div className="w-full bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg px-4 py-3 text-center font-medium hover:bg-white/30 transition-colors">
-              {completionPercentage === 0 ? 'Start Learning' : 'Continue Learning'}
+          <div className="pt-2">
+            <div className="w-full bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl px-4 py-2.5 text-center font-bold hover:bg-white/30 transition-all duration-300 shadow-lg text-sm">
+              <span className="flex items-center justify-center space-x-2">
+                <span>{completionPercentage === 0 ? 'Start' : 'Continue'}</span>
+                <Target className="w-4 h-4" />
+              </span>
             </div>
           </div>
         )}
 
         {isUnlocked && !hasContent && (
-          <div className="mt-4">
-            <div className="w-full bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-4 py-3 text-center font-medium text-white/60 cursor-not-allowed">
-              No Content Available
+          <div className="pt-2">
+            <div className="w-full bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-2.5 text-center font-medium text-white/60 cursor-not-allowed text-sm">
+              Coming Soon
             </div>
           </div>
         )}
