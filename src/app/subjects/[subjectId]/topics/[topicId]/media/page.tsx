@@ -1075,13 +1075,20 @@ export default function MediaPage() {
                     config={{
                       youtube: {
                         playerVars: {
-                          showinfo: 0,
-                          controls: 0,
-                          modestbranding: 1,
-                          rel: 0,
-                          autoplay: 1,
-                          playsinline: 1,
-                          start: 0
+                          showinfo: 0,        // Hide video information overlay
+                          controls: 0,        // Hide all player controls
+                          modestbranding: 1,  // Reduce YouTube branding
+                          rel: 0,             // Disable related videos
+                          autoplay: 1,        // Enable autoplay
+                          playsinline: 1,     // Play inline on mobile
+                          start: 0,           // Start from beginning
+                          iv_load_policy: 3,  // Hide video annotations
+                          cc_load_policy: 0,  // Hide closed captions by default
+                          disablekb: 1,       // Disable keyboard controls
+                          fs: 0,              // Hide fullscreen button
+                          enablejsapi: 0,     // Disable JavaScript API
+                          origin: typeof window !== 'undefined' ? window.location.origin : '',
+                          widget_referrer: typeof window !== 'undefined' ? window.location.origin : ''
                         }
                       }
                     }}
