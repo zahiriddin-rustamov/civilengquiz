@@ -214,13 +214,7 @@ export default function StudyWorldsPage() {
                 transition={{ delay: index * 0.1 }}
                 className="group relative"
               >
-                {world.isUnlocked ? (
-                  <Link href={`/subjects/${world._id}`}>
-                    <WorldCard world={world} />
-                  </Link>
-                ) : (
-                  <WorldCard world={world} />
-                )}
+                <WorldCard world={world} />
               </motion.div>
             ))}
           </div>
@@ -261,130 +255,142 @@ export default function StudyWorldsPage() {
 function WorldCard({ world }: { world: EnhancedSubject }) {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case 'Beginner': return 'text-green-600 bg-green-100';
-      case 'Intermediate': return 'text-yellow-600 bg-yellow-100';
-      case 'Advanced': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'Beginner': return 'text-emerald-700 bg-emerald-100/95 backdrop-blur-sm border-emerald-200';
+      case 'Intermediate': return 'text-amber-700 bg-amber-100/95 backdrop-blur-sm border-amber-200';
+      case 'Advanced': return 'text-red-700 bg-red-100/95 backdrop-blur-sm border-red-200';
+      default: return 'text-slate-700 bg-slate-100/95 backdrop-blur-sm border-slate-200';
     }
   };
 
   const getProgressColor = (percentage: number) => {
-    if (percentage >= 80) return 'from-green-500 to-emerald-600';
-    if (percentage >= 60) return 'from-blue-500 to-cyan-600';
-    if (percentage >= 40) return 'from-yellow-500 to-orange-600';
-    return 'from-gray-400 to-gray-500';
+    if (percentage >= 80) return 'from-emerald-400 to-green-500';
+    if (percentage >= 60) return 'from-blue-400 to-cyan-500';
+    if (percentage >= 40) return 'from-amber-400 to-orange-500';
+    return 'from-slate-300 to-slate-400';
   };
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl border-2 transition-all duration-300 ${
-      world.isUnlocked 
-        ? `bg-gradient-to-br ${world.color} border-white/20 shadow-xl hover:shadow-2xl hover:-translate-y-2 cursor-pointer` 
-        : 'bg-gradient-to-br from-gray-400 to-gray-500 border-gray-300 opacity-75'
-    }`}>
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1)_0%,transparent_50%)]"></div>
-      </div>
+    <Link href={world.isUnlocked ? `/subjects/${world._id}` : '#'}>
+      <div className={`group relative overflow-hidden rounded-3xl transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+        world.isUnlocked
+          ? 'shadow-xl hover:shadow-2xl cursor-pointer border border-white/30'
+          : 'opacity-75 border border-gray-300 cursor-not-allowed'
+      }`}
+           style={{ minHeight: '320px' }}>
 
-      {/* Lock Overlay */}
-      {!world.isUnlocked && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-10">
-          <div className="text-center text-white">
-            <Lock className="w-12 h-12 mx-auto mb-2" />
-            <p className="text-sm font-medium">Complete previous worlds</p>
-          </div>
-        </div>
-      )}
+        {/* Background Image or Gradient */}
+        {world.imageUrl ? (
+          <>
+            <div
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] group-hover:scale-108"
+              style={{
+                backgroundImage: `url(${world.imageUrl})`,
+                filter: world.isUnlocked ? 'none' : 'grayscale(100%)'
+              }}
+            />
+            {/* Dark overlay for text readability */}
+            <div className="absolute inset-0 bg-gradient-to-br from-black/75 via-black/60 to-black/80 transition-opacity duration-700 ease-[cubic-bezier(0.4,0,0.2,1)]" />
+          </>
+        ) : (
+          /* Fallback gradient background */
+          <div className={`absolute inset-0 bg-gradient-to-br ${world.isUnlocked ? world.color : 'from-gray-400 to-gray-500'}`} />
+        )}
 
-      <div className="relative p-8 text-white">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <div className="flex-shrink-0 w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 overflow-hidden">
-              {world.imageUrl ? (
-                <img
-                  src={world.imageUrl}
-                  alt={world.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    // Fallback to icon if image fails to load
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    target.nextElementSibling?.classList.remove('hidden');
-                  }}
-                />
-              ) : null}
-              <div className={world.imageUrl ? 'hidden' : ''}>
-                {world.icon}
-              </div>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold mb-1">{world.name}</h3>
-              <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(world.difficulty)}`}>
-                {world.difficulty}
-              </div>
-            </div>
-          </div>
-          
-          {world.progress === 100 && (
-            <Trophy className="w-6 h-6 text-yellow-300" />
-          )}
-        </div>
+        {/* Subtle overlay patterns */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1)_0%,transparent_50%)] opacity-60 transition-opacity duration-700 ease-[cubic-bezier(0.4,0,0.2,1)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.1)_0%,transparent_50%)] opacity-40 transition-opacity duration-700 ease-[cubic-bezier(0.4,0,0.2,1)]" />
 
-        {/* Description */}
-        <p className="text-white/90 text-sm mb-6 leading-relaxed">
-          {world.description}
-        </p>
-
-        {/* Stats */}
-        <div className="space-y-4">
-          {/* Progress Bar */}
-          {world.isUnlocked && (
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-white/80">Progress</span>
-                <span className="font-medium">{world.progress}%</span>
+        {/* Lock Overlay */}
+        {!world.isUnlocked && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-20">
+            <div className="text-center text-white">
+              <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center mx-auto mb-4 border border-white/20">
+                <Lock className="w-10 h-10" />
               </div>
-              <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${world.progress}%` }}
-                  transition={{ duration: 1, ease: "easeOut" }}
-                  className={`h-full bg-gradient-to-r ${getProgressColor(world.progress)} rounded-full`}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-              <div className="flex items-center space-x-2 mb-1">
-                <BookOpen className="w-4 h-4" />
-                <span className="text-white/80">Topics</span>
-              </div>
-              <div className="font-bold text-lg">{world.topicsCount}</div>
-            </div>
-            
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-              <div className="flex items-center space-x-2 mb-1">
-                <Zap className="w-4 h-4" />
-                <span className="text-white/80">XP Reward</span>
-              </div>
-              <div className="font-bold text-lg">{world.xpReward}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Button */}
-        {world.isUnlocked && (
-          <div className="mt-6">
-            <div className="w-full bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg px-4 py-3 text-center font-medium hover:bg-white/30 transition-colors">
-              Enter World
+              <h4 className="text-lg font-bold mb-1">Locked</h4>
+              <p className="text-sm font-medium opacity-90">Complete Previous Worlds</p>
+              <p className="text-xs opacity-75 mt-2">Continue your learning journey</p>
             </div>
           </div>
         )}
+
+        <div className="relative z-10 p-6 h-full flex flex-col text-white">
+          {/* Header */}
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center border border-white/20 shadow-lg">
+                {world.icon}
+              </div>
+              <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold border ${getDifficultyColor(world.difficulty)}`}>
+                {world.difficulty}
+              </div>
+            </div>
+
+            {world.progress === 100 && (
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-lg border-2 border-yellow-300/50">
+                  <Trophy className="w-6 h-6 text-yellow-900" />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Title & Description */}
+          <div className="flex-1 space-y-3">
+            <h3 className="text-2xl font-bold leading-tight drop-shadow-lg">{world.name}</h3>
+            <p className="text-white/90 text-sm leading-relaxed drop-shadow-sm" style={{
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden'
+            }}>
+              {world.description}
+            </p>
+          </div>
+
+          {/* Progress Section */}
+          {world.isUnlocked && (
+            <div className="mt-6 space-y-4">
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
+                <div className="flex items-center justify-between text-sm mb-3">
+                  <span className="font-semibold text-white/90">Progress</span>
+                  <span className="font-bold text-lg">{world.progress}%</span>
+                </div>
+                <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${world.progress}%` }}
+                    transition={{ duration: 1.5, ease: "easeOut", delay: 0.3 }}
+                    className={`h-full bg-gradient-to-r ${getProgressColor(world.progress)} rounded-full shadow-sm`}
+                  />
+                </div>
+              </div>
+
+              {/* Stats Row */}
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/20">
+                  <BookOpen className="w-4 h-4" />
+                  <span className="font-semibold">{world.topicsCount} Topics</span>
+                </div>
+                <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/20">
+                  <Zap className="w-4 h-4" />
+                  <span className="font-semibold">500 XP</span>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div className="pt-2">
+                <div className="w-full bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl px-4 py-3 text-center font-bold hover:bg-white/30 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] shadow-lg hover:shadow-xl">
+                  <span className="flex items-center justify-center space-x-2">
+                    <span>Enter World</span>
+                    <Target className="w-4 h-4" />
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </Link>
   );
 } 
