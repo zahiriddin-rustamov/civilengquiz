@@ -22,6 +22,7 @@ import { v4 as uuidv4 } from 'uuid';
 interface QuestionData {
   _id?: Types.ObjectId;
   topicId: string;
+  sectionId: string;
   type: 'multiple-choice' | 'true-false' | 'fill-in-blank' | 'numerical' | 'matching';
   text: string;
   imageUrl?: string;
@@ -33,6 +34,7 @@ interface QuestionData {
   explanation?: string;
   topicName?: string;
   subjectName?: string;
+  sectionName?: string;
 }
 
 const questionTypes = [
@@ -73,6 +75,7 @@ export default function EditQuestionPage() {
   const params = useParams();
   const [subjects, setSubjects] = useState<ISubject[]>([]);
   const [topics, setTopics] = useState<ITopic[]>([]);
+  const [sections, setSections] = useState<any[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingQuestion, setIsLoadingQuestion] = useState(true);
@@ -80,6 +83,7 @@ export default function EditQuestionPage() {
 
   const [formData, setFormData] = useState<QuestionData>({
     topicId: '',
+    sectionId: '',
     type: 'multiple-choice',
     text: '',
     imageUrl: '',
@@ -130,6 +134,13 @@ export default function EditQuestionPage() {
     }
   }, [params.id]);
 
+  // Fetch sections when topic changes during editing
+  useEffect(() => {
+    if (formData.topicId && !isLoadingQuestion) {
+      fetchSectionsForTopic(formData.topicId);
+    }
+  }, [formData.topicId, isLoadingQuestion]);
+
   const fetchQuestion = async (questionId: string) => {
     try {
       setIsLoadingQuestion(true);
@@ -149,6 +160,7 @@ export default function EditQuestionPage() {
       setFormData({
         _id: question._id,
         topicId: question.topicId.toString(),
+        sectionId: question.sectionId.toString(),
         type: question.type,
         text: question.text,
         imageUrl: question.imageUrl || '',
@@ -159,7 +171,8 @@ export default function EditQuestionPage() {
         data: question.data,
         explanation: question.explanation || '',
         topicName: question.topicName,
-        subjectName: question.subjectName
+        subjectName: question.subjectName,
+        sectionName: question.sectionName
       });
 
       // Set type-specific data
@@ -184,6 +197,11 @@ export default function EditQuestionPage() {
       // Fetch subject and topics for the current question
       if (question.topicName && question.subjectName) {
         await fetchSubjectByName(question.subjectName);
+      }
+
+      // Fetch sections for the current topic
+      if (question.topicId) {
+        await fetchSectionsForTopic(question.topicId.toString());
       }
     } catch (err) {
       console.error('Error fetching question:', err);
@@ -230,6 +248,18 @@ export default function EditQuestionPage() {
       }
     } catch (err) {
       console.error('Error fetching topics:', err);
+    }
+  };
+
+  const fetchSectionsForTopic = async (topicId: string) => {
+    try {
+      const response = await fetch(`/api/sections?topicId=${topicId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSections(data);
+      }
+    } catch (err) {
+      console.error('Error fetching sections:', err);
     }
   };
 
@@ -771,7 +801,7 @@ export default function EditQuestionPage() {
             <CardDescription>Choose where this question belongs and what type it should be</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="subject">Subject *</Label>
                 <Select value={selectedSubject} onValueChange={handleSubjectChange}>
@@ -806,6 +836,31 @@ export default function EditQuestionPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="section">Section *</Label>
+                <Select
+                  value={formData.sectionId}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, sectionId: value }))}
+                  disabled={sections.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select section" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sections.map(section => (
+                      <SelectItem key={section._id.toString()} value={section._id.toString()}>
+                        {section.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {sections.length === 0 && formData.topicId && (
+                  <p className="text-sm text-amber-600 mt-1">
+                    No sections found. <Link href={`/admin/sections/new?topicId=${formData.topicId}`} className="underline">Create a section first</Link>.
+                  </p>
+                )}
               </div>
             </div>
 

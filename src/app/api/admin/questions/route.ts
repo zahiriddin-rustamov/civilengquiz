@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectToDatabase from '@/lib/mongoose';
-import { Question, Topic } from '@/models/database';
+import { Question, Topic, QuestionSection } from '@/models/database';
 import { Types } from 'mongoose';
 
 // GET /api/admin/questions - List all questions with filtering
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
     if (type) query.type = type;
     if (difficulty) query.difficulty = difficulty;
 
-    // Get questions with topic information
+    // Get questions with topic and section information
     const questions = await Question.aggregate([
       { $match: query },
       {
@@ -38,6 +38,14 @@ export async function GET(req: Request) {
           localField: 'topicId',
           foreignField: '_id',
           as: 'topic'
+        }
+      },
+      {
+        $lookup: {
+          from: 'questionsections',
+          localField: 'sectionId',
+          foreignField: '_id',
+          as: 'section'
         }
       },
       {
@@ -51,10 +59,12 @@ export async function GET(req: Request) {
       {
         $addFields: {
           topicName: { $arrayElemAt: ['$topic.name', 0] },
-          subjectName: { $arrayElemAt: ['$subject.name', 0] }
+          subjectName: { $arrayElemAt: ['$subject.name', 0] },
+          sectionName: { $arrayElemAt: ['$section.name', 0] },
+          sectionOrder: { $arrayElemAt: ['$section.order', 0] }
         }
       },
-      { $sort: { 'topic.order': 1, order: 1 } },
+      { $sort: { 'topic.order': 1, sectionOrder: 1, order: 1 } },
       { $skip: skip },
       { $limit: limit }
     ]);
@@ -91,6 +101,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const {
       topicId,
+      sectionId,
       type,
       text,
       imageUrl,
@@ -102,14 +113,23 @@ export async function POST(req: Request) {
     } = body;
 
     // Validate required fields
-    if (!topicId || !type || !text || !difficulty || points === undefined || order === undefined || !data) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!topicId || !sectionId || !type || !text || !difficulty || points === undefined || order === undefined || !data) {
+      return NextResponse.json({ error: 'Missing required fields: topicId, sectionId, type, text, difficulty, points, order, data' }, { status: 400 });
     }
 
     // Validate topic exists
     const topic = await Topic.findById(topicId);
     if (!topic) {
       return NextResponse.json({ error: 'Topic not found' }, { status: 404 });
+    }
+
+    // Validate section exists and belongs to the topic
+    const section = await QuestionSection.findById(sectionId);
+    if (!section) {
+      return NextResponse.json({ error: 'Section not found' }, { status: 404 });
+    }
+    if (section.topicId.toString() !== topicId) {
+      return NextResponse.json({ error: 'Section does not belong to the specified topic' }, { status: 400 });
     }
 
     // Validate question type and data structure
@@ -121,11 +141,13 @@ export async function POST(req: Request) {
     // Create question
     const question = new Question({
       topicId: new Types.ObjectId(topicId),
+      sectionId: new Types.ObjectId(sectionId),
       type,
       text,
       imageUrl,
       difficulty,
-      points,
+      xpReward: points,
+      estimatedMinutes: Math.ceil(points / 10), // Estimate based on points
       order,
       data,
       explanation
@@ -133,7 +155,7 @@ export async function POST(req: Request) {
 
     await question.save();
 
-    // Populate topic and subject information for response
+    // Populate topic, section, and subject information for response
     const populatedQuestion = await Question.aggregate([
       { $match: { _id: question._id } },
       {
@@ -142,6 +164,14 @@ export async function POST(req: Request) {
           localField: 'topicId',
           foreignField: '_id',
           as: 'topic'
+        }
+      },
+      {
+        $lookup: {
+          from: 'questionsections',
+          localField: 'sectionId',
+          foreignField: '_id',
+          as: 'section'
         }
       },
       {
@@ -155,7 +185,8 @@ export async function POST(req: Request) {
       {
         $addFields: {
           topicName: { $arrayElemAt: ['$topic.name', 0] },
-          subjectName: { $arrayElemAt: ['$subject.name', 0] }
+          subjectName: { $arrayElemAt: ['$subject.name', 0] },
+          sectionName: { $arrayElemAt: ['$section.name', 0] }
         }
       }
     ]);

@@ -55,6 +55,7 @@ interface EnhancedTopicData {
     flashcards: number;
     media: number;
   };
+  hasAccessibleSections: boolean; // Whether there are sections with questions
   // TODO: Add these when implementing user progress
   achievements: {
     id: string;
@@ -133,6 +134,7 @@ export default function TopicOverviewPage() {
         progress: topicApiData.progress || 0,
         contentCounts: topicApiData.contentCounts || { questions: 0, flashcards: 0, media: 0 },
         completedContent: topicApiData.completedContent || { questions: 0, flashcards: 0, media: 0 },
+        hasAccessibleSections: topicApiData.hasAccessibleSections || false,
         // TODO: Implement these when adding user progress tracking
         achievements: [],
         streakDays: 0,
@@ -358,8 +360,9 @@ export default function TopicOverviewPage() {
                     completed: topicData.completedContent.questions,
                     timeSpent: 0 // TODO: Add real time tracking
                   }}
-                  href={`/subjects/${subjectId}/topics/${topicId}/questions`}
+                  href={`/subjects/${subjectId}/topics/${topicId}/sections`}
                   isUnlocked={topicData.isUnlocked}
+                  hasAccessibleSections={topicData.hasAccessibleSections}
                 />
               </motion.div>
 
@@ -485,15 +488,16 @@ export default function TopicOverviewPage() {
 }
 
 // Content Type Card Component
-function ContentTypeCard({ 
-  type, 
-  title, 
-  description, 
-  icon, 
-  color, 
-  data, 
-  href, 
-  isUnlocked 
+function ContentTypeCard({
+  type,
+  title,
+  description,
+  icon,
+  color,
+  data,
+  href,
+  isUnlocked,
+  hasAccessibleSections
 }: {
   type: 'questions' | 'flashcards' | 'media';
   title: string;
@@ -503,6 +507,7 @@ function ContentTypeCard({
   data: any;
   href: string;
   isUnlocked: boolean;
+  hasAccessibleSections?: boolean;
 }) {
   const getCompletionPercentage = () => {
     if (type === 'questions' || type === 'media') {
@@ -522,7 +527,10 @@ function ContentTypeCard({
 
   const completionPercentage = getCompletionPercentage();
 
-  const hasContent = data.count > 0;
+  // For questions, check if there are accessible sections; for others, check count
+  const hasContent = type === 'questions'
+    ? (hasAccessibleSections ?? data.count > 0)
+    : data.count > 0;
   const isClickable = isUnlocked && hasContent;
 
   const CardContent = () => (

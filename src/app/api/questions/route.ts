@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import connectToDatabase from '@/lib/mongoose';
-import { Question, Topic } from '@/models/database';
+import { Question, Topic, QuestionSection, Subject } from '@/models/database';
 import { QuestionService } from '@/lib/db-operations';
 import { Types } from 'mongoose';
 
-// GET /api/questions - Get all questions with filtering
+// GET /api/questions - Get all questions with filtering and all subject-topic combinations
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
     const skip = (page - 1) * limit;
+    const includeAllTopics = searchParams.get('includeAllTopics') === 'true';
 
     // Build query
     const query: any = {};
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
     if (type) query.type = type;
     if (difficulty) query.difficulty = difficulty;
 
-    // Get questions with topic and subject information
+    // Get questions with topic, subject, and section information
     const questions = await Question.aggregate([
       { $match: query },
       {
@@ -45,12 +46,22 @@ export async function GET(request: NextRequest) {
         }
       },
       {
-        $addFields: {
-          topicName: { $arrayElemAt: ['$topic.name', 0] },
-          subjectName: { $arrayElemAt: ['$subject.name', 0] }
+        $lookup: {
+          from: 'questionsections',
+          localField: 'sectionId',
+          foreignField: '_id',
+          as: 'section'
         }
       },
-      { $sort: { 'topic.order': 1, order: 1 } },
+      {
+        $addFields: {
+          topicName: { $arrayElemAt: ['$topic.name', 0] },
+          subjectName: { $arrayElemAt: ['$subject.name', 0] },
+          sectionName: { $arrayElemAt: ['$section.name', 0] },
+          sectionOrder: { $arrayElemAt: ['$section.order', 0] }
+        }
+      },
+      { $sort: { 'topic.order': 1, 'sectionOrder': 1, order: 1 } },
       { $skip: skip },
       { $limit: limit }
     ]);
@@ -58,8 +69,73 @@ export async function GET(request: NextRequest) {
     // Get total count for pagination
     const totalCount = await Question.countDocuments(query);
 
+    let allTopicCombinations = [];
+    let allSections = [];
+
+    // If includeAllTopics is requested (for admin Questions page), get all subject-topic combinations and sections
+    if (includeAllTopics) {
+      allTopicCombinations = await Topic.aggregate([
+        {
+          $lookup: {
+            from: 'subjects',
+            localField: 'subjectId',
+            foreignField: '_id',
+            as: 'subject'
+          }
+        },
+        {
+          $addFields: {
+            subjectName: { $arrayElemAt: ['$subject.name', 0] }
+          }
+        },
+        {
+          $project: {
+            _id: 1,
+            name: 1,
+            subjectId: 1,
+            subjectName: 1,
+            order: 1
+          }
+        },
+        {
+          $sort: { 'subject.order': 1, order: 1 }
+        }
+      ]);
+
+      // Also get all sections with their topic and subject information
+      allSections = await QuestionSection.aggregate([
+        {
+          $lookup: {
+            from: 'topics',
+            localField: 'topicId',
+            foreignField: '_id',
+            as: 'topic'
+          }
+        },
+        {
+          $lookup: {
+            from: 'subjects',
+            localField: 'topic.subjectId',
+            foreignField: '_id',
+            as: 'subject'
+          }
+        },
+        {
+          $addFields: {
+            topicName: { $arrayElemAt: ['$topic.name', 0] },
+            subjectName: { $arrayElemAt: ['$subject.name', 0] }
+          }
+        },
+        {
+          $sort: { order: 1 }
+        }
+      ]);
+    }
+
     return NextResponse.json({
       questions,
+      allTopicCombinations,
+      allSections,
       pagination: {
         page,
         limit,
@@ -91,11 +167,11 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
 
     // Validate required fields
-    const { topicId, type, text, difficulty, xpReward, estimatedMinutes } = data;
+    const { topicId, sectionId, type, text, difficulty, xpReward, estimatedMinutes } = data;
 
-    if (!topicId || !type || !text || !difficulty) {
+    if (!topicId || !sectionId || !type || !text || !difficulty) {
       return NextResponse.json(
-        { error: 'Missing required fields: topicId, type, text, difficulty' },
+        { error: 'Missing required fields: topicId, sectionId, type, text, difficulty' },
         { status: 400 }
       );
     }
@@ -106,6 +182,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Topic not found' },
         { status: 404 }
+      );
+    }
+
+    // Validate section exists and belongs to the topic
+    const section = await QuestionSection.findById(sectionId);
+    if (!section) {
+      return NextResponse.json(
+        { error: 'Section not found' },
+        { status: 404 }
+      );
+    }
+    if (section.topicId.toString() !== topicId) {
+      return NextResponse.json(
+        { error: 'Section does not belong to the specified topic' },
+        { status: 400 }
       );
     }
 
@@ -129,12 +220,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Auto-calculate next order value within the topic
-    const existingQuestions = await Question.find({ topicId }).sort({ order: -1 }).limit(1);
+    // Auto-calculate next order value within the section
+    const existingQuestions = await Question.find({ sectionId }).sort({ order: -1 }).limit(1);
     const nextOrder = existingQuestions.length > 0 ? existingQuestions[0].order + 1 : 1;
 
     const question = await QuestionService.createQuestion({
       topicId,
+      sectionId,
       type,
       text,
       imageUrl: data.imageUrl,

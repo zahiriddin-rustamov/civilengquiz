@@ -20,6 +20,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 interface QuestionData {
   topicId: string;
+  sectionId: string;
   type: 'multiple-choice' | 'true-false' | 'fill-in-blank' | 'numerical' | 'matching';
   text: string;
   imageUrl?: string;
@@ -68,12 +69,14 @@ export default function NewQuestionPage() {
   const searchParams = useSearchParams();
   const [subjects, setSubjects] = useState<ISubject[]>([]);
   const [topics, setTopics] = useState<ITopic[]>([]);
+  const [sections, setSections] = useState<any[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<QuestionData>({
     topicId: '',
+    sectionId: '',
     type: 'multiple-choice',
     text: '',
     imageUrl: '',
@@ -121,11 +124,27 @@ export default function NewQuestionPage() {
 
     // Pre-select topic if provided in URL
     const topicId = searchParams?.get('topicId');
+    const sectionId = searchParams?.get('sectionId');
+
     if (topicId) {
       // Don't set formData.topicId here - let fetchTopicAndSubject do it after topics are loaded
       fetchTopicAndSubject(topicId);
     }
+
+    if (sectionId) {
+      setFormData(prev => ({ ...prev, sectionId }));
+    }
   }, [searchParams]);
+
+  // Fetch sections when topic changes
+  useEffect(() => {
+    if (formData.topicId) {
+      fetchSectionsForTopic(formData.topicId);
+    } else {
+      setSections([]);
+      setFormData(prev => ({ ...prev, sectionId: '' }));
+    }
+  }, [formData.topicId]);
 
   // Update XP and time estimates when difficulty or type changes
   useEffect(() => {
@@ -181,6 +200,18 @@ export default function NewQuestionPage() {
       }
     } catch (err) {
       console.error('Error fetching topic and subject:', err);
+    }
+  };
+
+  const fetchSectionsForTopic = async (topicId: string) => {
+    try {
+      const response = await fetch(`/api/sections?topicId=${topicId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSections(data);
+      }
+    } catch (err) {
+      console.error('Error fetching sections:', err);
     }
   };
 
@@ -255,8 +286,8 @@ export default function NewQuestionPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.topicId || !formData.text.trim()) {
-      setError('Please fill in all required fields');
+    if (!formData.topicId || !formData.sectionId || !formData.text.trim()) {
+      setError('Please fill in all required fields including topic and section');
       return;
     }
 
@@ -703,7 +734,7 @@ export default function NewQuestionPage() {
             <CardDescription>Choose where this question belongs and what type it should be</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="subject">Subject *</Label>
                 <Select value={selectedSubject} onValueChange={handleSubjectChange}>
@@ -738,6 +769,31 @@ export default function NewQuestionPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="section">Section *</Label>
+                <Select
+                  value={formData.sectionId}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, sectionId: value }))}
+                  disabled={sections.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select section" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sections.map(section => (
+                      <SelectItem key={section._id.toString()} value={section._id.toString()}>
+                        {section.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {sections.length === 0 && formData.topicId && (
+                  <p className="text-sm text-amber-600 mt-1">
+                    No sections found. <Link href={`/admin/sections/new?topicId=${formData.topicId}`} className="underline">Create a section first</Link>.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -860,7 +916,7 @@ export default function NewQuestionPage() {
           </Button>
           <Button
             type="submit"
-            disabled={isLoading || !formData.topicId || !formData.text.trim()}
+            disabled={isLoading || !formData.topicId || !formData.sectionId || !formData.text.trim()}
           >
             {isLoading ? (
               <>

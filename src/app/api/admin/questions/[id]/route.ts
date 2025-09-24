@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectToDatabase from '@/lib/mongoose';
-import { Question } from '@/models/database';
+import { Question, QuestionSection } from '@/models/database';
 import { Types } from 'mongoose';
 
 // GET /api/admin/questions/[id] - Get single question
@@ -22,7 +22,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ error: 'Invalid question ID' }, { status: 400 });
     }
 
-    // Get question with topic and subject information
+    // Get question with topic, section, and subject information
     const question = await Question.aggregate([
       { $match: { _id: new Types.ObjectId(questionId) } },
       {
@@ -31,6 +31,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
           localField: 'topicId',
           foreignField: '_id',
           as: 'topic'
+        }
+      },
+      {
+        $lookup: {
+          from: 'questionsections',
+          localField: 'sectionId',
+          foreignField: '_id',
+          as: 'section'
         }
       },
       {
@@ -44,7 +52,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       {
         $addFields: {
           topicName: { $arrayElemAt: ['$topic.name', 0] },
-          subjectName: { $arrayElemAt: ['$subject.name', 0] }
+          subjectName: { $arrayElemAt: ['$subject.name', 0] },
+          sectionName: { $arrayElemAt: ['$section.name', 0] }
         }
       }
     ]);
@@ -80,6 +89,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     const body = await req.json();
     const {
+      sectionId,
       type,
       text,
       imageUrl,
@@ -95,26 +105,43 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Validate section if provided
+    if (sectionId) {
+      const section = await QuestionSection.findById(sectionId);
+      if (!section) {
+        return NextResponse.json({ error: 'Section not found' }, { status: 404 });
+      }
+    }
+
     // Validate question type and data structure
     const validationResult = validateQuestionData(type, data);
     if (!validationResult.valid) {
       return NextResponse.json({ error: validationResult.error }, { status: 400 });
     }
 
+    // Build update object
+    const updateData: any = {
+      type,
+      text,
+      imageUrl,
+      difficulty,
+      xpReward: points,
+      estimatedMinutes: Math.ceil(points / 10),
+      order,
+      data,
+      explanation,
+      updatedAt: new Date()
+    };
+
+    // Only update sectionId if provided
+    if (sectionId) {
+      updateData.sectionId = new Types.ObjectId(sectionId);
+    }
+
     // Update question
     const updatedQuestion = await Question.findByIdAndUpdate(
       questionId,
-      {
-        type,
-        text,
-        imageUrl,
-        difficulty,
-        points,
-        order,
-        data,
-        explanation,
-        updatedAt: new Date()
-      },
+      updateData,
       { new: true, runValidators: true }
     );
 
@@ -122,7 +149,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ error: 'Question not found' }, { status: 404 });
     }
 
-    // Get updated question with topic and subject information
+    // Get updated question with topic, section, and subject information
     const populatedQuestion = await Question.aggregate([
       { $match: { _id: updatedQuestion._id } },
       {
@@ -131,6 +158,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           localField: 'topicId',
           foreignField: '_id',
           as: 'topic'
+        }
+      },
+      {
+        $lookup: {
+          from: 'questionsections',
+          localField: 'sectionId',
+          foreignField: '_id',
+          as: 'section'
         }
       },
       {
@@ -144,7 +179,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       {
         $addFields: {
           topicName: { $arrayElemAt: ['$topic.name', 0] },
-          subjectName: { $arrayElemAt: ['$subject.name', 0] }
+          subjectName: { $arrayElemAt: ['$subject.name', 0] },
+          sectionName: { $arrayElemAt: ['$section.name', 0] }
         }
       }
     ]);

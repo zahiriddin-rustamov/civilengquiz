@@ -16,11 +16,11 @@ export async function PUT(req: NextRequest) {
     await connectToDatabase();
 
     const body = await req.json();
-    const { topicId, updates } = body;
+    const { topicId, sections } = body;
 
     // Validate required fields
-    if (!topicId || !updates || !Array.isArray(updates)) {
-      return NextResponse.json({ error: 'Missing required fields: topicId, updates' }, { status: 400 });
+    if (!topicId || !sections || !Array.isArray(sections)) {
+      return NextResponse.json({ error: 'Missing required fields: topicId, sections' }, { status: 400 });
     }
 
     // Validate topic exists
@@ -33,38 +33,51 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Topic not found' }, { status: 404 });
     }
 
-    // Validate all updates have required fields
-    for (const update of updates) {
-      if (!update.questionId || update.order === undefined) {
-        return NextResponse.json({ error: 'Each update must have questionId and order' }, { status: 400 });
+    // Flatten all question updates from all sections
+    const allUpdates = [];
+
+    for (const section of sections) {
+      if (!section.sectionId || !section.questions || !Array.isArray(section.questions)) {
+        return NextResponse.json({ error: 'Each section must have sectionId and questions array' }, { status: 400 });
       }
 
-      if (!Types.ObjectId.isValid(update.questionId)) {
-        return NextResponse.json({ error: 'Invalid question ID in updates' }, { status: 400 });
+      for (const questionUpdate of section.questions) {
+        if (!questionUpdate.questionId || questionUpdate.order === undefined || !questionUpdate.sectionId) {
+          return NextResponse.json({ error: 'Each question update must have questionId, order, and sectionId' }, { status: 400 });
+        }
+
+        if (!Types.ObjectId.isValid(questionUpdate.questionId) || !Types.ObjectId.isValid(questionUpdate.sectionId)) {
+          return NextResponse.json({ error: 'Invalid question ID or section ID in updates' }, { status: 400 });
+        }
+
+        allUpdates.push(questionUpdate);
       }
     }
 
     // Verify all questions belong to the specified topic
-    const questionIds = updates.map((update: any) => new Types.ObjectId(update.questionId));
+    const questionIds = allUpdates.map((update: any) => new Types.ObjectId(update.questionId));
     const questions = await Question.find({
       _id: { $in: questionIds },
       topicId: new Types.ObjectId(topicId)
     });
 
-    if (questions.length !== updates.length) {
+    if (questions.length !== allUpdates.length) {
       return NextResponse.json({
         error: 'Some questions not found or do not belong to this topic'
       }, { status: 400 });
     }
 
-    // Perform bulk update
-    const bulkOps = updates.map((update: any) => ({
+    // Perform bulk update (including potential section moves)
+    const bulkOps = allUpdates.map((update: any) => ({
       updateOne: {
         filter: {
           _id: new Types.ObjectId(update.questionId),
           topicId: new Types.ObjectId(topicId)
         },
-        update: { order: update.order }
+        update: {
+          order: update.order,
+          sectionId: new Types.ObjectId(update.sectionId)
+        }
       }
     }));
 

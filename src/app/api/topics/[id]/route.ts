@@ -35,6 +35,9 @@ export async function GET(
       MediaService.getMediaByTopic(id)
     ]);
 
+    // If there are any questions, there's at least one section with questions
+    const hasAccessibleSections = questions.length > 0;
+
     // Calculate totals from content
     const totalXpReward =
       questions.reduce((sum, q) => sum + (q.xpReward || 0), 0) +
@@ -56,6 +59,7 @@ export async function GET(
         flashcards: flashcards.length,
         media: media.length
       },
+      hasAccessibleSections, // New field to indicate if questions are accessible via sections
       // TODO: Add user progress calculation
       progress: 0,
       completedContent: {

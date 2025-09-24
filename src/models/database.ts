@@ -94,10 +94,58 @@ const TopicSchema = new Schema<ITopic>({
   timestamps: true
 });
 
+const QuestionSectionSchema = new Schema<IQuestionSection>({
+  name: { type: String, required: true },
+  description: { type: String },
+  topicId: { type: Schema.Types.ObjectId, ref: 'Topic', required: true },
+  order: { type: Number, required: true },
+  settings: {
+    unlockConditions: {
+      type: String,
+      enum: ['always', 'sequential', 'score-based'],
+      default: 'always'
+    },
+    requiredScore: { type: Number, min: 0, max: 100 },
+    allowRandomAccess: { type: Boolean, default: true },
+    showToStudents: {
+      type: String,
+      enum: ['always', 'one-random', 'sequential'],
+      default: 'always'
+    },
+    requireCompletion: { type: Boolean, default: false }
+  }
+}, {
+  timestamps: true
+});
+
+// Question Section Schema
+export interface IQuestionSection extends Document {
+  _id: Types.ObjectId;
+  name: string;
+  description?: string;
+  topicId: Types.ObjectId;
+  order: number;
+  settings: {
+    // Unlock conditions
+    unlockConditions: 'always' | 'sequential' | 'score-based';
+    requiredScore?: number; // Percentage required from previous section (if score-based)
+
+    // Navigation settings
+    allowRandomAccess: boolean; // Can students jump between sections freely?
+    showToStudents: 'always' | 'one-random' | 'sequential'; // How to present to students
+
+    // Progress requirements
+    requireCompletion: boolean; // Must complete all questions to finish section
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Question Schema
 export interface IQuestion extends Document {
   _id: Types.ObjectId;
   topicId: Types.ObjectId;
+  sectionId: Types.ObjectId;
   type: 'multiple-choice' | 'true-false' | 'fill-in-blank' | 'numerical' | 'matching';
   text: string;
   imageUrl?: string;
@@ -113,6 +161,7 @@ export interface IQuestion extends Document {
 
 const QuestionSchema = new Schema<IQuestion>({
   topicId: { type: Schema.Types.ObjectId, ref: 'Topic', required: true },
+  sectionId: { type: Schema.Types.ObjectId, ref: 'QuestionSection', required: true },
   type: {
     type: String,
     enum: ['multiple-choice', 'true-false', 'fill-in-blank', 'numerical', 'matching'],
@@ -259,14 +308,15 @@ export interface IUserProgress extends Document {
   userId: Types.ObjectId;
   subjectId?: Types.ObjectId;
   topicId?: Types.ObjectId;
+  sectionId?: Types.ObjectId; // Section progress tracking
   contentId: Types.ObjectId; // Can be question, flashcard, or media
-  contentType: 'question' | 'flashcard' | 'media';
+  contentType: 'question' | 'flashcard' | 'media' | 'section';
   completed: boolean;
   score?: number;
   timeSpent: number; // in seconds
   lastAccessed: Date;
   attempts: number;
-  data?: any; // Store additional progress data (e.g., flashcard mastery level)
+  data?: any; // Store additional progress data (e.g., flashcard mastery level, section unlock status)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -275,8 +325,9 @@ const UserProgressSchema = new Schema<IUserProgress>({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   subjectId: { type: Schema.Types.ObjectId, ref: 'Subject' },
   topicId: { type: Schema.Types.ObjectId, ref: 'Topic' },
+  sectionId: { type: Schema.Types.ObjectId, ref: 'QuestionSection' },
   contentId: { type: Schema.Types.ObjectId, required: true },
-  contentType: { type: String, enum: ['question', 'flashcard', 'media'], required: true },
+  contentType: { type: String, enum: ['question', 'flashcard', 'media', 'section'], required: true },
   completed: { type: Boolean, default: false },
   score: { type: Number },
   timeSpent: { type: Number, default: 0 },
@@ -291,6 +342,7 @@ const UserProgressSchema = new Schema<IUserProgress>({
 UserProgressSchema.index({ userId: 1, contentId: 1, contentType: 1 }, { unique: true });
 UserProgressSchema.index({ userId: 1, topicId: 1 });
 UserProgressSchema.index({ userId: 1, subjectId: 1 });
+UserProgressSchema.index({ userId: 1, sectionId: 1 });
 
 // Media Engagement Schema
 export interface IMediaEngagement extends Document {
@@ -332,6 +384,11 @@ if (mongoose.models.Topic) {
   delete mongoose.models.Topic;
 }
 export const Topic = mongoose.model<ITopic>('Topic', TopicSchema);
+// Force clear cached QuestionSection model to ensure schema updates
+if (mongoose.models.QuestionSection) {
+  delete mongoose.models.QuestionSection;
+}
+export const QuestionSection = mongoose.model<IQuestionSection>('QuestionSection', QuestionSectionSchema);
 // Force clear cached Question model to ensure schema updates
 if (mongoose.models.Question) {
   delete mongoose.models.Question;

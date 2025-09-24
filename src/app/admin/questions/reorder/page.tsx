@@ -12,6 +12,7 @@ import { Types } from 'mongoose';
 interface QuestionWithData {
   _id: Types.ObjectId;
   topicId: Types.ObjectId;
+  sectionId: Types.ObjectId;
   type: 'multiple-choice' | 'true-false' | 'fill-in-blank' | 'numerical' | 'matching';
   text: string;
   imageUrl?: string;
@@ -25,6 +26,15 @@ interface QuestionWithData {
   updatedAt: Date;
   topicName: string;
   subjectName: string;
+  sectionName: string;
+  sectionOrder: number;
+}
+
+interface SectionGroup {
+  sectionId: string;
+  sectionName: string;
+  sectionOrder: number;
+  questions: QuestionWithData[];
 }
 
 const questionTypeConfig = {
@@ -40,12 +50,12 @@ export default function QuestionsReorderPage() {
   const searchParams = useSearchParams();
   const topicId = searchParams?.get('topicId');
 
-  const [questions, setQuestions] = useState<QuestionWithData[]>([]);
+  const [sections, setSections] = useState<SectionGroup[]>([]);
   const [topicInfo, setTopicInfo] = useState<{ topicName: string; subjectName: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [draggedItem, setDraggedItem] = useState<{ sectionIndex: number; questionIndex: number } | null>(null);
 
   useEffect(() => {
     if (!topicId) {
@@ -54,6 +64,40 @@ export default function QuestionsReorderPage() {
     }
     fetchQuestions();
   }, [topicId, router]);
+
+  const groupQuestionsBySection = (questions: QuestionWithData[]): SectionGroup[] => {
+    const sectionMap = new Map<string, SectionGroup>();
+
+    questions.forEach(question => {
+      if (!question.sectionId || !question.sectionName) {
+        console.warn('Question missing section info:', question);
+        return;
+      }
+
+      const sectionId = question.sectionId.toString();
+
+      if (!sectionMap.has(sectionId)) {
+        sectionMap.set(sectionId, {
+          sectionId,
+          sectionName: question.sectionName,
+          sectionOrder: question.sectionOrder || 0,
+          questions: []
+        });
+      }
+
+      sectionMap.get(sectionId)!.questions.push(question);
+    });
+
+    // Convert to array and sort sections by order
+    const sortedSections = Array.from(sectionMap.values()).sort((a, b) => a.sectionOrder - b.sectionOrder);
+
+    // Sort questions within each section by order
+    sortedSections.forEach(section => {
+      section.questions.sort((a, b) => a.order - b.order);
+    });
+
+    return sortedSections;
+  };
 
   const fetchQuestions = async () => {
     if (!topicId) return;
@@ -78,9 +122,9 @@ export default function QuestionsReorderPage() {
         });
       }
 
-      // Sort by current order
-      data.questions.sort((a: any, b: any) => a.order - b.order);
-      setQuestions(data.questions);
+      // Group questions by sections
+      const groupedSections = groupQuestionsBySection(data.questions);
+      setSections(groupedSections);
     } catch (err) {
       console.error('Error fetching questions:', err);
       setError(err instanceof Error ? err.message : 'Failed to load questions');
@@ -89,8 +133,8 @@ export default function QuestionsReorderPage() {
     }
   };
 
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    setDraggedIndex(index);
+  const handleDragStart = (e: React.DragEvent, sectionIndex: number, questionIndex: number) => {
+    setDraggedItem({ sectionIndex, questionIndex });
     e.dataTransfer.effectAllowed = 'move';
   };
 
@@ -99,21 +143,29 @@ export default function QuestionsReorderPage() {
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+  const handleDrop = (e: React.DragEvent, dropSectionIndex: number, dropQuestionIndex: number) => {
     e.preventDefault();
-    if (draggedIndex === null || draggedIndex === dropIndex) return;
+    if (!draggedItem) return;
 
-    const newQuestions = [...questions];
-    const draggedQuestion = newQuestions[draggedIndex];
+    const { sectionIndex: dragSectionIndex, questionIndex: dragQuestionIndex } = draggedItem;
 
-    // Remove the dragged item
-    newQuestions.splice(draggedIndex, 1);
+    // If dropping in the same position, do nothing
+    if (dragSectionIndex === dropSectionIndex && dragQuestionIndex === dropQuestionIndex) {
+      setDraggedItem(null);
+      return;
+    }
 
-    // Insert at new position
-    newQuestions.splice(dropIndex, 0, draggedQuestion);
+    const newSections = [...sections];
+    const draggedQuestion = newSections[dragSectionIndex].questions[dragQuestionIndex];
 
-    setQuestions(newQuestions);
-    setDraggedIndex(null);
+    // Remove the dragged question from its original section
+    newSections[dragSectionIndex].questions.splice(dragQuestionIndex, 1);
+
+    // Insert the question into the new position
+    newSections[dropSectionIndex].questions.splice(dropQuestionIndex, 0, draggedQuestion);
+
+    setSections(newSections);
+    setDraggedItem(null);
   };
 
   const handleSaveOrder = async () => {
@@ -121,11 +173,19 @@ export default function QuestionsReorderPage() {
       setIsSaving(true);
       setError(null);
 
-      // Prepare the order updates
-      const orderUpdates = questions.map((question, index) => ({
-        questionId: question._id.toString(),
-        order: index + 1
-      }));
+      // Prepare the order updates for each section
+      const sectionUpdates = sections.map(section => {
+        const questionUpdates = section.questions.map((question, index) => ({
+          questionId: question._id.toString(),
+          order: index + 1,
+          sectionId: section.sectionId
+        }));
+
+        return {
+          sectionId: section.sectionId,
+          questions: questionUpdates
+        };
+      });
 
       const response = await fetch('/api/admin/questions/reorder', {
         method: 'PUT',
@@ -134,7 +194,7 @@ export default function QuestionsReorderPage() {
         },
         body: JSON.stringify({
           topicId,
-          updates: orderUpdates
+          sections: sectionUpdates
         }),
       });
 
@@ -240,14 +300,14 @@ export default function QuestionsReorderPage() {
             <GripVertical className="w-5 h-5 text-gray-400 mt-0.5" />
             <div>
               <p className="text-sm text-gray-600">
-                Drag and drop questions to reorder them. The order determines the sequence students will see when practicing this topic.
+                Drag and drop questions to reorder them within sections or move them between sections. Questions can be moved between any sections within this topic. The order determines the sequence students will see when practicing each section.
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {questions.length === 0 ? (
+      {sections.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-8">
@@ -261,75 +321,94 @@ export default function QuestionsReorderPage() {
         </Card>
       ) : (
         <>
-          {/* Reorderable Question List */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Question Order</CardTitle>
-              <CardDescription>
-                {questions.length} questions • Drag to reorder
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {questions.map((question, index) => {
-                  const typeConfig = questionTypeConfig[question.type];
-                  const IconComponent = typeConfig?.icon || FileText;
-
-                  return (
+          {/* Reorderable Question List by Sections */}
+          <div className="space-y-6">
+            {sections.map((section, sectionIndex) => (
+              <Card key={section.sectionId}>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <span>Section {section.sectionOrder}: {section.sectionName}</span>
+                  </CardTitle>
+                  <CardDescription>
+                    {section.questions.length} questions • Drag questions to reorder within section or move between sections
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {section.questions.length === 0 ? (
                     <div
-                      key={question._id.toString()}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, index)}
+                      className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
                       onDragOver={handleDragOver}
-                      onDrop={(e) => handleDrop(e, index)}
-                      className={`
-                        flex items-center space-x-4 p-4 border rounded-lg cursor-move transition-all
-                        hover:bg-gray-50 hover:border-gray-300
-                        ${draggedIndex === index ? 'opacity-50 scale-95' : ''}
-                      `}
+                      onDrop={(e) => handleDrop(e, sectionIndex, 0)}
                     >
-                      {/* Drag Handle */}
-                      <GripVertical className="w-5 h-5 text-gray-400" />
-
-                      {/* Order Number */}
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-semibold text-sm">
-                        {index + 1}
-                      </div>
-
-                      {/* Question Type Icon */}
-                      <Badge className={typeConfig?.color || 'bg-gray-100 text-gray-800'} variant="outline">
-                        <IconComponent className="w-3 h-3 mr-1" />
-                        {typeConfig?.label || question.type}
-                      </Badge>
-
-                      {/* Question Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-gray-900 truncate">
-                          {question.text}
-                        </div>
-                        <div className="text-sm text-gray-500 flex items-center space-x-2">
-                          <span>{typeConfig?.label || question.type}</span>
-                          {question.explanation && <span>• Has explanation</span>}
-                          {question.imageUrl && <span>• Has image</span>}
-                        </div>
-                      </div>
-
-                      {/* Metadata */}
-                      <div className="flex items-center space-x-2">
-                        <Badge className={getDifficultyColor(question.difficulty)}>
-                          {question.difficulty}
-                        </Badge>
-                        <span className="text-sm text-gray-600">{question.xpReward} XP</span>
-                        <span className="text-sm text-gray-600">
-                          {question.estimatedMinutes} min
-                        </span>
-                      </div>
+                      <FileText className="mx-auto h-8 w-8 text-gray-400" />
+                      <p className="mt-2 text-sm text-gray-500">No questions in this section</p>
+                      <p className="text-xs text-gray-400">Drop questions here</p>
                     </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                  ) : (
+                    <div className="space-y-2">
+                      {section.questions.map((question, questionIndex) => {
+                        const typeConfig = questionTypeConfig[question.type];
+                        const IconComponent = typeConfig?.icon || FileText;
+                        const isDragged = draggedItem?.sectionIndex === sectionIndex && draggedItem?.questionIndex === questionIndex;
+
+                        return (
+                          <div
+                            key={question._id.toString()}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, sectionIndex, questionIndex)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, sectionIndex, questionIndex)}
+                            className={`
+                              flex items-center space-x-4 p-4 border rounded-lg cursor-move transition-all
+                              hover:bg-gray-50 hover:border-gray-300
+                              ${isDragged ? 'opacity-50 scale-95' : ''}
+                            `}
+                          >
+                            {/* Drag Handle */}
+                            <GripVertical className="w-5 h-5 text-gray-400" />
+
+                            {/* Order Number within Section */}
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-semibold text-sm">
+                              {questionIndex + 1}
+                            </div>
+
+                            {/* Question Type Icon */}
+                            <Badge className={typeConfig?.color || 'bg-gray-100 text-gray-800'} variant="outline">
+                              <IconComponent className="w-3 h-3 mr-1" />
+                              {typeConfig?.label || question.type}
+                            </Badge>
+
+                            {/* Question Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-gray-900 truncate">
+                                {question.text}
+                              </div>
+                              <div className="text-sm text-gray-500 flex items-center space-x-2">
+                                <span>{typeConfig?.label || question.type}</span>
+                                {question.explanation && <span>• Has explanation</span>}
+                                {question.imageUrl && <span>• Has image</span>}
+                              </div>
+                            </div>
+
+                            {/* Metadata */}
+                            <div className="flex items-center space-x-2">
+                              <Badge className={getDifficultyColor(question.difficulty)}>
+                                {question.difficulty}
+                              </Badge>
+                              <span className="text-sm text-gray-600">{question.xpReward} XP</span>
+                              <span className="text-sm text-gray-600">
+                                {question.estimatedMinutes} min
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
           {/* Save Button */}
           <div className="flex justify-end space-x-3">

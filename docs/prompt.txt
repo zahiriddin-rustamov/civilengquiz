@@ -11,3 +11,15 @@ what do you suggest I do next. You may suggest next implementation steps, issues
 I am trying to correctly implement the Media logic for admin and students. One issue I am facing is that the engagement is not being properly saved/loaded to/from DB. We need to be clever here especially how we save/load so we avoid putting unnecessary load on the DB/crud operations. We also need to plan how to effectively save it to DB.
 
 Analyze the Media page in admin side of things. Do you see how we group the subject-topic items under the same collapsible/expandible card? I was wondering if we should replicate this logic to Questions and Flashcards pages.
+
+===
+
+Focus on the Questions in the admin page. I was trying to implement the idea below:
+
+Context provided for current progress: I had this idea to add an option for the admin is that to allow them to have sections in Questions. So for example, in a given subject and topic, right now any created question will all be under the same view so students will see it all eventually. But we have one more layer where the admin can create sections so a group of questions belong to one section and so on. By default it will be one section so it shows as it is but there can be more than one section so when presented to the students, it will be displayed section by section. And the admin can configure this, they can choose to only show ONE section randomly to the students when they click questions or allow students to move to next section only once they have completed the previous section and provide admin to enable/disable option to move between sections for the students. Or allow admin to configure to move to next sections only if the student scores above some % in the given section.
+
+The current issue is that the section creation logic is a bit weird in my opinion.
+
+Instead of having a separate section logic like we do now I had this idea, I need you to evaluate if its a good idea. Basically when we have a subject-topic combo, currently in the Questions page, we have the main card which shows Subject -> Topic right? What if we showed that by default for all subject-topic combos regardless if they have questions/sections. But of course, if they are empty, we will disable the reorder button. But we will have a new button next to the reorder which is to add new section. So new sections are directly added in this page instead of having separate section page.
+
+Do you get my idea? Analyze all relevant files to understand the context.

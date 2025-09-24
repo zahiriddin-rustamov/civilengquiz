@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { ProgressService } from '@/lib/db-operations';
+import connectToDatabase from '@/lib/mongoose';
+import { UserProgress } from '@/models/database';
 import { XPService } from '@/lib/xp-service';
 import { initializeUserGamingFields } from '@/lib/user-migration';
 
 interface ProgressUpdateRequest {
   contentId: string;
-  contentType: 'question' | 'flashcard' | 'media';
+  contentType: 'question' | 'flashcard' | 'media' | 'section';
   topicId: string;
   subjectId: string;
+  sectionId?: string; // Optional for backwards compatibility
   completed: boolean;
   score?: number;
   timeSpent: number;
-  data?: any; // Additional progress data (e.g., flashcard mastery level)
+  data?: any; // Additional progress data (e.g., flashcard mastery level, section completion data)
 }
 
 // POST /api/user/progress/update - Update user progress for content
@@ -62,11 +64,20 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (body.sectionId && !objectIdRegex.test(body.sectionId)) {
+      return NextResponse.json(
+        { error: 'Invalid sectionId format. Must be a valid ObjectId (24-character hex string)' },
+        { status: 400 }
+      );
+    }
+
+    // Connect to database
+    await connectToDatabase();
 
     // Update user progress
     let progress;
     try {
-      progress = await ProgressService.updateUserProgress({
+      const progressData = {
         userId,
         subjectId: body.subjectId,
         topicId: body.topicId,
@@ -75,8 +86,27 @@ export async function POST(request: NextRequest) {
         completed: body.completed,
         score: body.score,
         timeSpent: body.timeSpent,
-        data: body.data
-      });
+        lastAccessed: new Date(),
+        data: body.data,
+        ...(body.sectionId && { sectionId: body.sectionId })
+      };
+
+      progress = await UserProgress.findOneAndUpdate(
+        {
+          userId,
+          contentId: body.contentId,
+          contentType: body.contentType
+        },
+        {
+          $set: progressData,
+          $inc: { attempts: 1 }
+        },
+        {
+          upsert: true,
+          new: true,
+          runValidators: true
+        }
+      );
     } catch (error) {
       console.error('Error updating user progress:', error);
       return NextResponse.json(
