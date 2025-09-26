@@ -89,6 +89,7 @@ interface ShortItem {
 interface MediaData {
   topicName: string;
   subjectName: string;
+  imageUrl?: string;
   totalXP: number;
   estimatedTime: number;
   videos: VideoItem[];
@@ -359,6 +360,26 @@ export default function MediaPage() {
         [videoId]: { progress: progressValue, completed, points }
       }
     }));
+
+    // Auto-advance to next video or show completion when current video is completed
+    if (completed && mediaData) {
+      const currentVideo = mediaData.videos[currentVideoIndex];
+      if (currentVideo && currentVideo.id === videoId) {
+        // Small delay to let user see completion
+        setTimeout(() => {
+          if (currentVideoIndex < mediaData.videos.length - 1) {
+            // Move to next video
+            setCurrentVideoIndex(prev => prev + 1);
+          } else {
+            // Last video completed - scroll to completion section
+            const completionSection = document.querySelector('[data-completion-section]');
+            if (completionSection) {
+              completionSection.scrollIntoView({ behavior: 'smooth' });
+            }
+          }
+        }, 2000);
+      }
+    }
   };
 
   const triggerRandomQuiz = () => {
@@ -471,7 +492,7 @@ export default function MediaPage() {
     }));
   };
 
-  const handleViewCountIncrement = (mediaId: string, watchTime: number = 0) => {
+  const handleViewCountIncrement = async (mediaId: string, watchTime: number = 0) => {
     if (!mediaData) return;
 
     const currentLocal = localEngagements[mediaId] || {
@@ -499,6 +520,41 @@ export default function MediaPage() {
       addWatchTime: watchTime,
       timestamp: Date.now()
     }]);
+
+    // Also track progress via API for shorts
+    try {
+      const short = mediaData.shorts.find(s => s.id === mediaId);
+      if (short) {
+        const response = await fetch('/api/user/progress/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contentId: mediaId,
+            contentType: 'media',
+            topicId: topicId,
+            subjectId: subjectId,
+            completed: true, // Shorts are completed when viewed
+            score: 1.0, // Full completion for shorts
+            timeSpent: watchTime,
+            data: {
+              watchTime: watchTime,
+              difficulty: short.difficulty,
+              videoType: 'short',
+              viewCount: newLocal.viewsDelta
+            }
+          }),
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          console.log(`Short ${mediaId} progress tracked, XP earned: ${result.xpEarned || 0}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error tracking short progress:', error);
+    }
 
     // Update UI optimistically
     setMediaData(prev => ({
@@ -551,9 +607,9 @@ export default function MediaPage() {
 
   if (status === 'loading' || isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading educational YouTube videos...</p>
         </div>
       </div>
@@ -562,7 +618,7 @@ export default function MediaPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30 flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 text-xl mb-4">⚠️ Error Loading Media</div>
           <p className="text-gray-600 mb-4">{error}</p>
@@ -581,7 +637,7 @@ export default function MediaPage() {
 
   if (!mediaData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-600">Media content not found</p>
           <Button asChild className="mt-4">
@@ -596,73 +652,92 @@ export default function MediaPage() {
   const progressPercentage = overallProgress.total > 0 ? Math.round((overallProgress.completed / overallProgress.total) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 p-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <Link 
-            href={`/subjects/${subjectId}/topics/${topicId}`}
-            className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium mb-4"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to {mediaData.topicName}
-          </Link>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{mediaData.topicName} Media</h1>
-              <p className="text-gray-600">{mediaData.subjectName}</p>
-            </div>
-            <div className="text-right">
-              <div className="text-sm text-gray-600">Progress: {overallProgress.completed}/{overallProgress.total}</div>
-              <div className="text-lg font-semibold text-indigo-600">{overallProgress.points}/{overallProgress.maxPoints} XP</div>
+    <div className="min-h-screen">
+      {/* Modern Banner */}
+      <div className="relative h-80 overflow-hidden">
+        {mediaData.imageUrl ? (
+          <>
+            <div
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+              style={{ backgroundImage: `url(${mediaData.imageUrl})` }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-black/75 via-black/60 to-black/80" />
+          </>
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-red-600 via-orange-700 to-yellow-800" />
+        )}
+
+        <div className="relative h-full flex flex-col justify-center px-4">
+          <div className="max-w-6xl mx-auto w-full">
+            <Link
+              href={`/subjects/${subjectId}/topics/${topicId}`}
+              className="inline-flex items-center gap-2 text-white/90 hover:text-white font-medium text-sm mb-6 transition-all duration-300 bg-white/10 backdrop-blur-md rounded-xl px-4 py-2 border border-white/20 hover:bg-white/15 shadow-lg"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to {mediaData.topicName}
+            </Link>
+
+            {/* Two Column Layout */}
+            <div className="grid lg:grid-cols-3 gap-8 items-center">
+              {/* Left Column - Title */}
+              <div className="lg:col-span-2">
+                <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">{mediaData.topicName} Media</h1>
+                <p className="text-white/80 text-lg mb-4">{mediaData.subjectName}</p>
+
+                {/* Progress indicator */}
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-white/90 font-medium text-sm">Learning Progress</span>
+                    <span className="font-bold text-white">{overallProgress.completed}/{overallProgress.total}</span>
+                  </div>
+                  <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-orange-400 to-red-500 rounded-full transition-all duration-1000"
+                      style={{
+                        width: `${overallProgress.total > 0 ? (overallProgress.completed / overallProgress.total) * 100 : 0}%`
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column - Key Stats */}
+              <div className="space-y-3">
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20 text-center">
+                  <div className="flex items-center justify-center space-x-2 mb-1">
+                    <Trophy className="w-4 h-4 text-white" />
+                    <span className="text-white/70 font-medium text-xs">XP Earned</span>
+                  </div>
+                  <div className="text-xl font-bold text-white">{overallProgress.points}/{overallProgress.maxPoints}</div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20 text-center">
+                    <div className="flex items-center justify-center space-x-1 mb-1">
+                      <Video className="w-3 h-3 text-white" />
+                      <span className="text-white/70 font-medium text-xs">Videos</span>
+                    </div>
+                    <div className="text-sm font-bold text-white">{mediaData.videos.length}</div>
+                  </div>
+
+                  <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20 text-center">
+                    <div className="flex items-center justify-center space-x-1 mb-1">
+                      <Smartphone className="w-3 h-3 text-white" />
+                      <span className="text-white/70 font-medium text-xs">Shorts</span>
+                    </div>
+                    <div className="text-sm font-bold text-white">{mediaData.shorts.length}</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Progress Overview */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 mb-8"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Learning Progress</h2>
-            <div className="text-2xl font-bold text-indigo-600">{progressPercentage}%</div>
-          </div>
-          
-          <div className="w-full bg-gray-200 rounded-full h-3 mb-6">
-            <motion.div
-              className="bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-600 h-3 rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${progressPercentage}%` }}
-              transition={{ duration: 1 }}
-            />
-          </div>
+      {/* Content Area */}
+      <div className="bg-gradient-to-br from-gray-50 via-orange-50/30 to-red-50/30 min-h-screen">
+        <div className="max-w-6xl mx-auto px-4 py-8">
 
-          <div className="grid grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border border-blue-200">
-              <Video className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-blue-700">{mediaData.videos.length}</div>
-              <div className="text-sm text-blue-600">Long Videos</div>
-            </div>
-            <div className="text-center p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
-              <Smartphone className="w-8 h-8 text-purple-600 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-purple-700">{mediaData.shorts.length}</div>
-              <div className="text-sm text-purple-600">Shorts</div>
-            </div>
-            <div className="text-center p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
-              <Clock className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-yellow-700">{mediaData.estimatedTime}</div>
-              <div className="text-sm text-yellow-600">Minutes</div>
-            </div>
-            <div className="text-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-              <Trophy className="w-8 h-8 text-green-600 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-green-700">{overallProgress.points}</div>
-              <div className="text-sm text-green-600">XP Earned</div>
-            </div>
-          </div>
-        </motion.div>
 
         {/* Tab Navigation */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-2 mb-8">
@@ -832,7 +907,7 @@ export default function MediaPage() {
                     title: mediaData.videos[currentVideoIndex].title,
                     description: mediaData.videos[currentVideoIndex].description,
                     url: mediaData.videos[currentVideoIndex].url,
-                    duration: mediaData.videos[currentVideoIndex].duration,
+                    duration: mediaData.videos[currentVideoIndex].duration, // Actual duration from YouTube API
                     thumbnail: mediaData.videos[currentVideoIndex].thumbnail,
                     difficulty: mediaData.videos[currentVideoIndex].difficulty,
                     points: mediaData.videos[currentVideoIndex].points,
@@ -841,6 +916,8 @@ export default function MediaPage() {
                   onProgress={handleVideoProgress}
                   initialProgress={progress.videoProgress[mediaData.videos[currentVideoIndex].id]?.progress || 0}
                   isCompleted={progress.videoProgress[mediaData.videos[currentVideoIndex].id]?.completed || false}
+                  topicId={topicId}
+                  subjectId={subjectId}
                 />
 
                 {/* Post-Video Content */}
@@ -1378,7 +1455,56 @@ export default function MediaPage() {
           </motion.div>
         )}
 
-        {/* Completion Summary */}
+        {/* Video Series Completion */}
+        {activeTab === 'videos' && mediaData.videos.length > 0 &&
+         mediaData.videos.every(video => progress.videoProgress[video.id]?.completed) && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mt-8 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border border-blue-200 p-6 text-center"
+            data-completion-section
+          >
+            <Trophy className="w-12 h-12 text-blue-500 mx-auto mb-4" />
+            <h3 className="text-2xl font-bold text-blue-800 mb-2">All Videos Completed! 🎉</h3>
+            <p className="text-blue-700 mb-4">
+              Amazing work! You've successfully completed all {mediaData.videos.length} learning videos for {mediaData.topicName}.
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-white rounded-lg p-3 border border-blue-200">
+                <div className="text-2xl font-bold text-blue-600">
+                  {mediaData.videos.reduce((sum, video) =>
+                    sum + (progress.videoProgress[video.id]?.points || 0), 0
+                  )}
+                </div>
+                <div className="text-sm text-blue-600">XP from Videos</div>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-blue-200">
+                <div className="text-2xl font-bold text-green-600">{mediaData.videos.length}</div>
+                <div className="text-sm text-green-600">Videos Mastered</div>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-blue-200">
+                <div className="text-2xl font-bold text-purple-600">
+                  {Math.round(mediaData.videos.reduce((sum, video) => sum + video.duration, 0) / 60)}
+                </div>
+                <div className="text-sm text-purple-600">Minutes of Content</div>
+              </div>
+            </div>
+            {mediaData.shorts.length > 0 && (
+              <div className="bg-white/50 rounded-lg p-4 border border-blue-100">
+                <p className="text-blue-700 font-medium mb-2">Ready for more learning?</p>
+                <Button
+                  onClick={() => setActiveTab('shorts')}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  <Smartphone className="w-4 h-4 mr-2" />
+                  Explore Learning Shorts ({mediaData.shorts.length})
+                </Button>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* Overall Completion Summary */}
         {progressPercentage === 100 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -1386,9 +1512,9 @@ export default function MediaPage() {
             className="mt-8 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200 p-6 text-center"
           >
             <Trophy className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold text-green-800 mb-2">Videos Completed!</h3>
+            <h3 className="text-2xl font-bold text-green-800 mb-2">All Media Completed!</h3>
             <p className="text-green-700 mb-4">
-              Congratulations! You've watched all YouTube videos for {mediaData.topicName}.
+              Congratulations! You've completed all media content for {mediaData.topicName}.
             </p>
             <div className="flex items-center justify-center gap-4 text-sm">
               <div className="flex items-center gap-1">
@@ -1402,6 +1528,7 @@ export default function MediaPage() {
             </div>
           </motion.div>
         )}
+        </div>
       </div>
     </div>
   );

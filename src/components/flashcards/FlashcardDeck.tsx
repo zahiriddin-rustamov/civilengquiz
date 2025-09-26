@@ -34,12 +34,22 @@ export function FlashcardDeck({
   const [studiedCards, setStudiedCards] = useState<Set<string>>(new Set());
   const [direction, setDirection] = useState(0);
 
-  // Update shuffled cards when flashcards prop changes
+  // Update shuffled cards when flashcards prop changes, but preserve position if only mastery changed
   useEffect(() => {
-    setShuffledCards(flashcards);
-    setCurrentIndex(0);
-    setStudiedCards(new Set());
-  }, [flashcards]);
+    // Check if this is just a mastery level update vs a complete card set change
+    const isMasteryUpdate = shuffledCards.length === flashcards.length &&
+                           shuffledCards.every(card => flashcards.find(fc => fc.id === card.id));
+
+    if (isMasteryUpdate) {
+      // Just update the card data without resetting position
+      setShuffledCards(flashcards);
+    } else {
+      // Complete reset for new card set
+      setShuffledCards(flashcards);
+      setCurrentIndex(0);
+      setStudiedCards(new Set());
+    }
+  }, [flashcards, shuffledCards]);
 
   const currentCard = shuffledCards[currentIndex];
   const progress = ((currentIndex + 1) / shuffledCards.length) * 100;

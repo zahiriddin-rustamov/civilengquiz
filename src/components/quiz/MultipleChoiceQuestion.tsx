@@ -21,15 +21,25 @@ interface MultipleChoiceQuestionProps {
   isCorrect?: boolean;
 }
 
-export function MultipleChoiceQuestion({ 
-  question, 
-  onAnswer, 
-  showResult = false, 
+export function MultipleChoiceQuestion({
+  question,
+  onAnswer,
+  showResult = false,
   selectedAnswer,
-  isCorrect 
+  isCorrect
 }: MultipleChoiceQuestionProps) {
   const [selected, setSelected] = useState<number | null>(selectedAnswer ?? null);
   const [hasAnswered, setHasAnswered] = useState(showResult);
+
+  // Randomize options while preserving correct answer mapping
+  const [shuffledOptions] = useState(() => {
+    const optionsWithIndex = question.options.map((option, index) => ({ option, originalIndex: index }));
+    const shuffled = optionsWithIndex.sort(() => Math.random() - 0.5);
+    return shuffled;
+  });
+
+  // Find new correct answer index after shuffling
+  const newCorrectAnswer = shuffledOptions.findIndex(item => item.originalIndex === question.correctAnswer);
 
   const handleOptionSelect = (optionIndex: number) => {
     if (hasAnswered) return;
@@ -38,10 +48,11 @@ export function MultipleChoiceQuestion({
 
   const handleSubmit = () => {
     if (selected === null || hasAnswered) return;
-    
-    const correct = selected === question.correctAnswer;
+
+    const correct = selected === newCorrectAnswer;
+    const originalAnswerIndex = shuffledOptions[selected].originalIndex;
     setHasAnswered(true);
-    onAnswer(question.id, selected, correct, correct ? question.points : 0);
+    onAnswer(question.id, originalAnswerIndex, correct, correct ? question.points : 0);
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -55,17 +66,17 @@ export function MultipleChoiceQuestion({
 
   const getOptionStyle = (optionIndex: number) => {
     if (!hasAnswered) {
-      return selected === optionIndex 
+      return selected === optionIndex
         ? 'border-indigo-400 bg-gradient-to-r from-indigo-50 to-purple-50 shadow-lg'
         : 'border-gray-200 hover:border-indigo-300 hover:shadow-md';
     }
 
     // Show results
-    if (optionIndex === question.correctAnswer) {
+    if (optionIndex === newCorrectAnswer) {
       return 'border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 shadow-lg';
     }
-    
-    if (selected === optionIndex && selected !== question.correctAnswer) {
+
+    if (selected === optionIndex && selected !== newCorrectAnswer) {
       return 'border-red-400 bg-gradient-to-r from-red-50 to-pink-50 shadow-lg';
     }
 
@@ -74,16 +85,16 @@ export function MultipleChoiceQuestion({
 
   const getOptionIcon = (optionIndex: number) => {
     if (!hasAnswered) {
-      return selected === optionIndex ? 
-        <CheckCircle className="w-5 h-5 text-indigo-600" /> : 
+      return selected === optionIndex ?
+        <CheckCircle className="w-5 h-5 text-indigo-600" /> :
         <Circle className="w-5 h-5 text-gray-400" />;
     }
 
-    if (optionIndex === question.correctAnswer) {
+    if (optionIndex === newCorrectAnswer) {
       return <CheckCircle className="w-5 h-5 text-green-600" />;
     }
-    
-    if (selected === optionIndex && selected !== question.correctAnswer) {
+
+    if (selected === optionIndex && selected !== newCorrectAnswer) {
       return <AlertCircle className="w-5 h-5 text-red-600" />;
     }
 
@@ -115,7 +126,7 @@ export function MultipleChoiceQuestion({
 
       {/* Options */}
       <div className="space-y-3 mb-6">
-        {question.options.map((option, index) => (
+        {shuffledOptions.map((item, index) => (
           <motion.button
             key={index}
             whileHover={!hasAnswered ? { scale: 1.02 } : {}}
@@ -125,7 +136,7 @@ export function MultipleChoiceQuestion({
             disabled={hasAnswered}
           >
             {getOptionIcon(index)}
-            <span className="text-gray-800 font-medium">{option}</span>
+            <span className="text-gray-800 font-medium">{item.option}</span>
           </motion.button>
         ))}
       </div>

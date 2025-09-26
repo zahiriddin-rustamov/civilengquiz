@@ -247,29 +247,13 @@ export default function TopicOverviewPage() {
                                topicData.completedContent.media;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
-      <div className="container mx-auto px-4 py-8">
-        {/* Back Button */}
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="mb-6"
-        >
-          <Button variant="ghost" asChild className="text-gray-600 hover:text-gray-800">
-            <Link href={`/subjects/${subjectId}`} className="flex items-center space-x-2">
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to {topicData.subjectName}</span>
-            </Link>
-          </Button>
-        </motion.div>
-
-        {/* Topic Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-3xl shadow-2xl mb-8"
-          style={{ minHeight: '350px' }}
-        >
+    <div className="min-h-screen">
+      {/* Full-width Modern Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative h-80 overflow-hidden"
+      >
           {/* Background Image or Gradient */}
           {topicData.imageUrl ? (
             <>
@@ -296,91 +280,84 @@ export default function TopicOverviewPage() {
             <div className="absolute inset-0 bg-black/30" />
           )}
 
-          <div className="relative z-10 p-8 h-full flex flex-col justify-between text-white">
-            <div className="flex items-start justify-between mb-6">
-              <div className="flex-1">
-                <div className="flex items-center space-x-4 mb-4">
-                  <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold border ${getDifficultyColor(topicData.difficulty)}`}>
+        <div className="relative h-full flex flex-col justify-center px-4">
+          <div className="max-w-6xl mx-auto w-full">
+            <Link
+              href={`/subjects/${subjectId}`}
+              className="inline-flex items-center gap-2 text-white/90 hover:text-white font-medium text-sm mb-4 transition-all duration-300 bg-white/10 backdrop-blur-md rounded-xl px-4 py-2 border border-white/20 hover:bg-white/15 shadow-lg"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to {topicData.subjectName}
+            </Link>
+
+            {/* Main Content - Two Column Layout */}
+            <div className="grid lg:grid-cols-3 gap-8 items-center">
+              {/* Left Column - Title and Description */}
+              <div className="lg:col-span-2">
+                <div className="flex items-center space-x-3 mb-3">
+                  <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${getDifficultyColor(topicData.difficulty)}`}>
                     {topicData.difficulty}
                   </div>
                   {topicData.streakDays > 0 && (
-                    <div className="flex items-center space-x-1 bg-orange-500/20 px-3 py-1.5 rounded-full backdrop-blur-sm border border-orange-300/20">
-                      <Flame className="w-4 h-4 text-orange-300" />
-                      <span className="text-sm font-medium">{topicData.streakDays} day streak</span>
+                    <div className="flex items-center space-x-1 bg-orange-500/20 px-2 py-1 rounded-full backdrop-blur-sm border border-orange-300/20">
+                      <Flame className="w-3 h-3 text-orange-300" />
+                      <span className="text-xs font-medium">{topicData.streakDays} day streak</span>
                     </div>
                   )}
                 </div>
-                <h1 className="text-4xl font-bold mb-4 drop-shadow-lg">{topicData.name}</h1>
-                <p className="text-white/90 text-lg mb-4 leading-relaxed drop-shadow-sm">{topicData.description}</p>
-                {topicData.longDescription && (
-                  <p className="text-white/80 text-sm leading-relaxed drop-shadow-sm" style={{
-                    display: '-webkit-box',
-                    WebkitLineClamp: 3,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
-                  }}>
-                    {topicData.longDescription}
-                  </p>
-                )}
-              </div>
-            </div>
 
-            {/* Progress Section */}
-            <div className="space-y-6">
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-white/90 font-semibold">Overall Progress</span>
-                  <span className="font-bold text-xl">{topicData.progress}%</span>
-                </div>
-                <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${topicData.progress}%` }}
-                    transition={{ duration: 1.5, ease: "easeOut", delay: 0.3 }}
-                    className={`h-full bg-gradient-to-r ${getProgressColor(topicData.progress)} rounded-full shadow-sm`}
-                  />
+                <h1 className="text-3xl md:text-4xl font-bold mb-3 text-white">{topicData.name}</h1>
+                <p className="text-white/80 text-base leading-relaxed mb-2">{topicData.description}</p>
+
+                {/* Progress Bar - Inline */}
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-white/90 font-medium text-sm">Progress</span>
+                    <span className="font-bold text-white">{topicData.progress}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${topicData.progress}%` }}
+                      transition={{ duration: 1.5, ease: "easeOut", delay: 0.3 }}
+                      className={`h-full bg-gradient-to-r ${getProgressColor(topicData.progress)} rounded-full shadow-sm`}
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Target className="w-5 h-5" />
-                    <span className="text-white/90 font-medium">Completed</span>
+              {/* Right Column - Compact Stats */}
+              <div className="space-y-3">
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20 text-center">
+                  <div className="flex items-center justify-center space-x-2 mb-1">
+                    <Target className="w-4 h-4 text-white" />
+                    <span className="text-white/70 font-medium text-xs">Completed</span>
                   </div>
-                  <div className="text-2xl font-bold">{completedContentItems}/{totalContentItems}</div>
+                  <div className="text-xl font-bold text-white">{completedContentItems}/{totalContentItems}</div>
                 </div>
 
-                <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Zap className="w-5 h-5" />
-                    <span className="text-white/90 font-medium">XP Reward</span>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20 text-center">
+                    <Zap className="w-4 h-4 text-white mx-auto mb-1" />
+                    <div className="text-lg font-bold text-white">{topicData.xpReward}</div>
+                    <div className="text-white/70 text-xs">XP</div>
                   </div>
-                  <div className="text-2xl font-bold">{topicData.xpReward}</div>
-                </div>
 
-                <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Clock className="w-5 h-5" />
-                    <span className="text-white/90 font-medium">Est. Time</span>
-                  </div>
-                  <div className="text-2xl font-bold">{topicData.estimatedMinutes}min</div>
-                </div>
-
-                <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Award className="w-5 h-5" />
-                    <span className="text-white/90 font-medium">Achievements</span>
-                  </div>
-                  <div className="text-2xl font-bold">
-                    {topicData.achievements.filter(a => a.unlocked).length}/{topicData.achievements.length}
+                  <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20 text-center">
+                    <Clock className="w-4 h-4 text-white mx-auto mb-1" />
+                    <div className="text-lg font-bold text-white">{topicData.estimatedMinutes}m</div>
+                    <div className="text-white/70 text-xs">Time</div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
+      </motion.div>
+
+      {/* Content Area */}
+      <div className="bg-gradient-to-br from-gray-50 via-indigo-50/30 to-purple-50/30 min-h-screen">
+        <div className="max-w-6xl mx-auto px-4 py-8">
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Content Types Section */}
@@ -396,7 +373,7 @@ export default function TopicOverviewPage() {
               >
                 <ContentTypeCard
                   type="questions"
-                  title="Interactive Questions"
+                  title="Questions"
                   description="Test your knowledge with quizzes and practice problems"
                   icon={<FileText className="w-8 h-8" />}
                   color="from-blue-400 to-blue-500"
@@ -419,7 +396,7 @@ export default function TopicOverviewPage() {
               >
                 <ContentTypeCard
                   type="flashcards"
-                  title="Study Flashcards"
+                  title="Flashcards"
                   description="Memorize key concepts with spaced repetition"
                   icon={<BookOpen className="w-8 h-8" />}
                   color="from-emerald-400 to-emerald-500"
@@ -442,7 +419,7 @@ export default function TopicOverviewPage() {
               >
                 <ContentTypeCard
                   type="media"
-                  title="Learning Media"
+                  title="Media"
                   description="Watch videos and explore interactive content"
                   icon={<Play className="w-8 h-8" />}
                   color="from-indigo-400 to-indigo-500"
@@ -526,6 +503,7 @@ export default function TopicOverviewPage() {
               </div>
             </motion.div>
           </div>
+        </div>
         </div>
       </div>
     </div>

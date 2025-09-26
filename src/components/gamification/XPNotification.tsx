@@ -50,7 +50,7 @@ export function XPNotification({
       content: achievement.name,
       description: achievement.description,
       icon: <span className="text-2xl">{achievement.icon}</span>,
-      color: getRarityColor(achievement.rarity)
+      color: getRarityColor(achievement.rarity) || 'from-gray-400 to-gray-500'
     });
   });
 
@@ -122,7 +122,9 @@ export function XPNotification({
   );
 }
 
-function getRarityColor(rarity: Achievement['rarity']): string {
+function getRarityColor(rarity: Achievement['rarity'] | undefined): string {
+  if (!rarity) return 'from-gray-400 to-gray-500';
+
   switch (rarity) {
     case 'common':
       return 'from-gray-500 to-gray-600';

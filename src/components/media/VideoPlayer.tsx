@@ -24,7 +24,7 @@ interface VideoPlayerProps {
     title: string;
     description: string;
     url: string;
-    duration: number; // in seconds
+    duration?: number; // actual duration from database in seconds
     thumbnail?: string;
     difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
     points: number;
@@ -33,13 +33,17 @@ interface VideoPlayerProps {
   onProgress: (videoId: string, progress: number, completed: boolean, points: number) => void;
   initialProgress?: number;
   isCompleted?: boolean;
+  topicId: string;
+  subjectId: string;
 }
 
-export function VideoPlayer({ 
-  video, 
-  onProgress, 
+export function VideoPlayer({
+  video,
+  onProgress,
   initialProgress = 0,
-  isCompleted = false 
+  isCompleted = false,
+  topicId,
+  subjectId
 }: VideoPlayerProps) {
   const [playing, setPlaying] = useState(false);
   const [played, setPlayed] = useState(initialProgress);
@@ -50,19 +54,25 @@ export function VideoPlayer({
   const [showControls, setShowControls] = useState(true);
   const [hasStarted, setHasStarted] = useState(initialProgress > 0);
   const [watchTime, setWatchTime] = useState(0);
+  const [totalWatchTime, setTotalWatchTime] = useState(0);
   
   const playerRef = useRef<ReactPlayer>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (playing) {
+    if (playing && duration > 0) {
       interval = setInterval(() => {
-        setWatchTime(prev => prev + 1);
+        // Only increment if we haven't reached the end of the video
+        const currentTime = played * duration;
+        if (currentTime < duration - 1) { // Stop 1 second before end to account for timing
+          setWatchTime(prev => prev + 1);
+          setTotalWatchTime(prev => prev + 1);
+        }
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [playing]);
+  }, [playing, duration, played]);
 
   const handlePlay = () => {
     setPlaying(true);
@@ -80,15 +90,66 @@ export function VideoPlayer({
     }
   };
 
-  const handleProgress = (state: { played: number; playedSeconds: number }) => {
+  const handleEnded = () => {
+    setPlaying(false);
+    setShowControls(true);
+    // Video ended - no need to continue watch time tracking
+  };
+
+  const handleProgress = async (state: { played: number; playedSeconds: number }) => {
     setPlayed(state.played);
-    
-    // Mark as completed if watched 90% or more
-    const completed = state.played >= 0.9;
-    if (completed && !isCompleted) {
-      onProgress(video.id, state.played, true, video.points);
-    } else if (hasStarted) {
-      onProgress(video.id, state.played, false, 0);
+
+    // Mark as completed if watched 90% or more AND watched enough actual time
+    // Require 60% of video duration to be actually watched to prevent skipping
+    // Use video.duration from database if available, fallback to ReactPlayer duration
+    const videoDuration = video.duration || duration;
+    const minWatchTimeRequired = videoDuration * 0.6; // 60% of actual video duration
+    const hasWatchedEnough = totalWatchTime >= minWatchTimeRequired;
+    const completed = state.played >= 0.9 && hasWatchedEnough;
+
+    if ((completed && !isCompleted) || (hasStarted && state.played > initialProgress + 0.1)) {
+      try {
+        // Update progress via API
+        const response = await fetch('/api/user/progress/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contentId: video.id,
+            contentType: 'media',
+            topicId: topicId,
+            subjectId: subjectId,
+            completed: completed,
+            score: state.played, // Progress as score (0-1)
+            timeSpent: watchTime,
+            data: {
+              progressPercentage: Math.round(state.played * 100),
+              watchTime: totalWatchTime,
+              actualWatchTime: totalWatchTime,
+              difficulty: video.difficulty,
+              videoType: 'long-form',
+              minWatchTimeRequired: duration * 0.6,
+              hasWatchedEnough: hasWatchedEnough
+            }
+          }),
+        });
+
+        const result = await response.json();
+
+        // Call the parent's onProgress with API result
+        if (result.success) {
+          const xpEarned = result.xpEarned || 0;
+          onProgress(video.id, state.played, completed, xpEarned);
+        } else {
+          // Fallback to local tracking if API fails
+          onProgress(video.id, state.played, completed, completed ? video.points : 0);
+        }
+      } catch (error) {
+        console.error('Error updating video progress:', error);
+        // Fallback to local tracking
+        onProgress(video.id, state.played, completed, completed ? video.points : 0);
+      }
     }
   };
 
@@ -227,6 +288,7 @@ export function VideoPlayer({
           onPause={handlePause}
           onProgress={handleProgress}
           onDuration={setDuration}
+          onEnded={handleEnded}
           controls={false}
           config={{
             youtube: {
@@ -374,8 +436,15 @@ export function VideoPlayer({
             <div className="text-sm text-gray-600">Progress</div>
           </div>
           <div className="p-3 bg-white rounded-lg border border-gray-200">
-            <div className="text-2xl font-bold text-green-600">{formatTime(watchTime)}</div>
-            <div className="text-sm text-gray-600">Watch Time</div>
+            <div className="text-2xl font-bold text-green-600">{formatTime(totalWatchTime)}</div>
+            <div className="text-sm text-gray-600">
+              Watch Time
+              {(video.duration || duration) > 0 && !isCompleted && (
+                <div className="text-xs text-gray-500 mt-1">
+                  Need: {formatTime((video.duration || duration) * 0.6)}
+                </div>
+              )}
+            </div>
           </div>
           <div className="p-3 bg-white rounded-lg border border-gray-200">
             <div className="text-2xl font-bold text-purple-600">

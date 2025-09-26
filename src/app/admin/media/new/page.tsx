@@ -21,6 +21,7 @@ interface MediaData {
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   xpReward: number;
   estimatedMinutes: number;
+  actualDuration?: number; // in seconds
   order: number;
   youtubeUrl: string;
   videoType: 'video' | 'short';
@@ -67,6 +68,14 @@ export default function NewMediaPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [youtubePreview, setYoutubePreview] = useState<{id: string; thumbnail: string} | null>(null);
+  const [youtubeMetadata, setYoutubeMetadata] = useState<{
+    duration: number;
+    title: string;
+    description: string;
+    channelTitle: string;
+    estimatedMinutes: number;
+  } | null>(null);
+  const [fetchingMetadata, setFetchingMetadata] = useState(false);
 
   const [formData, setFormData] = useState<MediaData>({
     topicId: '',
@@ -110,7 +119,7 @@ export default function NewMediaPage() {
   }, [formData.topicId]);
 
   useEffect(() => {
-    // Extract YouTube ID and generate preview
+    // Extract YouTube ID and fetch metadata
     if (formData.youtubeUrl) {
       const youtubeId = extractYouTubeId(formData.youtubeUrl);
       if (youtubeId) {
@@ -118,11 +127,20 @@ export default function NewMediaPage() {
           id: youtubeId,
           thumbnail: `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`
         });
+
+        // Fetch metadata with debounce
+        const timeoutId = setTimeout(() => {
+          fetchYouTubeMetadata(formData.youtubeUrl);
+        }, 1000);
+
+        return () => clearTimeout(timeoutId);
       } else {
         setYoutubePreview(null);
+        setYoutubeMetadata(null);
       }
     } else {
       setYoutubePreview(null);
+      setYoutubeMetadata(null);
     }
   }, [formData.youtubeUrl]);
 
@@ -140,6 +158,48 @@ export default function NewMediaPage() {
       }
     }
     return null;
+  };
+
+  const fetchYouTubeMetadata = async (youtubeUrl: string) => {
+    try {
+      setFetchingMetadata(true);
+      setError(null);
+
+      const response = await fetch(`/api/admin/youtube/metadata?url=${encodeURIComponent(youtubeUrl)}`);
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch video metadata');
+      }
+
+      const { data } = result;
+      const estimatedMinutes = Math.max(1, Math.ceil(data.duration / 60 * 1.2)); // Add 20% buffer
+
+      setYoutubeMetadata({
+        duration: data.duration,
+        title: data.title,
+        description: data.description,
+        channelTitle: data.channelTitle,
+        estimatedMinutes
+      });
+
+      // Auto-fill form fields if they're empty
+      setFormData(prev => ({
+        ...prev,
+        title: prev.title || data.title,
+        description: prev.description || data.description.slice(0, 500) + (data.description.length > 500 ? '...' : ''),
+        estimatedMinutes: prev.estimatedMinutes === 5 ? estimatedMinutes : prev.estimatedMinutes, // Only auto-fill if default
+        actualDuration: data.duration, // Always store actual duration
+        // Adjust XP based on video length
+        xpReward: prev.xpReward === 50 ? Math.min(100, Math.max(25, Math.floor(data.duration / 60) * 10)) : prev.xpReward
+      }));
+
+    } catch (err) {
+      console.error('Error fetching YouTube metadata:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch video metadata');
+    } finally {
+      setFetchingMetadata(false);
+    }
   };
 
   const fetchSubjects = async () => {
@@ -536,7 +596,64 @@ export default function NewMediaPage() {
                 placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
                 required
               />
-              {youtubePreview && (
+
+              {fetchingMetadata && (
+                <div className="mt-2 p-3 border rounded-lg bg-blue-50 border-blue-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
+                    <p className="text-sm text-blue-700">Fetching video metadata...</p>
+                  </div>
+                </div>
+              )}
+
+              {youtubePreview && youtubeMetadata && !fetchingMetadata && (
+                <div className="mt-2 p-4 border rounded-lg bg-green-50 border-green-200">
+                  <div className="flex items-start space-x-3">
+                    <Youtube className="w-5 h-5 text-red-500 mt-1" />
+                    <div className="flex-1 space-y-2">
+                      <div>
+                        <p className="text-sm font-medium text-green-800">✅ Video Metadata Retrieved</p>
+                        <p className="text-xs text-green-600">ID: {youtubePreview.id}</p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <span className="font-medium text-gray-700">Duration:</span>
+                          <span className="ml-1 text-gray-600">
+                            {Math.floor(youtubeMetadata.duration / 60)}:{(youtubeMetadata.duration % 60).toString().padStart(2, '0')}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700">Channel:</span>
+                          <span className="ml-1 text-gray-600">{youtubeMetadata.channelTitle}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700">Est. Learning:</span>
+                          <span className="ml-1 text-gray-600">{youtubeMetadata.estimatedMinutes} min</span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700">Auto-filled:</span>
+                          <span className="ml-1 text-green-600">Title, Description, Duration</span>
+                        </div>
+                      </div>
+
+                      {formData.title === youtubeMetadata.title && (
+                        <div className="text-xs text-green-600 bg-green-100 rounded px-2 py-1">
+                          💡 Title auto-filled from YouTube
+                        </div>
+                      )}
+                    </div>
+                    <img
+                      src={youtubePreview.thumbnail}
+                      alt="Video thumbnail"
+                      className="w-20 h-15 object-cover rounded flex-shrink-0"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {youtubePreview && !youtubeMetadata && !fetchingMetadata && (
                 <div className="mt-2 p-3 border rounded-lg bg-gray-50">
                   <div className="flex items-center space-x-3">
                     <Youtube className="w-5 h-5 text-red-500" />

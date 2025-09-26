@@ -74,6 +74,18 @@ export async function POST(request: NextRequest) {
     // Connect to database
     await connectToDatabase();
 
+    // Check existing progress to determine if this is a first-time correct completion
+    let existingProgress = await UserProgress.findOne({
+      userId,
+      contentId: body.contentId,
+      contentType: body.contentType
+    });
+
+    const wasAlreadyCompletedCorrectly = existingProgress &&
+      existingProgress.completed &&
+      existingProgress.score &&
+      existingProgress.score > 0;
+
     // Update user progress
     let progress;
     try {
@@ -115,9 +127,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate and award XP if content was completed
+    // Calculate and award XP only if content was completed correctly for the first time
     let xpResult = null;
-    if (body.completed) {
+    const isFirstTimeCorrectCompletion = body.completed &&
+      body.score &&
+      body.score > 0 &&
+      !wasAlreadyCompletedCorrectly;
+
+    if (isFirstTimeCorrectCompletion) {
       const xpEarned = XPService.calculateContentXP(
         body.contentType,
         body.score,
@@ -130,8 +147,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Calculate actual XP earned for display
-    const actualXPEarned = body.completed ? XPService.calculateContentXP(
+    // Calculate actual XP earned for display (only for first-time correct completions)
+    const actualXPEarned = isFirstTimeCorrectCompletion ? XPService.calculateContentXP(
       body.contentType,
       body.score,
       body.data?.difficulty,

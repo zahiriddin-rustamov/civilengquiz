@@ -228,29 +228,13 @@ export default function SubjectPage() {
   const totalTime = topics.reduce((sum, t) => sum + (t.estimatedMinutes || 0), 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
-      <div className="container mx-auto px-4 py-8">
-        {/* Back Button */}
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="mb-6"
-        >
-          <Button variant="ghost" asChild className="text-gray-600 hover:text-gray-800">
-            <Link href="/subjects" className="flex items-center space-x-2">
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Study Worlds</span>
-            </Link>
-          </Button>
-        </motion.div>
-
-        {/* Subject Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-3xl shadow-2xl mb-8"
-          style={{ minHeight: '300px' }}
-        >
+    <div className="min-h-screen">
+      {/* Full-width Modern Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative h-80 overflow-hidden"
+      >
           {/* Background Image or Gradient */}
           {subjectInfo.imageUrl ? (
             <>
@@ -272,55 +256,69 @@ export default function SubjectPage() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1)_0%,transparent_50%)] opacity-60" />
           <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.1)_0%,transparent_50%)] opacity-40" />
 
-          <div className="relative z-10 p-8 h-full flex flex-col justify-between text-white">
+        <div className="relative h-full flex flex-col justify-center px-4">
+          <div className="max-w-6xl mx-auto w-full">
+            <Link
+              href="/subjects"
+              className="inline-flex items-center gap-2 text-white/90 hover:text-white font-medium text-sm mb-6 transition-all duration-300 bg-white/10 backdrop-blur-md rounded-xl px-4 py-2 border border-white/20 hover:bg-white/15 shadow-lg"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Study Worlds
+            </Link>
+
             <div className="flex items-center space-x-6 mb-6">
               <div className="flex-shrink-0 w-20 h-20 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center border border-white/20 shadow-lg">
                 {getSubjectIcon(subjectInfo.name)}
               </div>
               <div className="flex-1">
-                <h1 className="text-4xl font-bold mb-3 drop-shadow-lg">{subjectInfo.name}</h1>
-                <p className="text-white/90 text-lg leading-relaxed drop-shadow-sm">{subjectInfo.description}</p>
+                <h1 className="text-4xl md:text-5xl font-bold mb-3 text-white">{subjectInfo.name}</h1>
+                <p className="text-white/80 text-lg leading-relaxed">{subjectInfo.description}</p>
               </div>
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
                 <div className="flex items-center space-x-2 mb-2">
-                  <Target className="w-5 h-5" />
-                  <span className="text-white/90 font-medium">Progress</span>
+                  <Target className="w-5 h-5 text-white" />
+                  <span className="text-white/70 font-medium text-sm">Progress</span>
                 </div>
-                <div className="text-2xl font-bold">{completedTopics}/{topics.length}</div>
+                <div className="text-2xl font-bold text-white">{completedTopics}/{topics.length}</div>
               </div>
 
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
                 <div className="flex items-center space-x-2 mb-2">
-                  <Zap className="w-5 h-5" />
-                  <span className="text-white/90 font-medium">Total XP</span>
+                  <Zap className="w-5 h-5 text-white" />
+                  <span className="text-white/70 font-medium text-sm">Total XP</span>
                 </div>
-                <div className="text-2xl font-bold">{totalXP}</div>
+                <div className="text-2xl font-bold text-white">{totalXP}</div>
               </div>
 
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
                 <div className="flex items-center space-x-2 mb-2">
-                  <Clock className="w-5 h-5" />
-                  <span className="text-white/90 font-medium">Est. Time</span>
+                  <Clock className="w-5 h-5 text-white" />
+                  <span className="text-white/70 font-medium text-sm">Est. Time</span>
                 </div>
-                <div className="text-2xl font-bold">{totalTime}min</div>
+                <div className="text-2xl font-bold text-white">{totalTime}min</div>
               </div>
 
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-lg">
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
                 <div className="flex items-center space-x-2 mb-2">
-                  <Award className="w-5 h-5" />
-                  <span className="text-white/90 font-medium">Mastery</span>
+                  <Award className="w-5 h-5 text-white" />
+                  <span className="text-white/70 font-medium text-sm">Mastery</span>
                 </div>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold text-white">
                   {topics.length > 0 ? Math.round((completedTopics / topics.length) * 100) : 0}%
                 </div>
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
+      </motion.div>
+
+      {/* Content Area */}
+      <div className="bg-gradient-to-br from-gray-50 via-blue-50/30 to-cyan-50/30 min-h-screen">
+        <div className="max-w-6xl mx-auto px-4 py-8">
 
         {/* Topics Section */}
         <div className="mb-8">
@@ -357,6 +355,7 @@ export default function SubjectPage() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
@@ -531,4 +530,4 @@ function TopicCard({ topic, subjectId }: {
       </div>
     </Link>
   );
-} 
+}

@@ -97,6 +97,7 @@ export async function POST(req: Request) {
       difficulty,
       xpReward,
       estimatedMinutes,
+      actualDuration,
       order,
       youtubeUrl,
       videoType,
@@ -130,6 +131,7 @@ export async function POST(req: Request) {
       difficulty,
       xpReward,
       estimatedMinutes,
+      duration: actualDuration || null, // Store actual duration in seconds (matches schema)
       order,
       youtubeUrl: youtubeUrl.trim(),
       youtubeId,

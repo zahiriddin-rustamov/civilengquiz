@@ -15,10 +15,8 @@ import {
   Trophy,
   Star,
   Target,
-  Users,
   BookOpen,
-  ArrowRight
-} from 'lucide-react';
+  FileText} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +42,7 @@ interface Section {
 interface TopicData {
   topicName: string;
   subjectName: string;
+  imageUrl?: string;
   sections: Section[];
   totalXP: number;
   estimatedTime: number;
@@ -269,29 +268,87 @@ export default function SectionsPage() {
   const visibleSections = getVisibleSections();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <Link
-            href={`/subjects/${subjectId}/topics/${topicId}`}
-            className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium mb-4"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to {topicData.topicName}
-          </Link>
+    <div className="min-h-screen">
+      {/* Modern Banner */}
+      <div className="relative h-80 overflow-hidden">
+        {topicData.imageUrl ? (
+          <>
+            <div
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+              style={{ backgroundImage: `url(${topicData.imageUrl})` }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-black/75 via-black/60 to-black/80" />
+          </>
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-700 to-indigo-800" />
+        )}
 
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Question Sections</h1>
-              <p className="text-gray-600">{topicData.subjectName} → {topicData.topicName}</p>
-            </div>
-            <div className="text-right">
-              <div className="text-sm text-gray-600">Total Available</div>
-              <div className="text-lg font-semibold text-indigo-600">{topicData.totalXP} XP</div>
+        <div className="relative h-full flex flex-col justify-center px-4">
+          <div className="max-w-6xl mx-auto w-full">
+            <Link
+              href={`/subjects/${subjectId}/topics/${topicId}`}
+              className="inline-flex items-center gap-2 text-white/90 hover:text-white font-medium text-sm mb-6 transition-all duration-300 bg-white/10 backdrop-blur-md rounded-xl px-4 py-2 border border-white/20 hover:bg-white/15 shadow-lg"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to {topicData.topicName}
+            </Link>
+
+            {/* Two Column Layout */}
+            <div className="grid lg:grid-cols-3 gap-8 items-center">
+              {/* Left Column - Title */}
+              <div className="lg:col-span-2">
+                <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">Question Sections</h1>
+                <p className="text-white/80 text-lg mb-4">{topicData.subjectName} → {topicData.topicName}</p>
+
+                {/* Progress indicator */}
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-white/90 font-medium text-sm">Sections Progress</span>
+                    <span className="font-bold text-white">{sectionProgress.filter(p => p.completed).length}/{visibleSections.length}</span>
+                  </div>
+                  <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-blue-400 to-cyan-500 rounded-full transition-all duration-1000"
+                      style={{
+                        width: `${visibleSections.length > 0 ? (sectionProgress.filter(p => p.completed).length / visibleSections.length) * 100 : 0}%`
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column - Key Stats */}
+              <div className="space-y-3">
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20 text-center">
+                  <div className="flex items-center justify-center space-x-2 mb-1">
+                    <Zap className="w-4 h-4 text-white" />
+                    <span className="text-white/70 font-medium text-xs">Available XP</span>
+                  </div>
+                  <div className="text-xl font-bold text-white">{topicData.totalXP}</div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20 text-center">
+                    <Trophy className="w-4 h-4 text-white mx-auto mb-1" />
+                    <div className="text-lg font-bold text-white">{sectionProgress.filter(p => p.completed).length}</div>
+                    <div className="text-white/70 text-xs">Done</div>
+                  </div>
+
+                  <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20 text-center">
+                    <Target className="w-4 h-4 text-white mx-auto mb-1" />
+                    <div className="text-lg font-bold text-white">{visibleSections.length}</div>
+                    <div className="text-white/70 text-xs">Total</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Content Area */}
+      <div className="bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 min-h-screen">
+        <div className="max-w-6xl mx-auto px-4 py-8">
 
         {/* Sections Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -412,48 +469,7 @@ export default function SectionsPage() {
           })}
         </div>
 
-        {/* Overall Progress Summary */}
-        <div className="mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-yellow-500" />
-                Overall Progress
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-indigo-600">
-                    {sectionProgress.filter(p => p.completed).length}
-                  </div>
-                  <div className="text-sm text-gray-600">Completed Sections</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {sectionProgress.reduce((sum, p) => sum + p.questionsAnswered, 0)}
-                  </div>
-                  <div className="text-sm text-gray-600">Questions Answered</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-yellow-600">
-                    {sectionProgress.reduce((sum, p) => sum + (p.score * p.questionsAnswered), 0)}
-                  </div>
-                  <div className="text-sm text-gray-600">Total XP Earned</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">
-                    {sectionProgress.length > 0
-                      ? Math.round(sectionProgress.reduce((sum, p) => sum + p.score, 0) / sectionProgress.length)
-                      : 0
-                    }%
-                  </div>
-                  <div className="text-sm text-gray-600">Average Score</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      </div>
       </div>
     </div>
   );
