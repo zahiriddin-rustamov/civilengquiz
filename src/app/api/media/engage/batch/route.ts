@@ -35,7 +35,14 @@ export async function POST(request: NextRequest) {
         isLiked: eng.isLiked,
         isSaved: eng.isSaved,
         incrementViewCount: eng.incrementViewCount,
-        addWatchTime: eng.addWatchTime
+        addWatchTime: eng.addWatchTime,
+        // Enhanced tracking data
+        actualWatchTime: eng.actualWatchTime,
+        engagementScore: eng.engagementScore,
+        isGenuineWatch: eng.isGenuineWatch,
+        visibility: eng.visibility,
+        seekEvents: eng.seekEvents,
+        pauseEvents: eng.pauseEvents
       }));
 
     if (validEngagements.length === 0) {

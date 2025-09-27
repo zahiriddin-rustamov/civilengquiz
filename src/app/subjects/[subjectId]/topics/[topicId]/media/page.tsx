@@ -28,6 +28,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { VideoPlayer } from '@/components/media/VideoPlayer';
 import { SurveyForm } from '@/components/surveys';
+import { useShortsWatchTime } from '@/lib/hooks/useShortsWatchTime';
 import ReactPlayer from 'react-player';
 
 // Video interface for long-form content
@@ -166,6 +167,13 @@ export default function MediaPage() {
   // Flag to prevent double-counting views from keyboard navigation
   const [isKeyboardNavigation, setIsKeyboardNavigation] = useState(false);
 
+  // Shorts watch time tracking
+  const shortsWatchTime = useShortsWatchTime();
+
+  // Development mode debugger
+  const [showDebugger, setShowDebugger] = useState(process.env.NODE_ENV === 'development');
+  const [currentDebugShort, setCurrentDebugShort] = useState<string | null>(null);
+
   const subjectId = params.subjectId as string;
   const topicId = params.topicId as string;
 
@@ -207,9 +215,7 @@ export default function MediaPage() {
             shortsWatchedToday: prev.shortsWatchedToday + 1
           }));
 
-          // Track view count for keyboard navigation
-          const estimatedWatchTime = Math.floor(Math.random() * 6) + 5; // 5-10 seconds
-          handleViewCountIncrement(short.id, estimatedWatchTime);
+          // No longer need estimated watch time - tracking is now automatic
 
           // Scroll to next video
           const container = document.querySelector('.snap-y');
@@ -228,10 +234,7 @@ export default function MediaPage() {
           setIsKeyboardNavigation(true);
           setCurrentShortIndex(prev => prev - 1);
 
-          // Track view count for keyboard navigation (going back)
-          const short = mediaData.shorts[currentShortIndex - 1];
-          const estimatedWatchTime = Math.floor(Math.random() * 6) + 5; // 5-10 seconds
-          handleViewCountIncrement(short.id, estimatedWatchTime);
+          // No longer need estimated watch time - tracking is now automatic
 
           // Scroll to previous video
           const container = document.querySelector('.snap-y');
@@ -378,30 +381,16 @@ export default function MediaPage() {
       }
     }));
 
-    // Auto-advance to next video or show completion when current video is completed
+    // Check for survey when all videos are completed (but don't auto-advance)
     if (completed && mediaData) {
       const currentVideo = mediaData.videos[currentVideoIndex];
-      if (currentVideo && currentVideo.id === videoId) {
-        // Small delay to let user see completion
+      if (currentVideo && currentVideo.id === videoId && currentVideoIndex === mediaData.videos.length - 1) {
+        // Only trigger survey check if this is the last video
         setTimeout(() => {
-          if (currentVideoIndex < mediaData.videos.length - 1) {
-            // Move to next video
-            setCurrentVideoIndex(prev => prev + 1);
-          } else {
-            // Last video completed - check if all media is completed and trigger survey
-            setTimeout(() => {
-              if (checkAllMediaCompleted()) {
-                checkForSurvey();
-              }
-            }, 500); // Small delay to let state update
-
-            // Scroll to completion section
-            const completionSection = document.querySelector('[data-completion-section]');
-            if (completionSection) {
-              completionSection.scrollIntoView({ behavior: 'smooth' });
-            }
+          if (checkAllMediaCompleted()) {
+            checkForSurvey();
           }
-        }, 2000);
+        }, 500); // Small delay to let state update
       }
     }
   };
@@ -537,11 +526,22 @@ export default function MediaPage() {
       [mediaId]: newLocal
     }));
 
-    // Queue the view update
+    // Get enhanced tracking data for shorts
+    const watchData = shortsWatchTime.getWatchTimeData(mediaId);
+    const engagementScore = shortsWatchTime.getEngagementScore(mediaId);
+    const isGenuine = shortsWatchTime.isGenuineWatch(mediaId, 30);
+
+    // Queue the view update with enhanced data
     setEngagementQueue(prev => [...prev, {
       mediaId,
       incrementViewCount: true,
       addWatchTime: watchTime,
+      actualWatchTime: watchData?.actualWatchTime || watchTime,
+      engagementScore: engagementScore,
+      isGenuineWatch: isGenuine,
+      visibility: watchData?.visibility || 100,
+      seekEvents: watchData?.seekEvents || 0,
+      pauseEvents: watchData?.pauseEvents || 0,
       timestamp: Date.now()
     }]);
 
@@ -1178,10 +1178,17 @@ export default function MediaPage() {
                     shortsWatchedToday: prev.shortsWatchedToday + 1
                   }));
 
-                  // Only track view count if not from keyboard navigation (to avoid double-counting)
+                  // Track actual watch time using the new system
                   if (!isKeyboardNavigation) {
-                    const estimatedWatchTime = Math.floor(Math.random() * 6) + 5; // 5-10 seconds
-                    handleViewCountIncrement(short.id, estimatedWatchTime);
+                    const watchData = shortsWatchTime.getWatchTimeData(short.id);
+                    if (watchData && watchData.actualWatchTime > 0) {
+                      handleViewCountIncrement(short.id, watchData.actualWatchTime);
+
+                      // Update progress for genuine watches
+                      if (shortsWatchTime.isGenuineWatch(short.id, 30)) {
+                        shortsWatchTime.updateProgress(short.id, topicId, subjectId);
+                      }
+                    }
                   }
 
                   // Check for quiz trigger every 3-5 shorts
@@ -1195,6 +1202,7 @@ export default function MediaPage() {
               {mediaData.shorts.map((short, index) => (
                 <div
                   key={short.id}
+                  data-short-id={short.id}
                   className="relative h-full w-full snap-start snap-always flex items-center justify-center"
                 >
                   {/* Video Player */}
@@ -1208,6 +1216,32 @@ export default function MediaPage() {
                     muted={index !== currentShortIndex}
                     controls={false}
                     style={{ position: 'absolute', top: 0, left: 0 }}
+                    onPlay={() => {
+                      const reactPlayer = document.querySelector(`[data-short-id="${short.id}"]`);
+                      if (reactPlayer) {
+                        shortsWatchTime.initializeTracking(short.id, reactPlayer as HTMLElement);
+                      }
+                      shortsWatchTime.onPlay(short.id, 0, short.duration);
+                    }}
+                    onPause={() => {
+                      shortsWatchTime.onPause(short.id, 0, short.duration);
+                    }}
+                    onProgress={(state) => {
+                      shortsWatchTime.onProgress(short.id, state.playedSeconds, short.duration);
+
+                      // Update debug info for current short
+                      if (index === currentShortIndex) {
+                        setCurrentDebugShort(short.id);
+                      }
+                    }}
+                    onEnded={() => {
+                      shortsWatchTime.onEnd(short.id, short.duration);
+
+                      // Update progress when video ends
+                      if (shortsWatchTime.isGenuineWatch(short.id, 30)) {
+                        shortsWatchTime.updateProgress(short.id, topicId, subjectId);
+                      }
+                    }}
                     config={{
                       youtube: {
                         playerVars: {
@@ -1238,7 +1272,7 @@ export default function MediaPage() {
                         <h3 className="font-bold text-lg drop-shadow-lg">{short.title}</h3>
                         <p className="text-sm opacity-90 drop-shadow-md line-clamp-2">{short.description}</p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs bg-black/50 backdrop-blur px-2 py-1 rounded-full">
                           {short.difficulty}
                         </span>
@@ -1248,6 +1282,28 @@ export default function MediaPage() {
                         <span className="text-xs bg-black/50 backdrop-blur px-2 py-1 rounded-full">
                           👁 {short.views}
                         </span>
+                        {/* Real-time watch time indicator */}
+                        {(() => {
+                          const watchData = shortsWatchTime.getWatchTimeData(short.id);
+                          const engagementScore = shortsWatchTime.getEngagementScore(short.id);
+                          if (watchData && watchData.actualWatchTime > 0) {
+                            return (
+                              <>
+                                <span className="text-xs bg-green-600/80 backdrop-blur px-2 py-1 rounded-full">
+                                  ⏱ {Math.round(watchData.actualWatchTime)}s
+                                </span>
+                                <span className={`text-xs backdrop-blur px-2 py-1 rounded-full ${
+                                  engagementScore >= 70 ? 'bg-green-600/80' :
+                                  engagementScore >= 40 ? 'bg-yellow-600/80' :
+                                  'bg-red-600/80'
+                                }`}>
+                                  📊 {engagementScore}%
+                                </span>
+                              </>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                     </div>
 

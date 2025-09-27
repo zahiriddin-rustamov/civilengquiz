@@ -2,13 +2,13 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Play, 
-  Pause, 
-  Volume2, 
-  VolumeX, 
-  Maximize, 
-  RotateCcw, 
+import {
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Maximize,
+  RotateCcw,
   FastForward,
   CheckCircle,
   Clock,
@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import ReactPlayer from 'react-player';
+import { WatchTimeTracker } from '@/lib/services/WatchTimeTracker';
 
 interface VideoPlayerProps {
   video: {
@@ -53,38 +54,58 @@ export function VideoPlayer({
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showControls, setShowControls] = useState(true);
   const [hasStarted, setHasStarted] = useState(initialProgress > 0);
-  const [watchTime, setWatchTime] = useState(0);
-  const [totalWatchTime, setTotalWatchTime] = useState(0);
-  
+
   const playerRef = useRef<ReactPlayer>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const watchTimeTracker = useRef<WatchTimeTracker | null>(null);
 
+  // Initialize watch time tracker
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (playing && duration > 0) {
-      interval = setInterval(() => {
-        // Only increment if we haven't reached the end of the video
-        const currentTime = played * duration;
-        if (currentTime < duration - 1) { // Stop 1 second before end to account for timing
-          setWatchTime(prev => prev + 1);
-          setTotalWatchTime(prev => prev + 1);
-        }
-      }, 1000);
+    watchTimeTracker.current = new WatchTimeTracker(video.id);
+
+    // Initialize visibility tracking when container is available
+    if (containerRef.current) {
+      watchTimeTracker.current.initializeVisibilityTracking(containerRef.current);
     }
-    return () => clearInterval(interval);
-  }, [playing, duration, played]);
+
+    return () => {
+      if (watchTimeTracker.current) {
+        watchTimeTracker.current.destroy();
+      }
+    };
+  }, [video.id]);
+
+  // Initialize visibility tracking when container ref is set
+  useEffect(() => {
+    if (containerRef.current && watchTimeTracker.current) {
+      watchTimeTracker.current.initializeVisibilityTracking(containerRef.current);
+    }
+  }, [containerRef.current]);
 
   const handlePlay = () => {
     setPlaying(true);
     if (!hasStarted) {
       setHasStarted(true);
     }
+
+    // Track play event
+    if (watchTimeTracker.current) {
+      watchTimeTracker.current.onPlay(played * duration, duration);
+    }
+
     hideControlsAfterDelay();
   };
 
   const handlePause = () => {
     setPlaying(false);
     setShowControls(true);
+
+    // Track pause event
+    if (watchTimeTracker.current) {
+      watchTimeTracker.current.onPause(played * duration, duration);
+    }
+
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
     }
@@ -93,23 +114,57 @@ export function VideoPlayer({
   const handleEnded = () => {
     setPlaying(false);
     setShowControls(true);
-    // Video ended - no need to continue watch time tracking
+
+    // Track end event
+    if (watchTimeTracker.current) {
+      watchTimeTracker.current.onEnd(duration);
+    }
   };
 
   const handleProgress = async (state: { played: number; playedSeconds: number }) => {
     setPlayed(state.played);
 
-    // Mark as completed if watched 90% or more AND watched enough actual time
-    // Require 60% of video duration to be actually watched to prevent skipping
+    // Track progress with the watch time tracker
+    if (watchTimeTracker.current) {
+      watchTimeTracker.current.onProgress(state.playedSeconds, duration);
+    }
+
+    // Get accurate watch time data from tracker
+    const watchData = watchTimeTracker.current?.getWatchTimeData();
+    const engagementScore = watchTimeTracker.current?.getEngagementScore() || 0;
+    const isGenuineWatch = watchTimeTracker.current?.isGenuineWatch(60) || false;
+
     // Use video.duration from database if available, fallback to ReactPlayer duration
     const videoDuration = video.duration || duration;
-    const minWatchTimeRequired = videoDuration * 0.6; // 60% of actual video duration
-    const hasWatchedEnough = totalWatchTime >= minWatchTimeRequired;
-    const completed = state.played >= 0.9 && hasWatchedEnough;
 
-    if ((completed && !isCompleted) || (hasStarted && state.played > initialProgress + 0.1)) {
+    // Completion criteria - more lenient for better UX
+    const progressCompleted = state.played >= 0.9; // Watched 90% of video
+    const timeCompleted = watchData ? (watchData.actualWatchTime / videoDuration) >= 0.6 : state.played >= 0.9; // 60% actual watch time OR 90% progress
+    const qualityCompleted = watchData ? (engagementScore >= 30 || isGenuineWatch) : true; // Lower engagement threshold OR genuine watch OR no tracker data
+    const completed = progressCompleted && timeCompleted && qualityCompleted;
+
+    // Debug logging for completion issues
+    if (process.env.NODE_ENV === 'development' && state.played >= 0.8) {
+      console.log('Video completion check:', {
+        videoId: video.id,
+        progress: Math.round(state.played * 100) + '%',
+        actualWatchTime: watchData?.actualWatchTime || 0,
+        videoDuration: videoDuration,
+        engagementScore,
+        progressCompleted,
+        timeCompleted,
+        qualityCompleted,
+        completed,
+        isCompleted
+      });
+    }
+
+    // Always call onProgress for UI updates, but only make API calls when needed
+    const shouldUpdateAPI = (completed && !isCompleted) || (hasStarted && state.played > initialProgress + 0.1);
+
+    if (shouldUpdateAPI) {
       try {
-        // Update progress via API
+        // Update progress via API with enhanced data
         const response = await fetch('/api/user/progress/update', {
           method: 'POST',
           headers: {
@@ -122,15 +177,20 @@ export function VideoPlayer({
             subjectId: subjectId,
             completed: completed,
             score: state.played, // Progress as score (0-1)
-            timeSpent: watchTime,
+            timeSpent: watchData?.actualWatchTime || 0,
             data: {
               progressPercentage: Math.round(state.played * 100),
-              watchTime: totalWatchTime,
-              actualWatchTime: totalWatchTime,
+              watchTime: watchData?.actualWatchTime || 0,
+              actualWatchTime: watchData?.actualWatchTime || 0,
+              engagementScore: engagementScore,
+              isGenuineWatch: isGenuineWatch,
+              visibility: watchData?.visibility || 100,
+              seekEvents: watchData?.seekEvents || 0,
+              pauseEvents: watchData?.pauseEvents || 0,
               difficulty: video.difficulty,
               videoType: 'long-form',
-              minWatchTimeRequired: duration * 0.6,
-              hasWatchedEnough: hasWatchedEnough
+              minWatchTimeRequired: videoDuration * 0.6,
+              hasWatchedEnough: timeCompleted
             }
           }),
         });
@@ -150,6 +210,9 @@ export function VideoPlayer({
         // Fallback to local tracking
         onProgress(video.id, state.played, completed, completed ? video.points : 0);
       }
+    } else {
+      // Always update UI even if no API call needed
+      onProgress(video.id, state.played, completed, completed ? video.points : Math.round(state.played * video.points));
     }
   };
 
@@ -157,6 +220,11 @@ export function VideoPlayer({
     const seekTo = value[0] / 100;
     setPlayed(seekTo);
     playerRef.current?.seekTo(seekTo);
+
+    // Track seek event
+    if (watchTimeTracker.current) {
+      watchTimeTracker.current.onProgress(seekTo * duration, duration);
+    }
   };
 
   const handleVolumeChange = (value: number[]) => {
@@ -271,7 +339,8 @@ export function VideoPlayer({
       </div>
 
       {/* Video Player */}
-      <div 
+      <div
+        ref={containerRef}
         className="relative bg-black aspect-video"
         onMouseMove={handleMouseMove}
         onMouseLeave={() => playing && hideControlsAfterDelay()}
@@ -430,21 +499,29 @@ export function VideoPlayer({
 
       {/* Progress Stats */}
       <div className="p-6 bg-gradient-to-r from-gray-50 to-gray-100">
-        <div className="grid grid-cols-3 gap-4 text-center">
+        <div className="grid grid-cols-4 gap-4 text-center">
           <div className="p-3 bg-white rounded-lg border border-gray-200">
             <div className="text-2xl font-bold text-indigo-600">{progressPercentage}%</div>
             <div className="text-sm text-gray-600">Progress</div>
           </div>
           <div className="p-3 bg-white rounded-lg border border-gray-200">
-            <div className="text-2xl font-bold text-green-600">{formatTime(totalWatchTime)}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {formatTime(watchTimeTracker.current?.getWatchTimeData().actualWatchTime || 0)}
+            </div>
             <div className="text-sm text-gray-600">
-              Watch Time
+              Actual Watch Time
               {(video.duration || duration) > 0 && !isCompleted && (
                 <div className="text-xs text-gray-500 mt-1">
                   Need: {formatTime((video.duration || duration) * 0.6)}
                 </div>
               )}
             </div>
+          </div>
+          <div className="p-3 bg-white rounded-lg border border-gray-200">
+            <div className="text-2xl font-bold text-orange-600">
+              {watchTimeTracker.current?.getEngagementScore() || 0}%
+            </div>
+            <div className="text-sm text-gray-600">Engagement</div>
           </div>
           <div className="p-3 bg-white rounded-lg border border-gray-200">
             <div className="text-2xl font-bold text-purple-600">
