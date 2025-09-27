@@ -8,6 +8,7 @@ interface YouTubeVideoData {
   channelTitle: string;
   viewCount: number;
   tags: string[];
+  videoType: 'video' | 'short'; // Auto-detected based on duration and URL
 }
 
 interface YouTubeAPIResponse {
@@ -69,9 +70,33 @@ export function extractYouTubeId(url: string): string | null {
 }
 
 /**
+ * Detect if a URL is a YouTube Short based on URL pattern
+ */
+export function isShortUrl(url: string): boolean {
+  return /youtube\.com\/shorts\//.test(url);
+}
+
+/**
+ * Auto-detect if video is a Short based on duration and URL
+ */
+export function detectVideoType(url: string, duration: number): 'video' | 'short' {
+  // Primary detection: URL pattern (most reliable)
+  if (isShortUrl(url)) {
+    return 'short';
+  }
+
+  // Secondary detection: Duration (YouTube Shorts are 60 seconds or less)
+  if (duration <= 60) {
+    return 'short';
+  }
+
+  return 'video';
+}
+
+/**
  * Fetch video metadata from YouTube Data API v3
  */
-export async function fetchYouTubeVideoData(videoId: string): Promise<YouTubeVideoData | null> {
+export async function fetchYouTubeVideoData(videoId: string, originalUrl?: string): Promise<YouTubeVideoData | null> {
   const apiKey = process.env.YOUTUBE_API_KEY;
   if (!apiKey) {
     console.error('YOUTUBE_API_KEY not found in environment variables');
@@ -108,6 +133,9 @@ export async function fetchYouTubeVideoData(videoId: string): Promise<YouTubeVid
                      thumbnails.medium?.url ||
                      thumbnails.default.url;
 
+    // Auto-detect video type based on URL and duration
+    const videoType = originalUrl ? detectVideoType(originalUrl, duration) : (duration <= 60 ? 'short' : 'video');
+
     return {
       id: video.id,
       title: video.snippet.title,
@@ -117,7 +145,8 @@ export async function fetchYouTubeVideoData(videoId: string): Promise<YouTubeVid
       publishedAt: video.snippet.publishedAt,
       channelTitle: video.snippet.channelTitle,
       viewCount: parseInt(video.statistics.viewCount || '0', 10),
-      tags: video.snippet.tags || []
+      tags: video.snippet.tags || [],
+      videoType
     };
 
   } catch (error) {

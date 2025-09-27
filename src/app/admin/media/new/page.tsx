@@ -74,6 +74,7 @@ export default function NewMediaPage() {
     description: string;
     channelTitle: string;
     estimatedMinutes: number;
+    videoType: 'video' | 'short';
   } | null>(null);
   const [fetchingMetadata, setFetchingMetadata] = useState(false);
 
@@ -180,12 +181,14 @@ export default function NewMediaPage() {
         title: data.title,
         description: data.description,
         channelTitle: data.channelTitle,
-        estimatedMinutes
+        estimatedMinutes,
+        videoType: data.videoType
       });
 
-      // Auto-fill form fields if they're empty
+      // Auto-fill form fields if they're empty, including auto-detected video type
       setFormData(prev => ({
         ...prev,
+        videoType: data.videoType, // Auto-set the video type based on detection
         title: prev.title || data.title,
         description: prev.description || data.description.slice(0, 500) + (data.description.length > 500 ? '...' : ''),
         estimatedMinutes: prev.estimatedMinutes === 5 ? estimatedMinutes : prev.estimatedMinutes, // Only auto-fill if default
@@ -632,8 +635,14 @@ export default function NewMediaPage() {
                           <span className="ml-1 text-gray-600">{youtubeMetadata.estimatedMinutes} min</span>
                         </div>
                         <div>
+                          <span className="font-medium text-gray-700">Type Detected:</span>
+                          <span className={`ml-1 font-medium ${youtubeMetadata.videoType === 'short' ? 'text-purple-600' : 'text-blue-600'}`}>
+                            {youtubeMetadata.videoType === 'short' ? 'YouTube Short' : 'YouTube Video'}
+                          </span>
+                        </div>
+                        <div>
                           <span className="font-medium text-gray-700">Auto-filled:</span>
-                          <span className="ml-1 text-green-600">Title, Description, Duration</span>
+                          <span className="ml-1 text-green-600">Title, Description, Type</span>
                         </div>
                       </div>
 

@@ -23,8 +23,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400 });
     }
 
-    // Fetch video metadata
-    const videoData = await fetchYouTubeVideoData(videoId);
+    // Fetch video metadata with original URL for auto-detection
+    const videoData = await fetchYouTubeVideoData(videoId, url);
     if (!videoData) {
       return NextResponse.json({ error: 'Could not fetch video metadata. Video may be private or not exist.' }, { status: 404 });
     }
