@@ -64,7 +64,6 @@ export async function GET(
           name: section.name,
           description: section.description,
           order: section.order,
-          settings: section.settings,
           questionCount: questions.length,
           totalXP,
           estimatedTime
@@ -79,6 +78,11 @@ export async function GET(
       topicName: topic.name,
       subjectName: subject?.name || 'Unknown Subject',
       sections: sectionsWithMetadata,
+      sectionSettings: topic.sectionSettings || {
+        unlockConditions: 'always',
+        requiredScore: 70,
+        requireCompletion: false
+      },
       totalXP,
       estimatedTime: totalEstimatedTime
     };

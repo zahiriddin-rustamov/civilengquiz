@@ -87,21 +87,11 @@ export async function POST(request: NextRequest) {
 
     const order = (lastSection?.order || 0) + 1;
 
-    // Create default settings if not provided
-    const defaultSettings = {
-      unlockConditions: 'always',
-      allowRandomAccess: true,
-      showToStudents: 'always',
-      requireCompletion: false,
-      ...settings
-    };
-
     const section = await QuestionSection.create({
       name,
       description: data.description,
       topicId,
-      order,
-      settings: defaultSettings
+      order
     });
 
     return NextResponse.json(section, { status: 201 });

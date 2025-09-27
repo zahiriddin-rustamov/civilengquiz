@@ -27,13 +27,6 @@ interface Section {
   name: string;
   description?: string;
   order: number;
-  settings: {
-    unlockConditions: 'always' | 'sequential' | 'score-based';
-    requiredScore?: number;
-    allowRandomAccess: boolean;
-    showToStudents: 'always' | 'one-random' | 'sequential';
-    requireCompletion: boolean;
-  };
   questionCount: number;
   totalXP: number;
   estimatedTime: number;
@@ -44,6 +37,11 @@ interface TopicData {
   subjectName: string;
   imageUrl?: string;
   sections: Section[];
+  sectionSettings: {
+    unlockConditions: 'always' | 'sequential' | 'score-based';
+    requiredScore: number;
+    requireCompletion: boolean;
+  };
   totalXP: number;
   estimatedTime: number;
 }
@@ -122,7 +120,9 @@ export default function SectionsPage() {
   };
 
   const isSectionUnlocked = (section: Section, index: number): boolean => {
-    const settings = section.settings;
+    if (!topicData?.sectionSettings) return true;
+
+    const settings = topicData.sectionSettings;
 
     if (settings.unlockConditions === 'always') {
       return true;
@@ -155,7 +155,9 @@ export default function SectionsPage() {
   };
 
   const getUnlockMessage = (section: Section, index: number): string => {
-    const settings = section.settings;
+    if (!topicData?.sectionSettings) return '';
+
+    const settings = topicData.sectionSettings;
 
     if (settings.unlockConditions === 'sequential') {
       for (let i = 0; i < index; i++) {
@@ -183,43 +185,23 @@ export default function SectionsPage() {
   const getVisibleSections = (): Section[] => {
     if (!topicData || topicData.sections.length === 0) return [];
 
-    // First, filter out sections with no questions
-    const sectionsWithQuestions = topicData.sections.filter(section => section.questionCount > 0);
-
-    if (sectionsWithQuestions.length === 0) return [];
-
-    const firstSection = sectionsWithQuestions[0];
-    const showToStudents = firstSection.settings.showToStudents;
-
-    switch (showToStudents) {
-      case 'one-random':
-        // Show only one random section (from sections that have questions)
-        const randomIndex = Math.floor(Math.random() * sectionsWithQuestions.length);
-        return [sectionsWithQuestions[randomIndex]];
-
-      case 'sequential':
-        // Show sections up to the first locked one (only sections with questions)
-        const visibleSections = [];
-        for (let i = 0; i < sectionsWithQuestions.length; i++) {
-          const section = sectionsWithQuestions[i];
-          visibleSections.push(section);
-          // Find the original index in the full sections array for unlock check
-          const originalIndex = topicData.sections.findIndex(s => s.id === section.id);
-          if (!isSectionUnlocked(section, originalIndex)) {
-            break;
-          }
-        }
-        return visibleSections;
-
-      case 'always':
-      default:
-        // Show all sections (only those with questions)
-        return sectionsWithQuestions;
-    }
+    // Always show all sections that have questions
+    return topicData.sections.filter(section => section.questionCount > 0);
   };
 
   const handleSectionClick = (sectionId: string) => {
-    router.push(`/subjects/${subjectId}/topics/${topicId}/sections/${sectionId}/questions`);
+    // Find the section and check if it's unlocked
+    const section = visibleSections.find(s => s.id === sectionId);
+    if (!section) return;
+
+    const sectionIndex = topicData!.sections.findIndex(s => s.id === sectionId);
+    const isUnlocked = isSectionUnlocked(section, sectionIndex);
+
+    if (isUnlocked) {
+      router.push(`/subjects/${subjectId}/topics/${topicId}/sections/${sectionId}/questions`);
+    }
+    // If locked, the card onClick already prevents navigation with the isUnlocked check
+    // and the UI shows the lock state visually
   };
 
   if (status === 'loading' || isLoading) {
@@ -352,17 +334,19 @@ export default function SectionsPage() {
 
         {/* Sections Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {visibleSections.map((section, index) => {
+          {visibleSections.map((section, visibleIndex) => {
             const progress = getSectionProgress(section.id);
-            const isUnlocked = isSectionUnlocked(section, index);
-            const unlockMessage = getUnlockMessage(section, index);
+            // Find the original index in the full sections array
+            const originalIndex = topicData!.sections.findIndex(s => s.id === section.id);
+            const isUnlocked = isSectionUnlocked(section, originalIndex);
+            const unlockMessage = getUnlockMessage(section, originalIndex);
 
             return (
               <motion.div
                 key={section.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+                transition={{ delay: visibleIndex * 0.1 }}
               >
                 <Card
                   className={`h-full transition-all duration-200 hover:shadow-lg cursor-pointer ${

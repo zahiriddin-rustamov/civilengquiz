@@ -140,12 +140,12 @@ export default function QuestionsPage() {
   const [showSectionSettingsModal, setShowSectionSettingsModal] = useState(false);
   const [selectedTopicForSettings, setSelectedTopicForSettings] = useState<string | null>(null);
   const [topicSectionSettings, setTopicSectionSettings] = useState({
-    showToStudents: 'sequential' as 'always' | 'one-random' | 'sequential',
     unlockConditions: 'always' as 'always' | 'sequential' | 'score-based',
     requiredScore: 70,
-    allowRandomAccess: true,
     requireCompletion: false,
   });
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchQuestions();
@@ -484,6 +484,78 @@ export default function QuestionsPage() {
     }
   };
 
+  const loadSectionSettings = async (topicId: string) => {
+    try {
+      setSettingsError(null);
+
+      // Get settings from the topic
+      const response = await fetch(`/api/topics/${topicId}`);
+      if (!response.ok) {
+        throw new Error('Failed to load topic settings');
+      }
+
+      const topicData = await response.json();
+
+      if (topicData.sectionSettings) {
+        setTopicSectionSettings({
+          unlockConditions: topicData.sectionSettings.unlockConditions || 'always',
+          requiredScore: topicData.sectionSettings.requiredScore || 70,
+          requireCompletion: topicData.sectionSettings.requireCompletion || false,
+        });
+      } else {
+        // Set defaults if no settings exist
+        setTopicSectionSettings({
+          unlockConditions: 'always',
+          requiredScore: 70,
+          requireCompletion: false,
+        });
+      }
+    } catch (err) {
+      console.error('Error loading topic settings:', err);
+      setSettingsError('Failed to load topic settings');
+    }
+  };
+
+  const saveSectionSettings = async () => {
+    if (!selectedTopicForSettings) {
+      setSettingsError('No topic selected for settings update');
+      return;
+    }
+
+    try {
+      setIsSavingSettings(true);
+      setSettingsError(null);
+
+      const response = await fetch(`/api/topics/${selectedTopicForSettings}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sectionSettings: topicSectionSettings,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save topic settings');
+      }
+
+      // Close modal and reset state
+      setShowSectionSettingsModal(false);
+      setSelectedTopicForSettings(null);
+
+      // Show success message
+      alert('Section settings saved successfully!');
+
+      // Refresh questions to show updated data
+      await fetchQuestions();
+    } catch (err) {
+      console.error('Error saving topic settings:', err);
+      setSettingsError('Failed to save topic settings. Please try again.');
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -742,9 +814,10 @@ export default function QuestionsPage() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => {
+                                      onClick={async () => {
                                         setSelectedTopicForSettings(topicGroup.topicId);
                                         setShowSectionSettingsModal(true);
+                                        await loadSectionSettings(topicGroup.topicId);
                                       }}
                                     >
                                       <Settings className="h-4 w-4" />
@@ -1072,55 +1145,21 @@ export default function QuestionsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-6 py-4">
-            {/* How sections are shown to students */}
-            <div className="space-y-3">
-              <Label className="text-base font-medium">Student Presentation</Label>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    id="show-sequential"
-                    name="showToStudents"
-                    value="sequential"
-                    checked={topicSectionSettings.showToStudents === 'sequential'}
-                    onChange={(e) => setTopicSectionSettings({ ...topicSectionSettings, showToStudents: e.target.value as any })}
-                  />
-                  <Label htmlFor="show-sequential" className="text-sm">
-                    <strong>Sequential:</strong> Students see sections one by one in order
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    id="show-one-random"
-                    name="showToStudents"
-                    value="one-random"
-                    checked={topicSectionSettings.showToStudents === 'one-random'}
-                    onChange={(e) => setTopicSectionSettings({ ...topicSectionSettings, showToStudents: e.target.value as any })}
-                  />
-                  <Label htmlFor="show-one-random" className="text-sm">
-                    <strong>One Random:</strong> Show only one randomly selected section
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    id="show-always"
-                    name="showToStudents"
-                    value="always"
-                    checked={topicSectionSettings.showToStudents === 'always'}
-                    onChange={(e) => setTopicSectionSettings({ ...topicSectionSettings, showToStudents: e.target.value as any })}
-                  />
-                  <Label htmlFor="show-always" className="text-sm">
-                    <strong>All Sections:</strong> Students can access all sections freely
-                  </Label>
-                </div>
-              </div>
-            </div>
+            {/* Error display */}
+            {settingsError && (
+              <Alert className="border-red-200 bg-red-50">
+                <AlertDescription className="text-red-800">
+                  {settingsError}
+                </AlertDescription>
+              </Alert>
+            )}
 
-            {/* Unlock conditions */}
+            {/* Section Access Control */}
             <div className="space-y-3">
-              <Label className="text-base font-medium">Section Unlock Conditions</Label>
+              <Label className="text-base font-medium">Section Access Control</Label>
+              <p className="text-sm text-gray-600">
+                All sections are always visible to students. Choose how they unlock:
+              </p>
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <input
@@ -1132,7 +1171,7 @@ export default function QuestionsPage() {
                     onChange={(e) => setTopicSectionSettings({ ...topicSectionSettings, unlockConditions: e.target.value as any })}
                   />
                   <Label htmlFor="unlock-always" className="text-sm">
-                    <strong>Always Available:</strong> All sections unlocked from start
+                    <strong>Free Access:</strong> Students can access any section immediately
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -1145,7 +1184,7 @@ export default function QuestionsPage() {
                     onChange={(e) => setTopicSectionSettings({ ...topicSectionSettings, unlockConditions: e.target.value as any })}
                   />
                   <Label htmlFor="unlock-sequential" className="text-sm">
-                    <strong>Sequential:</strong> Unlock sections one by one after completion
+                    <strong>Sequential:</strong> Must complete previous section to unlock next
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -1158,16 +1197,16 @@ export default function QuestionsPage() {
                     onChange={(e) => setTopicSectionSettings({ ...topicSectionSettings, unlockConditions: e.target.value as any })}
                   />
                   <Label htmlFor="unlock-score-based" className="text-sm">
-                    <strong>Score Based:</strong> Unlock next section only if minimum score achieved
+                    <strong>Score Based:</strong> Must achieve minimum score to unlock next section
                   </Label>
                 </div>
               </div>
 
               {/* Required score input (only show if score-based is selected) */}
               {topicSectionSettings.unlockConditions === 'score-based' && (
-                <div className="ml-6 mt-2">
+                <div className="ml-6 mt-2 flex items-center space-x-2">
                   <Label htmlFor="required-score" className="text-sm">
-                    Required Score (%)
+                    Minimum Score:
                   </Label>
                   <Input
                     id="required-score"
@@ -1179,43 +1218,34 @@ export default function QuestionsPage() {
                       ...topicSectionSettings,
                       requiredScore: parseInt(e.target.value) || 70
                     })}
-                    className="w-20 ml-2"
+                    className="w-16"
                   />
+                  <span className="text-sm text-gray-600">%</span>
                 </div>
               )}
             </div>
 
-            {/* Additional options */}
+            {/* Completion Requirements */}
             <div className="space-y-3">
-              <Label className="text-base font-medium">Additional Options</Label>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="allow-random-access"
-                    checked={topicSectionSettings.allowRandomAccess}
-                    onCheckedChange={(checked) => setTopicSectionSettings({
-                      ...topicSectionSettings,
-                      allowRandomAccess: checked as boolean
-                    })}
-                  />
-                  <Label htmlFor="allow-random-access" className="text-sm">
-                    Allow students to jump between unlocked sections freely
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="require-completion"
-                    checked={topicSectionSettings.requireCompletion}
-                    onCheckedChange={(checked) => setTopicSectionSettings({
-                      ...topicSectionSettings,
-                      requireCompletion: checked as boolean
-                    })}
-                  />
-                  <Label htmlFor="require-completion" className="text-sm">
-                    Require completion of all questions in a section to finish it
-                  </Label>
-                </div>
+              <Label className="text-base font-medium">Completion Requirements</Label>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="require-completion"
+                  checked={topicSectionSettings.requireCompletion}
+                  onCheckedChange={(checked) => setTopicSectionSettings({
+                    ...topicSectionSettings,
+                    requireCompletion: checked as boolean
+                  })}
+                />
+                <Label htmlFor="require-completion" className="text-sm">
+                  Students must answer all questions to complete the section
+                </Label>
               </div>
+              <p className="text-xs text-gray-500 ml-6">
+                {topicSectionSettings.requireCompletion
+                  ? "Students must answer every question to mark the section as complete"
+                  : "Students can mark section complete even if they skip questions"}
+              </p>
             </div>
           </div>
           <DialogFooter>
@@ -1224,17 +1254,17 @@ export default function QuestionsPage() {
               onClick={() => {
                 setShowSectionSettingsModal(false);
                 setSelectedTopicForSettings(null);
+                setSettingsError(null);
               }}
+              disabled={isSavingSettings}
             >
               Cancel
             </Button>
-            <Button onClick={() => {
-              // TODO: Implement save section settings
-              console.log('Save section settings:', topicSectionSettings);
-              setShowSectionSettingsModal(false);
-              setSelectedTopicForSettings(null);
-            }}>
-              Save Settings
+            <Button
+              onClick={saveSectionSettings}
+              disabled={isSavingSettings}
+            >
+              {isSavingSettings ? 'Saving...' : 'Save Settings'}
             </Button>
           </DialogFooter>
         </DialogContent>

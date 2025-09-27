@@ -77,6 +77,11 @@ export interface ITopic extends Document {
   order: number;
   isUnlocked: boolean;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  sectionSettings: {
+    unlockConditions: 'always' | 'sequential' | 'score-based';
+    requiredScore: number;
+    requireCompletion: boolean;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -90,6 +95,15 @@ const TopicSchema = new Schema<ITopic>({
   order: { type: Number, required: true },
   isUnlocked: { type: Boolean, default: true },
   difficulty: { type: String, enum: ['Beginner', 'Intermediate', 'Advanced'], required: true },
+  sectionSettings: {
+    unlockConditions: {
+      type: String,
+      enum: ['always', 'sequential', 'score-based'],
+      default: 'always'
+    },
+    requiredScore: { type: Number, min: 0, max: 100, default: 70 },
+    requireCompletion: { type: Boolean, default: false }
+  },
 }, {
   timestamps: true
 });
@@ -98,22 +112,7 @@ const QuestionSectionSchema = new Schema<IQuestionSection>({
   name: { type: String, required: true },
   description: { type: String },
   topicId: { type: Schema.Types.ObjectId, ref: 'Topic', required: true },
-  order: { type: Number, required: true },
-  settings: {
-    unlockConditions: {
-      type: String,
-      enum: ['always', 'sequential', 'score-based'],
-      default: 'always'
-    },
-    requiredScore: { type: Number, min: 0, max: 100 },
-    allowRandomAccess: { type: Boolean, default: true },
-    showToStudents: {
-      type: String,
-      enum: ['always', 'one-random', 'sequential'],
-      default: 'always'
-    },
-    requireCompletion: { type: Boolean, default: false }
-  }
+  order: { type: Number, required: true }
 }, {
   timestamps: true
 });
@@ -125,18 +124,6 @@ export interface IQuestionSection extends Document {
   description?: string;
   topicId: Types.ObjectId;
   order: number;
-  settings: {
-    // Unlock conditions
-    unlockConditions: 'always' | 'sequential' | 'score-based';
-    requiredScore?: number; // Percentage required from previous section (if score-based)
-
-    // Navigation settings
-    allowRandomAccess: boolean; // Can students jump between sections freely?
-    showToStudents: 'always' | 'one-random' | 'sequential'; // How to present to students
-
-    // Progress requirements
-    requireCompletion: boolean; // Must complete all questions to finish section
-  };
   createdAt: Date;
   updatedAt: Date;
 }

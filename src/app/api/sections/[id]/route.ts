@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { SectionService } from '@/lib/db-operations';
+import connectToDatabase from '@/lib/mongoose';
+import { QuestionSection, Question } from '@/models/database';
 
 // GET /api/sections/[id] - Get section by ID
 export async function GET(

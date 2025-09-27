@@ -43,7 +43,14 @@ export async function GET(
     let hasAccess = true;
     let unlockMessage = '';
 
-    if (section.settings.unlockConditions === 'sequential') {
+    // Use topic's section settings instead of section.settings
+    const sectionSettings = topic?.sectionSettings || {
+      unlockConditions: 'always',
+      requiredScore: 70,
+      requireCompletion: false
+    };
+
+    if (sectionSettings.unlockConditions === 'sequential') {
       // Check if previous sections are completed
       const previousSections = await QuestionSection.find({
         topicId: section.topicId,
@@ -63,7 +70,7 @@ export async function GET(
           break;
         }
       }
-    } else if (section.settings.unlockConditions === 'score-based') {
+    } else if (sectionSettings.unlockConditions === 'score-based') {
       // Check if previous section meets score requirement
       const previousSection = await QuestionSection.findOne({
         topicId: section.topicId,
@@ -77,7 +84,7 @@ export async function GET(
           contentType: 'section'
         });
 
-        const requiredScore = section.settings.requiredScore || 70;
+        const requiredScore = sectionSettings.requiredScore || 70;
         if (!sectionProgress || (sectionProgress.score || 0) < requiredScore) {
           hasAccess = false;
           unlockMessage = `Score at least ${requiredScore}% in "${previousSection.name}" to unlock this section`;
@@ -113,7 +120,7 @@ export async function GET(
         id: section._id,
         name: section.name,
         description: section.description,
-        settings: section.settings,
+        settings: sectionSettings,
         progress: sectionProgress
       },
       topicName: topic?.name || 'Unknown Topic',

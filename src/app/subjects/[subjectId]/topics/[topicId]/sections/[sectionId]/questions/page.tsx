@@ -34,9 +34,7 @@ interface SectionQuestionsData {
     description?: string;
     settings: {
       unlockConditions: 'always' | 'sequential' | 'score-based';
-      requiredScore?: number;
-      allowRandomAccess: boolean;
-      showToStudents: 'always' | 'one-random' | 'sequential';
+      requiredScore: number;
       requireCompletion: boolean;
     };
     progress: any;
