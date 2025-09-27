@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import ReactMarkdown from 'react-markdown';
 import { 
   ArrowLeft,
   BookOpen, 
@@ -307,7 +308,11 @@ export default function TopicOverviewPage() {
                 </div>
 
                 <h1 className="text-3xl md:text-4xl font-bold mb-3 text-white">{topicData.name}</h1>
-                <p className="text-white/80 text-base leading-relaxed mb-2">{topicData.description}</p>
+                <div className="text-white/80 text-base leading-relaxed mb-2 prose prose-base prose-invert max-w-none [&>*]:!text-white/80">
+                  <ReactMarkdown>
+                    {topicData.longDescription || topicData.description}
+                  </ReactMarkdown>
+                </div>
 
                 {/* Progress Bar - Inline */}
                 <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20">
