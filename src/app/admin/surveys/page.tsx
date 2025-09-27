@@ -17,6 +17,12 @@ import {
 } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   Plus,
   Search,
   Edit,
@@ -388,46 +394,83 @@ export default function SurveysPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end space-x-1">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/admin/surveys/${survey._id}`}>
-                              <Eye className="h-4 w-4" />
-                            </Link>
-                          </Button>
+                        <TooltipProvider>
+                          <div className="flex items-center justify-end space-x-1">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="sm" asChild>
+                                  <Link href={`/admin/surveys/${survey._id}`}>
+                                    <Eye className="h-4 w-4" />
+                                  </Link>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>View survey</p>
+                              </TooltipContent>
+                            </Tooltip>
 
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/admin/surveys/${survey._id}/edit`}>
-                              <Edit className="h-4 w-4" />
-                            </Link>
-                          </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="sm" asChild>
+                                  <Link href={`/admin/surveys/${survey._id}/edit`}>
+                                    <Edit className="h-4 w-4" />
+                                  </Link>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Edit survey</p>
+                              </TooltipContent>
+                            </Tooltip>
 
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/admin/surveys/${survey._id}/responses`}>
-                              <BarChart3 className="h-4 w-4" />
-                            </Link>
-                          </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="sm" asChild>
+                                  <Link href={`/admin/surveys/${survey._id}/responses`}>
+                                    <BarChart3 className="h-4 w-4" />
+                                  </Link>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>View responses</p>
+                              </TooltipContent>
+                            </Tooltip>
 
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleSurveyStatus(survey._id.toString(), survey.isActive)}
-                          >
-                            {survey.isActive ? (
-                              <XCircle className="h-4 w-4 text-orange-500" />
-                            ) : (
-                              <CheckCircle className="h-4 w-4 text-green-500" />
-                            )}
-                          </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => toggleSurveyStatus(survey._id.toString(), survey.isActive)}
+                                >
+                                  {survey.isActive ? (
+                                    <XCircle className="h-4 w-4 text-orange-500" />
+                                  ) : (
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{survey.isActive ? 'Deactivate survey' : 'Activate survey'}</p>
+                              </TooltipContent>
+                            </Tooltip>
 
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(survey._id.toString())}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDelete(survey._id.toString())}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Delete survey</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
                   );
