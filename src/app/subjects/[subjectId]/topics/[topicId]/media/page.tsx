@@ -147,6 +147,9 @@ export default function MediaPage() {
   const [showSurveyModal, setShowSurveyModal] = useState(false);
   const [surveyData, setSurveyData] = useState<any>(null);
 
+  // Video completion survey state (separate from overall media completion)
+  const [videoCompletionSurveyData, setVideoCompletionSurveyData] = useState<any>(null);
+
   // Engagement queue for batching
   const [engagementQueue, setEngagementQueue] = useState<Array<{
     mediaId: string;
@@ -331,9 +334,10 @@ export default function MediaPage() {
     };
   }, [engagementQueue]);
 
-  // Watch for media completion to trigger survey
+  // Watch for overall media completion (videos + shorts) to trigger survey
   useEffect(() => {
-    if (mediaData && checkAllMediaCompleted() && !showSurveyModal) {
+    if (mediaData && checkAllMediaCompleted() && !showSurveyModal && !videoCompletionSurveyData) {
+      // Only trigger overall survey if video completion survey hasn't been triggered
       // Add small delay to ensure all progress updates are complete
       const timer = setTimeout(() => {
         checkForSurvey();
@@ -341,7 +345,22 @@ export default function MediaPage() {
 
       return () => clearTimeout(timer);
     }
-  }, [progress, mediaData, showSurveyModal]);
+  }, [progress, mediaData, showSurveyModal, videoCompletionSurveyData]);
+
+  // Watch for video completion to trigger video-specific survey
+  useEffect(() => {
+    if (mediaData && isProgressLoaded && activeTab === 'videos' &&
+        mediaData.videos.length > 0 &&
+        mediaData.videos.every(video => progress.videoProgress[video.id]?.completed) &&
+        !videoCompletionSurveyData) {
+      // Add small delay to ensure all progress updates are complete
+      const timer = setTimeout(() => {
+        checkForVideoCompletionSurvey();
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [progress, mediaData, isProgressLoaded, activeTab, videoCompletionSurveyData]);
 
   const fetchMedia = async () => {
     try {
@@ -685,9 +704,27 @@ export default function MediaPage() {
     }
   };
 
+  const checkForVideoCompletionSurvey = async () => {
+    try {
+      const response = await fetch(`/api/surveys/trigger?triggerType=media_completion&contentId=${topicId}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.survey && !data.alreadyCompleted) {
+          setVideoCompletionSurveyData(data);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking for video completion survey:', error);
+    }
+  };
+
   const handleSurveyComplete = () => {
     setShowSurveyModal(false);
     setSurveyData(null);
+  };
+
+  const handleVideoCompletionSurveyComplete = () => {
+    setVideoCompletionSurveyData(null);
   };
 
   const checkAllMediaCompleted = () => {
@@ -1703,6 +1740,24 @@ export default function MediaPage() {
                 </Button>
               </div>
             )}
+          </motion.div>
+        )}
+
+        {/* Video Completion Survey */}
+        {activeTab === 'videos' && videoCompletionSurveyData && isProgressLoaded &&
+         mediaData.videos.length > 0 &&
+         mediaData.videos.every(video => progress.videoProgress[video.id]?.completed) && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mt-8"
+          >
+            <SurveyForm
+              survey={videoCompletionSurveyData.survey}
+              triggerContentId={videoCompletionSurveyData.triggerContentId}
+              onSubmitSuccess={handleVideoCompletionSurveyComplete}
+            />
           </motion.div>
         )}
 
