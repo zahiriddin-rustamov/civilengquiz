@@ -590,7 +590,7 @@ function ContentTypeCard({
       )}
 
       {isUnlocked && !hasContent && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm z-20">
           <div className="text-center text-white">
             <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm font-medium">No content available</p>
