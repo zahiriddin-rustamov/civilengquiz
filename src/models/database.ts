@@ -112,7 +112,7 @@ const QuestionSectionSchema = new Schema<IQuestionSection>({
   name: { type: String, required: true },
   description: { type: String },
   topicId: { type: Schema.Types.ObjectId, ref: 'Topic', required: true },
-  order: { type: Number, required: true }
+  order: { type: Number, required: true },
 }, {
   timestamps: true
 });
@@ -363,6 +363,109 @@ MediaEngagementSchema.index({ userId: 1, isLiked: 1 });
 MediaEngagementSchema.index({ userId: 1, isSaved: 1 });
 MediaEngagementSchema.index({ mediaId: 1 });
 
+// Survey Schema
+export interface ISurvey extends Document {
+  _id: Types.ObjectId;
+  title: string;
+  description?: string;
+  triggerType: 'section_completion' | 'flashcard_completion' | 'media_completion';
+  isActive: boolean;
+  targeting: {
+    type: 'all' | 'specific_sections' | 'specific_topics' | 'specific_subjects';
+    sectionIds?: Types.ObjectId[]; // For specific sections (section_completion only)
+    topicIds?: Types.ObjectId[];   // For sections in specific topics, or specific topics (flashcard/media)
+    subjectIds?: Types.ObjectId[]; // For sections/topics in specific subjects
+  };
+  questions: {
+    id: string;
+    type: 'rating' | 'multiple_choice' | 'text';
+    question: string;
+    required: boolean;
+    options?: string[]; // For multiple choice
+    scale?: { min: number; max: number; labels?: string[] }; // For rating
+  }[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const SurveySchema = new Schema<ISurvey>({
+  title: { type: String, required: true },
+  description: { type: String },
+  triggerType: {
+    type: String,
+    enum: ['section_completion', 'flashcard_completion', 'media_completion'],
+    required: true
+  },
+  isActive: { type: Boolean, default: true },
+  targeting: {
+    type: {
+      type: String,
+      enum: ['all', 'specific_sections', 'specific_topics', 'specific_subjects'],
+      required: true,
+      default: 'all'
+    },
+    sectionIds: [{ type: Schema.Types.ObjectId, ref: 'QuestionSection' }],
+    topicIds: [{ type: Schema.Types.ObjectId, ref: 'Topic' }],
+    subjectIds: [{ type: Schema.Types.ObjectId, ref: 'Subject' }]
+  },
+  questions: [{
+    id: { type: String, required: true },
+    type: { type: String, enum: ['rating', 'multiple_choice', 'text'], required: true },
+    question: { type: String, required: true },
+    required: { type: Boolean, default: false },
+    options: [{ type: String }],
+    scale: {
+      min: { type: Number },
+      max: { type: Number },
+      labels: [{ type: String }]
+    }
+  }]
+}, {
+  timestamps: true
+});
+
+// Survey Response Schema
+export interface ISurveyResponse extends Document {
+  _id: Types.ObjectId;
+  surveyId: Types.ObjectId;
+  userId: Types.ObjectId;
+  triggerContentId: Types.ObjectId; // sectionId for section surveys, topicId for flashcard/media surveys
+  triggerType: 'section_completion' | 'flashcard_completion' | 'media_completion';
+  responses: {
+    questionId: string;
+    answer: any; // rating number, selected option, or text response
+  }[];
+  completedAt: Date;
+  timeSpent: number; // in seconds
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const SurveyResponseSchema = new Schema<ISurveyResponse>({
+  surveyId: { type: Schema.Types.ObjectId, ref: 'Survey', required: true },
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  triggerContentId: { type: Schema.Types.ObjectId, required: true },
+  triggerType: {
+    type: String,
+    enum: ['section_completion', 'flashcard_completion', 'media_completion'],
+    required: true
+  },
+  responses: [{
+    questionId: { type: String, required: true },
+    answer: { type: Schema.Types.Mixed, required: true }
+  }],
+  completedAt: { type: Date, default: Date.now },
+  timeSpent: { type: Number, default: 0 }
+}, {
+  timestamps: true
+});
+
+// Create indexes for better query performance
+SurveySchema.index({ triggerType: 1, isActive: 1 });
+SurveyResponseSchema.index({ surveyId: 1, userId: 1 });
+SurveyResponseSchema.index({ triggerContentId: 1, triggerType: 1 });
+SurveyResponseSchema.index({ userId: 1 });
+
 // Export models
 export const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 export const Subject = mongoose.models.Subject || mongoose.model<ISubject>('Subject', SubjectSchema);
@@ -385,3 +488,5 @@ export const Flashcard = mongoose.models.Flashcard || mongoose.model<IFlashcard>
 export const Media = mongoose.models.Media || mongoose.model<IMedia>('Media', MediaSchema);
 export const UserProgress = mongoose.models.UserProgress || mongoose.model<IUserProgress>('UserProgress', UserProgressSchema);
 export const MediaEngagement = mongoose.models.MediaEngagement || mongoose.model<IMediaEngagement>('MediaEngagement', MediaEngagementSchema);
+export const Survey = mongoose.models.Survey || mongoose.model<ISurvey>('Survey', SurveySchema);
+export const SurveyResponse = mongoose.models.SurveyResponse || mongoose.model<ISurveyResponse>('SurveyResponse', SurveyResponseSchema);

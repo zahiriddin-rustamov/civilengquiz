@@ -23,6 +23,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { FlashcardDeck } from '@/components/flashcards/FlashcardDeck';
 import { FlashcardTable } from '@/components/flashcards/FlashcardTable';
+import { SurveyForm } from '@/components/surveys';
 
 // Enhanced flashcards data type for UI
 interface FlashcardsData {
@@ -62,6 +63,8 @@ export default function FlashcardsPage() {
   const [studySession, setStudySession] = useState<StudySession | null>(null);
   const [sessionCompleted, setSessionCompleted] = useState(false);
   const [sessionCards, setSessionCards] = useState<typeof flashcardsData.flashcards>([]);
+  const [showSurveyModal, setShowSurveyModal] = useState(false);
+  const [surveyData, setSurveyData] = useState<any>(null);
 
   const subjectId = params.subjectId as string;
   const topicId = params.topicId as string;
@@ -270,6 +273,27 @@ export default function FlashcardsPage() {
     setStudyMode('menu');
     // Scroll to top when completing session
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Check for flashcard completion survey
+    checkForSurvey();
+  };
+
+  const checkForSurvey = async () => {
+    try {
+      const response = await fetch(`/api/surveys/trigger?triggerType=flashcard_completion&contentId=${topicId}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.survey && !data.alreadyCompleted) {
+          setSurveyData(data);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking for survey:', error);
+    }
+  };
+
+  const handleSurveyComplete = () => {
+    setSurveyData(null);
   };
 
   const getFilteredCards = () => {
@@ -659,6 +683,17 @@ export default function FlashcardsPage() {
           </div>
         </div>
       </div>
+
+      {/* Survey Form */}
+      {surveyData && (
+        <div className="mt-8">
+          <SurveyForm
+            survey={surveyData.survey}
+            triggerContentId={surveyData.triggerContentId}
+            onSubmitSuccess={handleSurveyComplete}
+          />
+        </div>
+      )}
     </div>
   );
 }

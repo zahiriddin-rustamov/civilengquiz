@@ -9,6 +9,7 @@ import {
   FileText,
   CreditCard,
   Play,
+  MessageSquare,
   Users,
   BarChart3,
   Settings
@@ -32,6 +33,7 @@ const navigation: NavigationItem[] = [
   { name: 'Questions', href: '/admin/questions', icon: FileText },
   { name: 'Flashcards', href: '/admin/flashcards', icon: CreditCard },
   { name: 'Media', href: '/admin/media', icon: Play },
+  { name: 'Surveys', href: '/admin/surveys', icon: MessageSquare },
   {
     name: 'User Management',
     href: '/admin/users',
@@ -119,14 +121,14 @@ export function AdminSidebar() {
               Content Management
             </h3>
           </div>
-          {navigation.slice(1, 6).map(item => renderNavItem(item))}
+          {navigation.slice(1, 7).map(item => renderNavItem(item))}
         </div>
 
         {/* Separator */}
         <div className="border-t border-gray-200 my-4"></div>
 
         {/* Other sections */}
-        {navigation.slice(6).map(item => renderNavItem(item))}
+        {navigation.slice(7).map(item => renderNavItem(item))}
       </nav>
 
       {/* User Info */}

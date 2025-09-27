@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { VideoPlayer } from '@/components/media/VideoPlayer';
+import { SurveyForm } from '@/components/surveys';
 import ReactPlayer from 'react-player';
 
 // Video interface for long-form content
@@ -139,6 +140,10 @@ export default function MediaPage() {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [quizAnswered, setQuizAnswered] = useState(false);
   const [quizResult, setQuizResult] = useState<{ isCorrect: boolean; explanation: string } | null>(null);
+
+  // Survey state
+  const [showSurveyModal, setShowSurveyModal] = useState(false);
+  const [surveyData, setSurveyData] = useState<any>(null);
 
   // Engagement queue for batching
   const [engagementQueue, setEngagementQueue] = useState<Array<{
@@ -315,6 +320,18 @@ export default function MediaPage() {
     };
   }, [engagementQueue]);
 
+  // Watch for media completion to trigger survey
+  useEffect(() => {
+    if (mediaData && checkAllMediaCompleted() && !showSurveyModal) {
+      // Add small delay to ensure all progress updates are complete
+      const timer = setTimeout(() => {
+        checkForSurvey();
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [progress, mediaData, showSurveyModal]);
+
   const fetchMedia = async () => {
     try {
       setIsLoading(true);
@@ -371,7 +388,14 @@ export default function MediaPage() {
             // Move to next video
             setCurrentVideoIndex(prev => prev + 1);
           } else {
-            // Last video completed - scroll to completion section
+            // Last video completed - check if all media is completed and trigger survey
+            setTimeout(() => {
+              if (checkAllMediaCompleted()) {
+                checkForSurvey();
+              }
+            }, 500); // Small delay to let state update
+
+            // Scroll to completion section
             const completionSection = document.querySelector('[data-completion-section]');
             if (completionSection) {
               completionSection.scrollIntoView({ behavior: 'smooth' });
@@ -573,6 +597,41 @@ export default function MediaPage() {
     }));
   };
 
+  const checkForSurvey = async () => {
+    try {
+      const response = await fetch(`/api/surveys/trigger?triggerType=media_completion&contentId=${topicId}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.survey && !data.alreadyCompleted) {
+          setSurveyData(data);
+          setShowSurveyModal(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking for survey:', error);
+    }
+  };
+
+  const handleSurveyComplete = () => {
+    setShowSurveyModal(false);
+    setSurveyData(null);
+  };
+
+  const checkAllMediaCompleted = () => {
+    if (!mediaData) return false;
+
+    // Check if all videos are completed
+    const allVideosCompleted = mediaData.videos.every(video =>
+      progress.videoProgress[video.id]?.completed
+    );
+
+    // Check if all shorts are completed
+    const allShortsCompleted = mediaData.shorts.every(short =>
+      progress.shortProgress[short.id]?.completed
+    );
+
+    return allVideosCompleted && allShortsCompleted;
+  };
 
   const calculateOverallProgress = () => {
     if (!mediaData) return { completed: 0, total: 0, points: 0, maxPoints: 0 };
@@ -1530,6 +1589,17 @@ export default function MediaPage() {
         )}
         </div>
       </div>
+
+      {/* Survey Form */}
+      {surveyData && (
+        <div className="mt-8">
+          <SurveyForm
+            survey={surveyData.survey}
+            triggerContentId={surveyData.triggerContentId}
+            onSubmitSuccess={handleSurveyComplete}
+          />
+        </div>
+      )}
     </div>
   );
 } 

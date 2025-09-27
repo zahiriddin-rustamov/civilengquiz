@@ -25,6 +25,7 @@ import { FillInBlankQuestion } from '@/components/quiz/FillInBlankQuestion';
 import { NumericalQuestion } from '@/components/quiz/NumericalQuestion';
 import { MatchingQuestion } from '@/components/quiz/MatchingQuestion';
 import { XPNotification } from '@/components/gamification';
+import { SurveyForm } from '@/components/surveys';
 import { useDashboard } from '@/context/DashboardProvider';
 
 interface SectionQuestionsData {
@@ -77,6 +78,8 @@ export default function SectionQuestionsPage() {
     newLevel?: number;
     newAchievements: any[];
   } | null>(null);
+  const [showSurveyModal, setShowSurveyModal] = useState(false);
+  const [surveyData, setSurveyData] = useState<any>(null);
 
   const subjectId = params.subjectId as string;
   const topicId = params.topicId as string;
@@ -225,6 +228,9 @@ export default function SectionQuestionsPage() {
     }
 
     setQuizCompleted(true);
+
+    // Check for section completion survey
+    checkForSurvey();
   };
 
   const handlePreviousQuestion = () => {
@@ -237,6 +243,26 @@ export default function SectionQuestionsPage() {
     setCurrentQuestionIndex(0);
     setAnswers([]);
     setQuizCompleted(false);
+  };
+
+  const checkForSurvey = async () => {
+    try {
+      const response = await fetch(`/api/surveys/trigger?triggerType=section_completion&contentId=${sectionId}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.survey && !data.alreadyCompleted) {
+          setSurveyData(data);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking for survey:', error);
+    }
+  };
+
+  const handleSurveyComplete = () => {
+    setSurveyData(null);
+    // Trigger refresh to update dashboard progress
+    triggerRefresh();
   };
 
   const renderQuestion = (question: NonNullable<typeof questionsData>['questions'][0]) => {
@@ -462,7 +488,24 @@ export default function SectionQuestionsPage() {
               </Link>
             </div>
           </motion.div>
+
+          {/* Survey Section */}
+          {surveyData && !showSurveyModal && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="mt-8"
+            >
+              <SurveyForm
+                survey={surveyData.survey}
+                triggerContentId={surveyData.triggerContentId}
+                onSubmitSuccess={handleSurveyComplete}
+              />
+            </motion.div>
+          )}
         </div>
+
       </div>
     );
   }
@@ -554,6 +597,7 @@ export default function SectionQuestionsPage() {
           </Button>
         </div>
       </div>
+
     </div>
   );
 }
