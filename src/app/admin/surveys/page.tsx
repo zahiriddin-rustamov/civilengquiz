@@ -36,10 +36,7 @@ import {
   Trash2,
   Eye,
   FileText,
-  CheckCircle,
-  XCircle,
-  BarChart3,
-  MessageSquare
+  BarChart3
 } from 'lucide-react';
 import { Types } from 'mongoose';
 
@@ -273,42 +270,6 @@ export default function SurveysPage() {
         </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Surveys</CardTitle>
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{surveys.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Surveys</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {surveys.filter(s => s.isActive).length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inactive Surveys</CardTitle>
-            <XCircle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {surveys.filter(s => !s.isActive).length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Filters and Content */}
       <Card>
