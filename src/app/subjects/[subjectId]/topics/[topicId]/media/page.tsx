@@ -304,7 +304,6 @@ export default function MediaPage() {
         if (response.ok) {
           // Clear the queue on successful sync
           setEngagementQueue([]);
-          console.log(`Synced ${batchedEngagements.length} engagement updates`);
         } else {
           console.error('Failed to sync engagements:', await response.text());
         }
@@ -383,12 +382,6 @@ export default function MediaPage() {
         data.shorts = [...data.shorts].sort(() => Math.random() - 0.5);
       }
 
-      // Debug: Check if any shorts have quiz questions
-      console.log('Loaded media data:', {
-        videosCount: data.videos?.length || 0,
-        shortsCount: data.shorts?.length || 0,
-        shortsWithQuiz: data.shorts?.filter((s: any) => s.quizQuestions && s.quizQuestions.length > 0).length || 0
-      });
 
       setMediaData(data);
     } catch (err) {
@@ -436,26 +429,6 @@ export default function MediaPage() {
         setCurrentVideoIndex(nextVideoIndex);
       }
 
-      console.log('Loaded user progress:', {
-        videosCompleted: Object.keys(data.videoProgress || {}).length,
-        shortsCompleted: Object.keys(data.shortProgress || {}).length,
-        currentVideoIndex: currentVideoIndex,
-        progressData: data.videoProgress
-      });
-
-      // Debug: Check completion status after progress loads
-      if (mediaData?.videos) {
-        console.log('Checking video completion:', {
-          totalVideos: mediaData.videos.length,
-          videoIds: mediaData.videos.map(v => v.id),
-          progressKeys: Object.keys(data.videoProgress || {}),
-          completionCheck: mediaData.videos.map(video => ({
-            videoId: video.id,
-            isCompleted: data.videoProgress?.[video.id]?.completed || false,
-            progressData: data.videoProgress?.[video.id]
-          }))
-        });
-      }
     } catch (err) {
       console.error('Error fetching user progress:', err);
       // Continue with empty progress state
@@ -665,7 +638,7 @@ export default function MediaPage() {
 
         const result = await response.json();
         if (result.success) {
-          console.log(`Short ${mediaId} progress tracked, XP earned: ${result.xpEarned || 0}`);
+          // Progress tracked successfully
         }
       }
     } catch (error) {
@@ -758,19 +731,6 @@ export default function MediaPage() {
       }
     });
 
-    // Debug logging for completion calculation
-    if (process.env.NODE_ENV === 'development') {
-      console.log('calculateOverallProgress:', {
-        totalVideos: mediaData.videos.length,
-        completedItems,
-        isProgressLoaded,
-        videoProgress: progress.videoProgress,
-        videoCompletionCheck: mediaData.videos.map(video => ({
-          videoId: video.id,
-          completed: progress.videoProgress[video.id]?.completed || false
-        }))
-      });
-    }
 
     // Count completed shorts
     mediaData.shorts.forEach(short => {
@@ -1472,7 +1432,6 @@ export default function MediaPage() {
                         <button
                           className="flex flex-col items-center gap-1 transition-transform active:scale-110"
                           onClick={() => {
-                            console.log('Quiz button clicked for short:', short);
                             const randomQuestion = short.quizQuestions[Math.floor(Math.random() * short.quizQuestions.length)];
                             setCurrentQuiz(randomQuestion);
                             setSelectedAnswer(null);

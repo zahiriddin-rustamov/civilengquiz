@@ -143,21 +143,6 @@ export function VideoPlayer({
     const qualityCompleted = watchData ? (engagementScore >= 30 || isGenuineWatch) : true; // Lower engagement threshold OR genuine watch OR no tracker data
     const completed = progressCompleted && timeCompleted && qualityCompleted;
 
-    // Debug logging for completion issues
-    if (process.env.NODE_ENV === 'development' && state.played >= 0.8) {
-      console.log('Video completion check:', {
-        videoId: video.id,
-        progress: Math.round(state.played * 100) + '%',
-        actualWatchTime: watchData?.actualWatchTime || 0,
-        videoDuration: videoDuration,
-        engagementScore,
-        progressCompleted,
-        timeCompleted,
-        qualityCompleted,
-        completed,
-        isCompleted
-      });
-    }
 
     // Don't overwrite existing completion status unless user actually progresses beyond it
     const shouldCallOnProgress = !isCompleted || (completed && !isCompleted) || (state.played > initialProgress);

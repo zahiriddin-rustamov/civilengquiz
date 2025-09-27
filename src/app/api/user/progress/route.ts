@@ -77,27 +77,6 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Debug logging
-      console.log('Progress API Debug:', {
-        topicId,
-        mediaItemsCount: mediaItems.length,
-        mediaProgressCount: mediaProgress.length,
-        videoProgressKeys: Object.keys(videoProgress),
-        shortProgressKeys: Object.keys(shortProgress),
-        finalVideoProgress: videoProgress,
-        finalShortProgress: shortProgress,
-        mediaItemsMap: Array.from(mediaItemsMap.entries()).map(([id, item]) => ({
-          id,
-          videoType: item.videoType,
-          title: item.title
-        })),
-        progressEntries: mediaProgress.map(p => ({
-          contentId: p.contentId.toString(),
-          completed: p.completed,
-          videoType: p.data?.videoType,
-          score: p.score
-        }))
-      });
 
       return NextResponse.json({
         topicProgress,
