@@ -499,7 +499,7 @@ function TopicCard({ topic, subjectId }: {
               </div>
 
               {/* Content Stats */}
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-center gap-2 text-sm">
                 <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/20">
                   <FileText className="w-4 h-4" />
                   <span className="font-semibold">{topic.contentCounts.questions} Questions</span>
