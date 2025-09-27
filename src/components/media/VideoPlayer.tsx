@@ -159,8 +159,16 @@ export function VideoPlayer({
       });
     }
 
+    // Don't overwrite existing completion status unless user actually progresses beyond it
+    const shouldCallOnProgress = !isCompleted || (completed && !isCompleted) || (state.played > initialProgress);
+
     // Always call onProgress for UI updates, but only make API calls when needed
-    const shouldUpdateAPI = (completed && !isCompleted) || (hasStarted && state.played > initialProgress + 0.1);
+    // Save progress more frequently to ensure persistence
+    const shouldUpdateAPI = hasStarted && shouldCallOnProgress && (
+      (completed && !isCompleted) || // First time completion
+      (state.played > initialProgress + 0.05) || // Every 5% progress
+      (state.played >= 0.8) // Always save when near end
+    );
 
     if (shouldUpdateAPI) {
       try {
@@ -210,8 +218,8 @@ export function VideoPlayer({
         // Fallback to local tracking
         onProgress(video.id, state.played, completed, completed ? video.points : 0);
       }
-    } else {
-      // Always update UI even if no API call needed
+    } else if (shouldCallOnProgress) {
+      // Always update UI even if no API call needed, but respect existing completion status
       onProgress(video.id, state.played, completed, completed ? video.points : Math.round(state.played * video.points));
     }
   };

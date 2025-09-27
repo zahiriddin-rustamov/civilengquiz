@@ -121,6 +121,7 @@ export default function MediaPage() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isProgressLoaded, setIsProgressLoaded] = useState(false);
 
   // Tab navigation
   const [activeTab, setActiveTab] = useState<'videos' | 'shorts'>('videos');
@@ -187,6 +188,13 @@ export default function MediaPage() {
       fetchMedia();
     }
   }, [status, subjectId, topicId, router]);
+
+  // Load user progress after media data is loaded
+  useEffect(() => {
+    if (mediaData && status === 'authenticated') {
+      fetchUserProgress();
+    }
+  }, [mediaData, status, topicId]);
 
   // Keyboard navigation for shorts
   useEffect(() => {
@@ -369,6 +377,71 @@ export default function MediaPage() {
       setError(err instanceof Error ? err.message : 'Failed to load media');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchUserProgress = async () => {
+    try {
+      const response = await fetch(`/api/user/progress?topicId=${topicId}`);
+      if (!response.ok) {
+        console.warn('Failed to fetch user progress, starting fresh');
+        return;
+      }
+
+      const data = await response.json();
+
+      // Update progress state with loaded data
+      setProgress({
+        videoProgress: data.videoProgress || {},
+        shortProgress: data.shortProgress || {},
+        totalQuizCorrect: data.totalQuizCorrect || 0,
+        currentStreak: data.currentStreak || 0,
+        shortsWatchedToday: data.shortsWatchedToday || 0
+      });
+
+      // Set current video index based on progress
+      if (data.videoProgress && mediaData?.videos) {
+        // Find the first incomplete video or stay at the last one if all are complete
+        let nextVideoIndex = 0;
+        for (let i = 0; i < mediaData.videos.length; i++) {
+          const videoId = mediaData.videos[i].id;
+          if (!data.videoProgress[videoId]?.completed) {
+            nextVideoIndex = i;
+            break;
+          }
+          // If we're at the last video and it's complete, stay there
+          if (i === mediaData.videos.length - 1) {
+            nextVideoIndex = i;
+          }
+        }
+        setCurrentVideoIndex(nextVideoIndex);
+      }
+
+      console.log('Loaded user progress:', {
+        videosCompleted: Object.keys(data.videoProgress || {}).length,
+        shortsCompleted: Object.keys(data.shortProgress || {}).length,
+        currentVideoIndex: currentVideoIndex,
+        progressData: data.videoProgress
+      });
+
+      // Debug: Check completion status after progress loads
+      if (mediaData?.videos) {
+        console.log('Checking video completion:', {
+          totalVideos: mediaData.videos.length,
+          videoIds: mediaData.videos.map(v => v.id),
+          progressKeys: Object.keys(data.videoProgress || {}),
+          completionCheck: mediaData.videos.map(video => ({
+            videoId: video.id,
+            isCompleted: data.videoProgress?.[video.id]?.completed || false,
+            progressData: data.videoProgress?.[video.id]
+          }))
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching user progress:', err);
+      // Continue with empty progress state
+    } finally {
+      setIsProgressLoaded(true);
     }
   };
 
@@ -647,6 +720,20 @@ export default function MediaPage() {
         earnedPoints += progress.videoProgress[video.id].points;
       }
     });
+
+    // Debug logging for completion calculation
+    if (process.env.NODE_ENV === 'development') {
+      console.log('calculateOverallProgress:', {
+        totalVideos: mediaData.videos.length,
+        completedItems,
+        isProgressLoaded,
+        videoProgress: progress.videoProgress,
+        videoCompletionCheck: mediaData.videos.map(video => ({
+          videoId: video.id,
+          completed: progress.videoProgress[video.id]?.completed || false
+        }))
+      });
+    }
 
     // Count completed shorts
     mediaData.shorts.forEach(short => {
@@ -1571,7 +1658,7 @@ export default function MediaPage() {
         )}
 
         {/* Video Series Completion */}
-        {activeTab === 'videos' && mediaData.videos.length > 0 &&
+        {activeTab === 'videos' && mediaData.videos.length > 0 && isProgressLoaded &&
          mediaData.videos.every(video => progress.videoProgress[video.id]?.completed) && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -1620,7 +1707,7 @@ export default function MediaPage() {
         )}
 
         {/* Overall Completion Summary */}
-        {progressPercentage === 100 && (
+        {progressPercentage === 100 && isProgressLoaded && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
