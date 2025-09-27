@@ -274,8 +274,10 @@ export default function FlashcardsPage() {
     // Scroll to top when completing session
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Check for flashcard completion survey
-    checkForSurvey();
+    // Only check for survey after completing "Study All Cards" session
+    if (studySession?.mode === 'study') {
+      checkForSurvey();
+    }
   };
 
   const checkForSurvey = async () => {
@@ -451,6 +453,22 @@ export default function FlashcardsPage() {
                 </Link>
               </div>
             </motion.div>
+
+            {/* Survey Section */}
+            {surveyData && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="mt-8"
+              >
+                <SurveyForm
+                  survey={surveyData.survey}
+                  triggerContentId={surveyData.triggerContentId}
+                  onSubmitSuccess={handleSurveyComplete}
+                />
+              </motion.div>
+            )}
           </div>
         </div>
       </div>
@@ -683,17 +701,6 @@ export default function FlashcardsPage() {
           </div>
         </div>
       </div>
-
-      {/* Survey Form */}
-      {surveyData && (
-        <div className="mt-8">
-          <SurveyForm
-            survey={surveyData.survey}
-            triggerContentId={surveyData.triggerContentId}
-            onSubmitSuccess={handleSurveyComplete}
-          />
-        </div>
-      )}
     </div>
   );
 }

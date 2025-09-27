@@ -63,6 +63,7 @@ interface SurveyResponse {
 interface Survey {
   _id: Types.ObjectId;
   title: string;
+  triggerType: 'section_completion' | 'flashcard_completion' | 'media_completion';
   questions: {
     id: string;
     type: 'rating' | 'multiple_choice' | 'text';
@@ -78,6 +79,9 @@ interface ContentGroupTabsProps {
 }
 
 export function ContentGroupTabs({ responses, survey, className = "" }: ContentGroupTabsProps) {
+  // Determine if "By Section" tab should be shown
+  const showSectionTab = survey.triggerType === 'section_completion';
+
   // State for content filtering within tabs
   const [contentFilters, setContentFilters] = useState({
     selectedSection: '',
@@ -252,7 +256,7 @@ export function ContentGroupTabs({ responses, survey, className = "" }: ContentG
   return (
     <div className={className}>
       <Tabs defaultValue="all" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className={`grid w-full ${showSectionTab ? 'grid-cols-4' : 'grid-cols-3'}`}>
           <TabsTrigger value="all" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             All Responses
@@ -260,13 +264,15 @@ export function ContentGroupTabs({ responses, survey, className = "" }: ContentG
               {responses.length}
             </Badge>
           </TabsTrigger>
-          <TabsTrigger value="bySection" className="flex items-center gap-2">
-            <Layers className="h-4 w-4" />
-            By Section
-            <Badge variant="secondary" className="ml-1">
-              {Object.keys(groupedData.bySection).length}
-            </Badge>
-          </TabsTrigger>
+          {showSectionTab && (
+            <TabsTrigger value="bySection" className="flex items-center gap-2">
+              <Layers className="h-4 w-4" />
+              By Section
+              <Badge variant="secondary" className="ml-1">
+                {Object.keys(groupedData.bySection).length}
+              </Badge>
+            </TabsTrigger>
+          )}
           <TabsTrigger value="byTopic" className="flex items-center gap-2">
             <BookOpen className="h-4 w-4" />
             By Topic
@@ -322,7 +328,8 @@ export function ContentGroupTabs({ responses, survey, className = "" }: ContentG
           <IndividualResponsesTable responses={responses} survey={survey} />
         </TabsContent>
 
-        {/* By Section Tab */}
+        {/* By Section Tab - Only show for section completion surveys */}
+        {showSectionTab && (
         <TabsContent value="bySection" className="space-y-6">
           {Object.keys(groupedData.bySection).length === 0 ? (
             <Card>
@@ -389,6 +396,7 @@ export function ContentGroupTabs({ responses, survey, className = "" }: ContentG
             </>
           )}
         </TabsContent>
+        )}
 
         {/* By Topic Tab */}
         <TabsContent value="byTopic" className="space-y-6">
