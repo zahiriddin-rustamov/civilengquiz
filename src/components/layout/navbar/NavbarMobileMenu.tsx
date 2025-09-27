@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,13 +25,30 @@ interface NavbarMobileMenuProps {
   firstName?: string;
 }
 
-export function NavbarMobileMenu({ 
-  isMenuOpen, 
-  setIsMenuOpen, 
-  isAuthenticated, 
-  session, 
-  firstName 
+export function NavbarMobileMenu({
+  isMenuOpen,
+  setIsMenuOpen,
+  isAuthenticated,
+  session,
+  firstName
 }: NavbarMobileMenuProps) {
+  const pathname = usePathname();
+
+  const isActive = (path: string) => {
+    if (path === '/subjects') {
+      return pathname.startsWith('/subjects');
+    }
+    return pathname === path;
+  };
+
+  const getMobileLinkClassName = (path: string) => {
+    const baseClasses = "flex w-full items-center gap-3 rounded-lg p-3 transition-colors";
+    const activeClasses = "bg-indigo-100 text-indigo-700";
+    const inactiveClasses = "hover:bg-indigo-50";
+
+    return `${baseClasses} ${isActive(path) ? activeClasses : inactiveClasses}`;
+  };
+
   return (
     <AnimatePresence>
       {isMenuOpen && (
@@ -64,33 +82,33 @@ export function NavbarMobileMenu({
 
                 {/* Gaming Navigation Links */}
                 <div className="space-y-1">
-                  <Link 
+                  <Link
                     href="/dashboard"
-                    className="flex w-full items-center gap-3 rounded-lg p-3 hover:bg-indigo-50 transition-colors"
+                    className={getMobileLinkClassName('/dashboard')}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <Crown className="h-5 w-5 text-indigo-600" />
                     <span className="font-medium">Gaming Dashboard</span>
                   </Link>
-                  <Link 
+                  <Link
                     href="/subjects"
-                    className="flex w-full items-center gap-3 rounded-lg p-3 hover:bg-indigo-50 transition-colors"
+                    className={getMobileLinkClassName('/subjects')}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <BookOpen className="h-5 w-5 text-blue-600" />
                     <span className="font-medium">Study Worlds</span>
                   </Link>
-                  <Link 
+                  <Link
                     href="/challenges"
-                    className="flex w-full items-center gap-3 rounded-lg p-3 hover:bg-indigo-50 transition-colors"
+                    className={getMobileLinkClassName('/challenges')}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <Target className="h-5 w-5 text-orange-600" />
                     <span className="font-medium">Daily Challenges</span>
                   </Link>
-                  <Link 
+                  <Link
                     href="/achievements"
-                    className="flex w-full items-center gap-3 rounded-lg p-3 hover:bg-indigo-50 transition-colors"
+                    className={getMobileLinkClassName('/achievements')}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <Trophy className="h-5 w-5 text-yellow-600" />
