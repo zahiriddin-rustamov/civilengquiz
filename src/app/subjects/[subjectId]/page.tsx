@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import ReactMarkdown from 'react-markdown';
 import { 
   ArrowLeft,
   BookOpen, 
@@ -272,7 +273,9 @@ export default function SubjectPage() {
               </div>
               <div className="flex-1">
                 <h1 className="text-4xl md:text-5xl font-bold mb-3 text-white">{subjectInfo.name}</h1>
-                <p className="text-white/80 text-lg leading-relaxed">{subjectInfo.description}</p>
+                <div className="text-white/80 text-lg leading-relaxed prose prose-lg prose-invert max-w-none [&>*]:!text-white/80">
+                  <ReactMarkdown>{subjectInfo.description}</ReactMarkdown>
+                </div>
               </div>
             </div>
 
@@ -467,14 +470,14 @@ function TopicCard({ topic, subjectId }: {
           {/* Title & Description */}
           <div className="flex-1 mb-6">
             <h3 className="text-2xl font-bold mb-3 leading-tight drop-shadow-lg">{topic.name}</h3>
-            <p className="text-white/90 text-sm leading-relaxed drop-shadow-sm" style={{
+            <div className="text-white/90 text-sm leading-relaxed drop-shadow-sm prose prose-sm prose-invert max-w-none [&>*]:!text-white/90" style={{
               display: '-webkit-box',
               WebkitLineClamp: 3,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden'
             }}>
-              {topic.description}
-            </p>
+              <ReactMarkdown>{topic.description}</ReactMarkdown>
+            </div>
           </div>
 
           {/* Progress Section */}

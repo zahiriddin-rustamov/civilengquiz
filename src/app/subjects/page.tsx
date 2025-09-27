@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
 import { 
   BookOpen, 
   Lock, 
@@ -338,14 +339,14 @@ function WorldCard({ world }: { world: EnhancedSubject }) {
           {/* Title & Description */}
           <div className="flex-1 space-y-3">
             <h3 className="text-2xl font-bold leading-tight drop-shadow-lg">{world.name}</h3>
-            <p className="text-white/90 text-sm leading-relaxed drop-shadow-sm" style={{
+            <div className="text-white/90 text-sm leading-relaxed drop-shadow-sm prose prose-sm prose-invert max-w-none [&>*]:!text-white/90" style={{
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden'
             }}>
-              {world.description}
-            </p>
+              <ReactMarkdown>{world.description}</ReactMarkdown>
+            </div>
           </div>
 
           {/* Progress Section */}
