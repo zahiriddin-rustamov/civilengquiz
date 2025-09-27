@@ -15,28 +15,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Plus,
   Search,
-  MoreVertical,
   Edit,
   Trash2,
   Eye,
   FileText,
-  BarChart3
+  BarChart3,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 import { Types } from 'mongoose';
 
@@ -399,63 +388,46 @@ export default function SurveysPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <TooltipProvider>
-                          <div className="flex items-center justify-end space-x-1">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="sm" asChild>
-                                  <Link href={`/admin/surveys/${survey._id}`}>
-                                    <Eye className="h-4 w-4" />
-                                  </Link>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>View survey</p>
-                              </TooltipContent>
-                            </Tooltip>
+                        <div className="flex items-center justify-end space-x-1">
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/admin/surveys/${survey._id}`}>
+                              <Eye className="h-4 w-4" />
+                            </Link>
+                          </Button>
 
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="sm" asChild>
-                                  <Link href={`/admin/surveys/${survey._id}/edit`}>
-                                    <Edit className="h-4 w-4" />
-                                  </Link>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Edit survey</p>
-                              </TooltipContent>
-                            </Tooltip>
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/admin/surveys/${survey._id}/edit`}>
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          </Button>
 
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => toggleSurveyStatus(survey._id.toString(), survey.isActive)}
-                                >
-                                  {survey.isActive ? 'Deactivate' : 'Activate'}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                  <Link href={`/admin/surveys/${survey._id}/responses`}>
-                                    <BarChart3 className="w-4 h-4 mr-2" />
-                                    View Responses
-                                  </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDelete(survey._id.toString())}
-                                  className="text-red-600"
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </TooltipProvider>
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/admin/surveys/${survey._id}/responses`}>
+                              <BarChart3 className="h-4 w-4" />
+                            </Link>
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleSurveyStatus(survey._id.toString(), survey.isActive)}
+                          >
+                            {survey.isActive ? (
+                              <XCircle className="h-4 w-4 text-orange-500" />
+                            ) : (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            )}
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(survey._id.toString())}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
