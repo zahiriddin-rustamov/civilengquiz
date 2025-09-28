@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AuthProvider } from "@/context/AuthProvider";
 import { ConditionalLayout } from "@/components/layout/ConditionalLayout";
+import { TrackingProvider } from "@/lib/tracking";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -32,7 +33,9 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <AuthProvider>
-          <ConditionalLayout>{children}</ConditionalLayout>
+          <TrackingProvider enableTracking={true}>
+            <ConditionalLayout>{children}</ConditionalLayout>
+          </TrackingProvider>
         </AuthProvider>
       </body>
     </html>

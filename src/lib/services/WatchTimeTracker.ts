@@ -11,14 +11,47 @@ export interface WatchTimeData {
   lastPosition: number;
   sessionStartTime: number;
   isCompleted: boolean;
+  // New research metrics
+  segmentWatches: SegmentWatch[];
+  speedChanges: SpeedChange[];
+  rewatchPatterns: RewatchPattern[];
+  focusTime: number; // Time with tab in focus
+  backgroundTime: number; // Time with tab in background
+  averagePlaybackSpeed: number;
+  completionPercentage: number;
 }
 
 export interface WatchTimeEvent {
-  type: 'play' | 'pause' | 'seek' | 'progress' | 'visibility' | 'end';
+  type: 'play' | 'pause' | 'seek' | 'progress' | 'visibility' | 'end' | 'speed' | 'focus' | 'blur';
   timestamp: number;
   position: number;
   duration: number;
   wasVisible?: boolean;
+  speed?: number; // For speed change events
+}
+
+export interface SegmentWatch {
+  startTime: number;
+  endTime: number;
+  startPosition: number;
+  endPosition: number;
+  duration: number;
+  watchCount: number;
+}
+
+export interface SpeedChange {
+  timestamp: number;
+  position: number;
+  fromSpeed: number;
+  toSpeed: number;
+}
+
+export interface RewatchPattern {
+  segmentStart: number;
+  segmentEnd: number;
+  rewatchCount: number;
+  totalTimeSpent: number;
+  timestamps: number[];
 }
 
 export class WatchTimeTracker {
@@ -36,11 +69,62 @@ export class WatchTimeTracker {
   private visibleTime: number = 0;
   private totalSessionTime: number = 0;
 
+  // New tracking variables for research
+  private segmentWatches: Map<string, SegmentWatch> = new Map();
+  private speedChanges: SpeedChange[] = [];
+  private currentSpeed: number = 1;
+  private rewatchPatterns: Map<string, RewatchPattern> = new Map();
+  private focusTime: number = 0;
+  private backgroundTime: number = 0;
+  private isFocused: boolean = true;
+  private lastFocusTime: number = Date.now();
+  private watchedSegments: Set<string> = new Set();
+
   constructor(mediaId: string) {
     this.mediaId = mediaId;
     this.sessionStartTime = Date.now();
     this.lastEventTime = this.sessionStartTime;
+    this.lastFocusTime = this.sessionStartTime;
+    this.initializeFocusTracking();
   }
+
+  private initializeFocusTracking() {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', this.handleFocus);
+      window.addEventListener('blur', this.handleBlur);
+      this.isFocused = document.hasFocus();
+    }
+  }
+
+  private handleFocus = () => {
+    const now = Date.now();
+    if (!this.isFocused) {
+      this.backgroundTime += (now - this.lastFocusTime) / 1000;
+    }
+    this.isFocused = true;
+    this.lastFocusTime = now;
+    this.addEvent({
+      type: 'focus',
+      timestamp: now,
+      position: this.lastPosition,
+      duration: 0
+    });
+  };
+
+  private handleBlur = () => {
+    const now = Date.now();
+    if (this.isFocused) {
+      this.focusTime += (now - this.lastFocusTime) / 1000;
+    }
+    this.isFocused = false;
+    this.lastFocusTime = now;
+    this.addEvent({
+      type: 'blur',
+      timestamp: now,
+      position: this.lastPosition,
+      duration: 0
+    });
+  };
 
   // Initialize visibility tracking
   initializeVisibilityTracking(element: HTMLElement) {
@@ -114,8 +198,11 @@ export class WatchTimeTracker {
     const positionDiff = Math.abs(position - this.lastPosition);
     const timeDiff = (now - this.lastEventTime) / 1000;
 
+    // Track segment watching
+    this.trackSegmentWatch(position, duration);
+
     // Detect seeking - if position changed more than expected based on playback time
-    const expectedPositionChange = timeDiff * (this.isPlaying ? 1 : 0);
+    const expectedPositionChange = timeDiff * (this.isPlaying ? this.currentSpeed : 0);
     const isSeeking = positionDiff > this.seekThreshold &&
                      Math.abs(positionDiff - expectedPositionChange) > this.seekThreshold;
 
@@ -126,6 +213,9 @@ export class WatchTimeTracker {
         position,
         duration
       });
+
+      // Check for rewatch pattern
+      this.detectRewatchPattern(this.lastPosition, position);
 
       // Reset tracking after seek
       this.lastEventTime = now;
@@ -147,6 +237,76 @@ export class WatchTimeTracker {
       position,
       duration
     });
+  }
+
+  // Track speed changes
+  onSpeedChange(newSpeed: number) {
+    const now = Date.now();
+
+    this.speedChanges.push({
+      timestamp: now,
+      position: this.lastPosition,
+      fromSpeed: this.currentSpeed,
+      toSpeed: newSpeed
+    });
+
+    this.currentSpeed = newSpeed;
+
+    this.addEvent({
+      type: 'speed',
+      timestamp: now,
+      position: this.lastPosition,
+      duration: 0,
+      speed: newSpeed
+    });
+  }
+
+  private trackSegmentWatch(position: number, duration: number) {
+    // Track 10-second segments
+    const segmentSize = 10;
+    const segmentIndex = Math.floor(position / segmentSize);
+    const segmentKey = `${segmentIndex * segmentSize}-${(segmentIndex + 1) * segmentSize}`;
+
+    if (!this.segmentWatches.has(segmentKey)) {
+      this.segmentWatches.set(segmentKey, {
+        startTime: Date.now(),
+        endTime: Date.now(),
+        startPosition: segmentIndex * segmentSize,
+        endPosition: Math.min((segmentIndex + 1) * segmentSize, duration),
+        duration: 0,
+        watchCount: 0
+      });
+    }
+
+    const segment = this.segmentWatches.get(segmentKey)!;
+    segment.endTime = Date.now();
+    segment.duration += (Date.now() - this.lastEventTime) / 1000;
+
+    if (!this.watchedSegments.has(segmentKey)) {
+      this.watchedSegments.add(segmentKey);
+      segment.watchCount++;
+    }
+  }
+
+  private detectRewatchPattern(fromPosition: number, toPosition: number) {
+    // Only track backward seeks as potential rewatches
+    if (toPosition >= fromPosition) return;
+
+    const segmentKey = `${Math.floor(toPosition)}-${Math.floor(fromPosition)}`;
+
+    if (!this.rewatchPatterns.has(segmentKey)) {
+      this.rewatchPatterns.set(segmentKey, {
+        segmentStart: toPosition,
+        segmentEnd: fromPosition,
+        rewatchCount: 0,
+        totalTimeSpent: 0,
+        timestamps: []
+      });
+    }
+
+    const pattern = this.rewatchPatterns.get(segmentKey)!;
+    pattern.rewatchCount++;
+    pattern.timestamps.push(Date.now());
   }
 
   // Track end event
@@ -194,6 +354,14 @@ export class WatchTimeTracker {
   getWatchTimeData(): WatchTimeData {
     this.updateWatchTime(); // Ensure we have latest data
 
+    // Update focus time
+    const now = Date.now();
+    if (this.isFocused) {
+      this.focusTime += (now - this.lastFocusTime) / 1000;
+    } else {
+      this.backgroundTime += (now - this.lastFocusTime) / 1000;
+    }
+
     const playEvents = this.events.filter(e => e.type === 'play').length;
     const pauseEvents = this.events.filter(e => e.type === 'pause').length;
     const seekEvents = this.events.filter(e => e.type === 'seek').length;
@@ -202,9 +370,36 @@ export class WatchTimeTracker {
       ? Math.min(100, (this.visibleTime / this.totalSessionTime) * 100)
       : 100;
 
+    // Calculate average playback speed
+    let totalSpeedTime = 0;
+    let weightedSpeed = 0;
+    for (let i = 0; i < this.speedChanges.length; i++) {
+      const change = this.speedChanges[i];
+      const nextChange = this.speedChanges[i + 1];
+      const duration = nextChange
+        ? (nextChange.timestamp - change.timestamp) / 1000
+        : (now - change.timestamp) / 1000;
+      totalSpeedTime += duration;
+      weightedSpeed += change.toSpeed * duration;
+    }
+    const averagePlaybackSpeed = totalSpeedTime > 0
+      ? weightedSpeed / totalSpeedTime
+      : this.currentSpeed;
+
+    // Calculate completion percentage
+    const completionPercentage = this.lastPosition > 0
+      ? Math.min(100, (this.watchedSegments.size * 10 / this.lastPosition) * 100)
+      : 0;
+
+    // Update rewatch patterns with total time spent
+    for (const [key, pattern] of this.rewatchPatterns) {
+      const segmentDuration = pattern.segmentEnd - pattern.segmentStart;
+      pattern.totalTimeSpent = pattern.rewatchCount * segmentDuration;
+    }
+
     return {
       mediaId: this.mediaId,
-      actualWatchTime: Math.round(this.totalWatchTime * 100) / 100, // Round to 2 decimal places
+      actualWatchTime: Math.round(this.totalWatchTime * 100) / 100,
       totalDuration: this.lastPosition,
       seekEvents,
       pauseEvents,
@@ -212,7 +407,15 @@ export class WatchTimeTracker {
       visibility: Math.round(visibilityPercentage),
       lastPosition: this.lastPosition,
       sessionStartTime: this.sessionStartTime,
-      isCompleted: false // Will be determined by calling component
+      isCompleted: false,
+      // New research metrics
+      segmentWatches: Array.from(this.segmentWatches.values()),
+      speedChanges: this.speedChanges,
+      rewatchPatterns: Array.from(this.rewatchPatterns.values()),
+      focusTime: Math.round(this.focusTime * 100) / 100,
+      backgroundTime: Math.round(this.backgroundTime * 100) / 100,
+      averagePlaybackSpeed: Math.round(averagePlaybackSpeed * 100) / 100,
+      completionPercentage: Math.round(completionPercentage * 100) / 100
     };
   }
 
@@ -257,6 +460,10 @@ export class WatchTimeTracker {
       this.visibilityObserver.unobserve(this.element);
       this.visibilityObserver.disconnect();
     }
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('focus', this.handleFocus);
+      window.removeEventListener('blur', this.handleBlur);
+    }
   }
 }
 
@@ -271,6 +478,7 @@ export function useWatchTimeTracker(mediaId: string) {
     onPause: (position: number, duration: number) => tracker.onPause(position, duration),
     onProgress: (position: number, duration: number) => tracker.onProgress(position, duration),
     onEnd: (duration: number) => tracker.onEnd(duration),
+    onSpeedChange: (newSpeed: number) => tracker.onSpeedChange(newSpeed),
     getWatchTimeData: () => tracker.getWatchTimeData(),
     getEngagementScore: () => tracker.getEngagementScore(),
     isGenuineWatch: (minimumPercentage?: number) => tracker.isGenuineWatch(minimumPercentage),

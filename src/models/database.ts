@@ -466,6 +466,135 @@ SurveyResponseSchema.index({ surveyId: 1, userId: 1 });
 SurveyResponseSchema.index({ triggerContentId: 1, triggerType: 1 });
 SurveyResponseSchema.index({ userId: 1 });
 
+// User Interaction Schema for granular tracking
+export interface IUserInteraction extends Document {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
+  sessionId: string;
+  timestamp: Date;
+  eventType: string;
+  contentType?: 'question' | 'flashcard' | 'media' | 'reading' | 'navigation';
+  contentId?: Types.ObjectId;
+  eventData: any;
+  activeTime?: number;
+  totalTime?: number;
+  metadata?: any;
+}
+
+const UserInteractionSchema = new Schema<IUserInteraction>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User' },
+  sessionId: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now, required: true },
+  eventType: { type: String, required: true },
+  contentType: { type: String, enum: ['question', 'flashcard', 'media', 'reading', 'navigation'] },
+  contentId: { type: Schema.Types.ObjectId },
+  eventData: { type: Schema.Types.Mixed },
+  activeTime: { type: Number },
+  totalTime: { type: Number },
+  metadata: { type: Schema.Types.Mixed }
+}, {
+  timestamps: true
+});
+
+// Create indexes for better query performance
+UserInteractionSchema.index({ userId: 1, timestamp: -1 });
+UserInteractionSchema.index({ sessionId: 1, timestamp: -1 });
+UserInteractionSchema.index({ contentType: 1, contentId: 1 });
+UserInteractionSchema.index({ eventType: 1 });
+
+// Session Tracking Schema
+export interface ISessionTracking extends Document {
+  _id: Types.ObjectId;
+  sessionId: string;
+  userId?: Types.ObjectId;
+  startTime: Date;
+  endTime?: Date;
+  duration: number; // seconds
+  activeDuration: number; // seconds
+  navigationPath: Array<{
+    timestamp: Date;
+    url: string;
+    pageTitle?: string;
+    contentType?: string;
+    contentId?: string;
+  }>;
+  contentInteractions: Array<{
+    timestamp: Date;
+    contentType: 'question' | 'flashcard' | 'media' | 'reading';
+    contentId: string;
+    action: string;
+    duration?: number;
+    activeTime?: number;
+    metadata?: any;
+  }>;
+  engagementMetrics: {
+    totalTime: number;
+    activeTime: number;
+    idleTime: number;
+    engagementScore: number;
+    idlePeriods: Array<{ start: Date; end: Date; duration: number }>;
+  };
+  deviceInfo: {
+    userAgent: string;
+    screenResolution: string;
+    viewport: string;
+    platform: string;
+    language: string;
+    timezone: string;
+  };
+}
+
+const SessionTrackingSchema = new Schema<ISessionTracking>({
+  sessionId: { type: String, required: true, unique: true }, // unique: true creates an index automatically
+  userId: { type: Schema.Types.ObjectId, ref: 'User' },
+  startTime: { type: Date, required: true },
+  endTime: { type: Date },
+  duration: { type: Number, default: 0 },
+  activeDuration: { type: Number, default: 0 },
+  navigationPath: [{
+    timestamp: { type: Date, required: true },
+    url: { type: String, required: true },
+    pageTitle: { type: String },
+    contentType: { type: String },
+    contentId: { type: String }
+  }],
+  contentInteractions: [{
+    timestamp: { type: Date, required: true },
+    contentType: { type: String, enum: ['question', 'flashcard', 'media', 'reading'], required: true },
+    contentId: { type: String, required: true },
+    action: { type: String, required: true },
+    duration: { type: Number },
+    activeTime: { type: Number },
+    metadata: { type: Schema.Types.Mixed }
+  }],
+  engagementMetrics: {
+    totalTime: { type: Number, default: 0 },
+    activeTime: { type: Number, default: 0 },
+    idleTime: { type: Number, default: 0 },
+    engagementScore: { type: Number, default: 100 },
+    idlePeriods: [{
+      start: { type: Date },
+      end: { type: Date },
+      duration: { type: Number }
+    }]
+  },
+  deviceInfo: {
+    userAgent: { type: String },
+    screenResolution: { type: String },
+    viewport: { type: String },
+    platform: { type: String },
+    language: { type: String },
+    timezone: { type: String }
+  }
+}, {
+  timestamps: true
+});
+
+// Create indexes for better query performance
+// Note: sessionId already has a unique index from the schema definition
+SessionTrackingSchema.index({ userId: 1, startTime: -1 });
+SessionTrackingSchema.index({ startTime: -1 });
+
 // Export models
 export const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 export const Subject = mongoose.models.Subject || mongoose.model<ISubject>('Subject', SubjectSchema);
@@ -490,3 +619,5 @@ export const UserProgress = mongoose.models.UserProgress || mongoose.model<IUser
 export const MediaEngagement = mongoose.models.MediaEngagement || mongoose.model<IMediaEngagement>('MediaEngagement', MediaEngagementSchema);
 export const Survey = mongoose.models.Survey || mongoose.model<ISurvey>('Survey', SurveySchema);
 export const SurveyResponse = mongoose.models.SurveyResponse || mongoose.model<ISurveyResponse>('SurveyResponse', SurveyResponseSchema);
+export const UserInteraction = mongoose.models.UserInteraction || mongoose.model<IUserInteraction>('UserInteraction', UserInteractionSchema);
+export const SessionTracking = mongoose.models.SessionTracking || mongoose.model<ISessionTracking>('SessionTracking', SessionTrackingSchema);

@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { FlashcardDeck } from '@/components/flashcards/FlashcardDeck';
 import { FlashcardTable } from '@/components/flashcards/FlashcardTable';
 import { SurveyForm } from '@/components/surveys';
+import { FlashcardTracker } from '@/lib/tracking/components';
 
 // Enhanced flashcards data type for UI
 interface FlashcardsData {
@@ -521,12 +522,22 @@ export default function FlashcardsPage() {
             {studyMode === 'browse' ? (
               <FlashcardTable flashcards={getFilteredCards()} />
             ) : (
-              <FlashcardDeck
-                flashcards={getFilteredCards()}
-                onMasteryUpdate={handleMasteryUpdate}
-                onComplete={handleSessionComplete}
-                mode={studyMode}
-              />
+              <FlashcardTracker
+                flashcardId={topicId}
+                totalCards={getFilteredCards().length}
+                metadata={{
+                  topicName: flashcardsData.topicName,
+                  subjectName: flashcardsData.subjectName,
+                  mode: studyMode
+                }}
+              >
+                <FlashcardDeck
+                  flashcards={getFilteredCards()}
+                  onMasteryUpdate={handleMasteryUpdate}
+                  onComplete={handleSessionComplete}
+                  mode={studyMode}
+                />
+              </FlashcardTracker>
             )}
           </div>
         </div>

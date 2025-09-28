@@ -30,6 +30,7 @@ import { VideoPlayer } from '@/components/media/VideoPlayer';
 import { SurveyForm } from '@/components/surveys';
 import { useShortsWatchTime } from '@/lib/hooks/useShortsWatchTime';
 import ReactPlayer from 'react-player';
+import { MediaTracker } from '@/lib/tracking/components';
 
 // Video interface for long-form content
 interface VideoItem {
@@ -1044,24 +1045,37 @@ export default function MediaPage() {
                 )}
 
                 {/* Video Player */}
-                <VideoPlayer
-                  video={{
-                    id: mediaData.videos[currentVideoIndex].id,
-                    title: mediaData.videos[currentVideoIndex].title,
-                    description: mediaData.videos[currentVideoIndex].description,
-                    url: mediaData.videos[currentVideoIndex].url,
-                    duration: mediaData.videos[currentVideoIndex].duration, // Actual duration from YouTube API
-                    thumbnail: mediaData.videos[currentVideoIndex].thumbnail,
+                <MediaTracker
+                  mediaId={mediaData.videos[currentVideoIndex].id}
+                  mediaType="video"
+                  mediaTitle={mediaData.videos[currentVideoIndex].title}
+                  mediaDuration={mediaData.videos[currentVideoIndex].duration}
+                  metadata={{
+                    topicName: mediaData.topicName,
+                    subjectName: mediaData.subjectName,
                     difficulty: mediaData.videos[currentVideoIndex].difficulty,
-                    points: mediaData.videos[currentVideoIndex].points,
-                    topics: []
+                    order: mediaData.videos[currentVideoIndex].order
                   }}
-                  onProgress={handleVideoProgress}
-                  initialProgress={progress.videoProgress[mediaData.videos[currentVideoIndex].id]?.progress || 0}
-                  isCompleted={progress.videoProgress[mediaData.videos[currentVideoIndex].id]?.completed || false}
-                  topicId={topicId}
-                  subjectId={subjectId}
-                />
+                >
+                  <VideoPlayer
+                    video={{
+                      id: mediaData.videos[currentVideoIndex].id,
+                      title: mediaData.videos[currentVideoIndex].title,
+                      description: mediaData.videos[currentVideoIndex].description,
+                      url: mediaData.videos[currentVideoIndex].url,
+                      duration: mediaData.videos[currentVideoIndex].duration, // Actual duration from YouTube API
+                      thumbnail: mediaData.videos[currentVideoIndex].thumbnail,
+                      difficulty: mediaData.videos[currentVideoIndex].difficulty,
+                      points: mediaData.videos[currentVideoIndex].points,
+                      topics: []
+                    }}
+                    onProgress={handleVideoProgress}
+                    initialProgress={progress.videoProgress[mediaData.videos[currentVideoIndex].id]?.progress || 0}
+                    isCompleted={progress.videoProgress[mediaData.videos[currentVideoIndex].id]?.completed || false}
+                    topicId={topicId}
+                    subjectId={subjectId}
+                  />
+                </MediaTracker>
 
                 {/* Post-Video Content */}
                 {(mediaData.videos[currentVideoIndex].postVideoContent.keyConcepts.length > 0 ||
@@ -1290,63 +1304,77 @@ export default function MediaPage() {
                   className="relative h-full w-full snap-start snap-always flex items-center justify-center"
                 >
                   {/* Video Player */}
-                  <ReactPlayer
-                    key={`short-${short.id}-${index === currentShortIndex ? 'active' : 'inactive'}`}
-                    url={short.url}
-                    width="100%"
-                    height="100%"
-                    playing={index === currentShortIndex}
-                    loop={true}
-                    muted={index !== currentShortIndex}
-                    controls={false}
-                    style={{ position: 'absolute', top: 0, left: 0 }}
-                    onPlay={() => {
-                      const reactPlayer = document.querySelector(`[data-short-id="${short.id}"]`);
-                      if (reactPlayer) {
-                        shortsWatchTime.initializeTracking(short.id, reactPlayer as HTMLElement);
-                      }
-                      shortsWatchTime.onPlay(short.id, 0, short.duration);
+                  <MediaTracker
+                    mediaId={short.id}
+                    mediaType="short"
+                    mediaTitle={short.title}
+                    mediaDuration={short.duration}
+                    metadata={{
+                      topicName: mediaData.topicName,
+                      subjectName: mediaData.subjectName,
+                      difficulty: short.difficulty,
+                      order: short.order,
+                      index: index
                     }}
-                    onPause={() => {
-                      shortsWatchTime.onPause(short.id, 0, short.duration);
-                    }}
-                    onProgress={(state) => {
-                      shortsWatchTime.onProgress(short.id, state.playedSeconds, short.duration);
-
-                      // Update debug info for current short
-                      if (index === currentShortIndex) {
-                        setCurrentDebugShort(short.id);
-                      }
-                    }}
-                    onEnded={() => {
-                      shortsWatchTime.onEnd(short.id, short.duration);
-
-                      // Update progress when video ends
-                      if (shortsWatchTime.isGenuineWatch(short.id, 30)) {
-                        shortsWatchTime.updateProgress(short.id, topicId, subjectId);
-                      }
-                    }}
-                    config={{
-                      youtube: {
-                        playerVars: {
-                          showinfo: 0,        // Hide video information overlay
-                          controls: 0,        // Hide all player controls
-                          modestbranding: 1,  // Reduce YouTube branding
-                          rel: 0,             // Disable related videos
-                          autoplay: 1,        // Enable autoplay
-                          playsinline: 1,     // Play inline on mobile
-                          start: 0,           // Start from beginning
-                          iv_load_policy: 3,  // Hide video annotations
-                          cc_load_policy: 0,  // Hide closed captions by default
-                          disablekb: 1,       // Disable keyboard controls
-                          fs: 0,              // Hide fullscreen button
-                          enablejsapi: 0,     // Disable JavaScript API
-                          origin: typeof window !== 'undefined' ? window.location.origin : '',
-                          widget_referrer: typeof window !== 'undefined' ? window.location.origin : ''
+                  >
+                    <ReactPlayer
+                      key={`short-${short.id}-${index === currentShortIndex ? 'active' : 'inactive'}`}
+                      url={short.url}
+                      width="100%"
+                      height="100%"
+                      playing={index === currentShortIndex}
+                      loop={true}
+                      muted={index !== currentShortIndex}
+                      controls={false}
+                      style={{ position: 'absolute', top: 0, left: 0 }}
+                      onPlay={() => {
+                        const reactPlayer = document.querySelector(`[data-short-id="${short.id}"]`);
+                        if (reactPlayer) {
+                          shortsWatchTime.initializeTracking(short.id, reactPlayer as HTMLElement);
                         }
-                      }
-                    }}
-                  />
+                        shortsWatchTime.onPlay(short.id, 0, short.duration);
+                      }}
+                      onPause={() => {
+                        shortsWatchTime.onPause(short.id, 0, short.duration);
+                      }}
+                      onProgress={(state) => {
+                        shortsWatchTime.onProgress(short.id, state.playedSeconds, short.duration);
+
+                        // Update debug info for current short
+                        if (index === currentShortIndex) {
+                          setCurrentDebugShort(short.id);
+                        }
+                      }}
+                      onEnded={() => {
+                        shortsWatchTime.onEnd(short.id, short.duration);
+
+                        // Update progress when video ends
+                        if (shortsWatchTime.isGenuineWatch(short.id, 30)) {
+                          shortsWatchTime.updateProgress(short.id, topicId, subjectId);
+                        }
+                      }}
+                      config={{
+                        youtube: {
+                          playerVars: {
+                            showinfo: 0,        // Hide video information overlay
+                            controls: 0,        // Hide all player controls
+                            modestbranding: 1,  // Reduce YouTube branding
+                            rel: 0,             // Disable related videos
+                            autoplay: 1,        // Enable autoplay
+                            playsinline: 1,     // Play inline on mobile
+                            start: 0,           // Start from beginning
+                            iv_load_policy: 3,  // Hide video annotations
+                            cc_load_policy: 0,  // Hide closed captions by default
+                            disablekb: 1,       // Disable keyboard controls
+                            fs: 0,              // Hide fullscreen button
+                            enablejsapi: 0,     // Disable JavaScript API
+                            origin: typeof window !== 'undefined' ? window.location.origin : '',
+                            widget_referrer: typeof window !== 'undefined' ? window.location.origin : ''
+                          }
+                        }
+                      }}
+                    />
+                  </MediaTracker>
 
                   {/* Overlay Content */}
                   <div className="absolute inset-0 pointer-events-none">

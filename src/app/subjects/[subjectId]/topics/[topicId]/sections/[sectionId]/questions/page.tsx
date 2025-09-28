@@ -27,6 +27,7 @@ import { MatchingQuestion } from '@/components/quiz/MatchingQuestion';
 import { XPNotification } from '@/components/gamification';
 import { SurveyForm } from '@/components/surveys';
 import { useDashboard } from '@/context/DashboardProvider';
+import { QuestionTracker, useSessionTracking } from '@/lib/tracking';
 
 interface SectionQuestionsData {
   section: {
@@ -64,6 +65,7 @@ export default function SectionQuestionsPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const { triggerRefresh } = useDashboard();
+  const { trackContentInteraction } = useSessionTracking();
 
   const [questionsData, setQuestionsData] = useState<SectionQuestionsData | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -117,6 +119,14 @@ export default function SectionQuestionsPage() {
 
       const data = await response.json();
       setQuestionsData(data);
+
+      // Track section start
+      trackContentInteraction('question', sectionId, 'section_start', {
+        sectionName: data.section.name,
+        totalQuestions: data.questions.length,
+        subjectId,
+        topicId
+      });
     } catch (err) {
       console.error('Error fetching section questions:', err);
       setError(err instanceof Error ? err.message : 'Failed to load questions');
@@ -229,6 +239,17 @@ export default function SectionQuestionsPage() {
 
     setQuizCompleted(true);
 
+    // Track section completion
+    trackContentInteraction('question', sectionId, 'section_complete', {
+      sectionName: questionsData.section.name,
+      totalQuestions,
+      correctAnswers,
+      sectionScore,
+      timeSpent,
+      subjectId,
+      topicId
+    });
+
     // Check for section completion survey
     checkForSurvey();
   };
@@ -268,18 +289,19 @@ export default function SectionQuestionsPage() {
   const renderQuestion = (question: NonNullable<typeof questionsData>['questions'][0]) => {
     const existingAnswer = answers.find(a => a.questionId === question.id);
 
-    switch (question.type) {
-      case 'multiple-choice':
-        return (
-          <MultipleChoiceQuestion
-            key={question.id}
-            question={question.data}
-            onAnswer={handleAnswer}
-            showResult={!!existingAnswer}
-            selectedAnswer={existingAnswer?.answer}
-            isCorrect={existingAnswer?.isCorrect}
-          />
-        );
+    const questionComponent = (() => {
+      switch (question.type) {
+        case 'multiple-choice':
+          return (
+            <MultipleChoiceQuestion
+              key={question.id}
+              question={question.data}
+              onAnswer={handleAnswer}
+              showResult={!!existingAnswer}
+              selectedAnswer={existingAnswer?.answer}
+              isCorrect={existingAnswer?.isCorrect}
+            />
+          );
       case 'true-false':
         return (
           <TrueFalseQuestion
@@ -324,9 +346,36 @@ export default function SectionQuestionsPage() {
             isCorrect={existingAnswer?.isCorrect}
           />
         );
-      default:
-        return null;
-    }
+        default:
+          return null;
+      }
+    })();
+
+    // Wrap with QuestionTracker for enhanced tracking
+    if (!questionComponent) return null;
+
+    return (
+      <QuestionTracker
+        questionId={question.id}
+        questionType={question.type}
+        questionText={question.data.text}
+        difficulty={question.data.difficulty}
+        metadata={{
+          sectionId,
+          topicId,
+          subjectId,
+          questionIndex: currentQuestionIndex,
+          totalQuestions: questionsData?.questions.length || 0
+        }}
+        onQuestionComplete={(metrics) => {
+          console.log('Question tracking metrics:', metrics);
+          // Track to session
+          trackContentInteraction('question', question.id, 'complete', metrics);
+        }}
+      >
+        {questionComponent}
+      </QuestionTracker>
+    );
   };
 
   const calculateResults = () => {

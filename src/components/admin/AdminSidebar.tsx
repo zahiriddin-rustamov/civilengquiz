@@ -44,7 +44,7 @@ const navigation: NavigationItem[] = [
     name: 'Analytics',
     href: '/admin/analytics',
     icon: BarChart3,
-    disabled: true,
+    disabled: false,
   },
   {
     name: 'Settings',
