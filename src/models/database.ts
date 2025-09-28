@@ -304,6 +304,11 @@ export interface IUserProgress extends Document {
   lastAccessed: Date;
   attempts: number;
   data?: any; // Store additional progress data (e.g., flashcard mastery level, section unlock status)
+  // Daily XP tracking fields
+  firstCompletedDate?: Date; // Date when content was first completed successfully
+  lastDailyXPDate?: Date; // Last date when daily XP was awarded
+  dailyXPCount: number; // Number of times daily XP has been awarded
+  totalXPEarned: number; // Total XP earned from this content (first-time + all daily)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -321,6 +326,11 @@ const UserProgressSchema = new Schema<IUserProgress>({
   lastAccessed: { type: Date, default: Date.now },
   attempts: { type: Number, default: 0 },
   data: { type: Schema.Types.Mixed },
+  // Daily XP tracking fields
+  firstCompletedDate: { type: Date },
+  lastDailyXPDate: { type: Date },
+  dailyXPCount: { type: Number, default: 0 },
+  totalXPEarned: { type: Number, default: 0 },
 }, {
   timestamps: true
 });

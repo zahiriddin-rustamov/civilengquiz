@@ -172,6 +172,12 @@ export default function MediaPage() {
   // Flag to prevent double-counting views from keyboard navigation
   const [isKeyboardNavigation, setIsKeyboardNavigation] = useState(false);
 
+  // Track which shorts have been completed this session to prevent XP duplication
+  const [sessionCompletedShorts, setSessionCompletedShorts] = useState<Set<string>>(new Set());
+
+  // Debounce scroll events to prevent duplicate XP
+  const [lastScrollTime, setLastScrollTime] = useState(0);
+
   // Shorts watch time tracking
   const shortsWatchTime = useShortsWatchTime();
 
@@ -574,6 +580,9 @@ export default function MediaPage() {
   const handleViewCountIncrement = async (mediaId: string, watchTime: number = 0) => {
     if (!mediaData) return;
 
+    // Check if this short was already completed in this session
+    const isFirstTimeInSession = !sessionCompletedShorts.has(mediaId);
+
     const currentLocal = localEngagements[mediaId] || {
       isLiked: false,
       isSaved: false,
@@ -611,11 +620,12 @@ export default function MediaPage() {
       timestamp: Date.now()
     }]);
 
-    // Also track progress via API for shorts
-    try {
-      const short = mediaData.shorts.find(s => s.id === mediaId);
-      if (short) {
-        const response = await fetch('/api/user/progress/update', {
+    // Also track progress via API for shorts (only if first time in session)
+    if (isFirstTimeInSession) {
+      try {
+        const short = mediaData.shorts.find(s => s.id === mediaId);
+        if (short) {
+          const response = await fetch('/api/user/progress/update', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -637,13 +647,15 @@ export default function MediaPage() {
           }),
         });
 
-        const result = await response.json();
-        if (result.success) {
-          // Progress tracked successfully
+          const result = await response.json();
+          if (result.success) {
+            // Mark this short as completed in this session
+            setSessionCompletedShorts(prev => new Set(prev).add(mediaId));
+          }
         }
+      } catch (error) {
+        console.error('Error tracking short progress:', error);
       }
-    } catch (error) {
-      console.error('Error tracking short progress:', error);
     }
 
     // Update UI optimistically
@@ -1252,6 +1264,13 @@ export default function MediaPage() {
               className="h-full overflow-y-scroll snap-y snap-mandatory scroll-smooth"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               onScroll={(e) => {
+                const now = Date.now();
+                // Debounce scroll events to prevent duplicates (300ms minimum between events)
+                if (now - lastScrollTime < 300) {
+                  return;
+                }
+                setLastScrollTime(now);
+
                 const container = e.currentTarget;
                 const scrollPosition = container.scrollTop;
                 const itemHeight = container.offsetHeight;

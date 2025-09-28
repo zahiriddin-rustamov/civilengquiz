@@ -66,6 +66,8 @@ export default function FlashcardsPage() {
   const [sessionCards, setSessionCards] = useState<typeof flashcardsData.flashcards>([]);
   const [showSurveyModal, setShowSurveyModal] = useState(false);
   const [surveyData, setSurveyData] = useState<any>(null);
+  // Track which flashcards have been completed this session to prevent XP duplication
+  const [sessionCompletedCards, setSessionCompletedCards] = useState<Set<string>>(new Set());
 
   const subjectId = params.subjectId as string;
   const topicId = params.topicId as string;
@@ -117,6 +119,8 @@ export default function FlashcardsPage() {
       xpEarned: 0
     });
     setSessionCompleted(false);
+    // Reset session-completed cards for new session
+    setSessionCompletedCards(new Set());
 
     // Generate session cards once when starting
     if (flashcardsData) {
@@ -171,9 +175,13 @@ export default function FlashcardsPage() {
       // Calculate score based on response (for XP calculation)
       const score = newLevel === 'Easy' ? 1 : newLevel === 'Good' ? 0.8 : newLevel === 'Hard' ? 0.6 : 0.2;
 
+      // Check if this flashcard was already completed in this session
+      // Only update progress if it's the first time in this session
+      const isFirstTimeInSession = !sessionCompletedCards.has(flashcardId);
+
       try {
-        // Update progress and get real XP from server
-        const response = await fetch('/api/user/progress/update', {
+        // Update progress and get real XP from server (only if first time in session)
+        const response = isFirstTimeInSession ? await fetch('/api/user/progress/update', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -192,9 +200,14 @@ export default function FlashcardsPage() {
               difficulty: card.difficulty
             }
           }),
-        });
+        }) : { json: () => ({ success: true, xpEarned: 0 }) };
 
         const result = await response.json();
+
+        // Mark this flashcard as completed in this session
+        if (isFirstTimeInSession) {
+          setSessionCompletedCards(prev => new Set(prev).add(flashcardId));
+        }
 
         // Update local state
         const updatedFlashcards = flashcardsData.flashcards.map(c => {

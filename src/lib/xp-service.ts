@@ -5,6 +5,57 @@ import { Types } from 'mongoose';
 
 export class XPService {
   /**
+   * Check if user is eligible for daily XP (content completed on different day)
+   */
+  static isDailyXPEligible(firstCompletedDate: Date | undefined, lastDailyXPDate: Date | undefined): boolean {
+    if (!firstCompletedDate) {
+      // Content never completed before
+      return false;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const firstCompleted = new Date(firstCompletedDate);
+    firstCompleted.setHours(0, 0, 0, 0);
+
+    // Check if it's a different day from first completion
+    if (today.getTime() <= firstCompleted.getTime()) {
+      // Same day as first completion or somehow in the past
+      return false;
+    }
+
+    // If daily XP was already awarded today, not eligible
+    if (lastDailyXPDate) {
+      const lastDaily = new Date(lastDailyXPDate);
+      lastDaily.setHours(0, 0, 0, 0);
+
+      if (today.getTime() === lastDaily.getTime()) {
+        // Already got daily XP today
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Calculate daily XP (50% of base XP)
+   */
+  static calculateDailyXP(
+    contentType: 'question' | 'flashcard' | 'media' | 'section',
+    score?: number,
+    difficulty?: 'Beginner' | 'Intermediate' | 'Advanced',
+    additionalData?: any
+  ): number {
+    // Get base XP
+    const baseXP = this.calculateContentXP(contentType, score, difficulty, additionalData);
+
+    // Return 50% of base XP for daily reward
+    return Math.round(baseXP * 0.5);
+  }
+
+  /**
    * Calculate and update user XP and level
    */
   static async updateUserXP(userId: string, xpGained: number): Promise<{
@@ -236,7 +287,7 @@ export class XPService {
    * Calculate XP for completing content
    */
   static calculateContentXP(
-    contentType: 'question' | 'flashcard' | 'media',
+    contentType: 'question' | 'flashcard' | 'media' | 'section',
     score?: number,
     difficulty?: 'Beginner' | 'Intermediate' | 'Advanced',
     additionalData?: any
@@ -256,6 +307,9 @@ export class XPService {
       case 'media':
         baseXP = 50; // Base XP for media completion
         break;
+      case 'section':
+        baseXP = 100; // Base XP for section completion bonus
+        break;
     }
 
     // Difficulty multiplier
@@ -266,5 +320,33 @@ export class XPService {
     }[difficulty || 'Beginner'];
 
     return Math.round(baseXP * difficultyMultiplier);
+  }
+
+  /**
+   * Calculate completion bonus XP
+   */
+  static calculateCompletionBonus(type: 'section' | 'flashcard-topic' | 'media-topic', difficulty?: 'Beginner' | 'Intermediate' | 'Advanced'): number {
+    let bonusXP = 0;
+
+    switch (type) {
+      case 'section':
+        bonusXP = 100; // Bonus for completing all questions in a section
+        break;
+      case 'flashcard-topic':
+        bonusXP = 150; // Bonus for studying all flashcards in a topic
+        break;
+      case 'media-topic':
+        bonusXP = 200; // Bonus for watching all media in a topic
+        break;
+    }
+
+    // Apply difficulty multiplier
+    const difficultyMultiplier = {
+      'Beginner': 1.0,
+      'Intermediate': 1.2,
+      'Advanced': 1.5
+    }[difficulty || 'Beginner'];
+
+    return Math.round(bonusXP * difficultyMultiplier);
   }
 }
