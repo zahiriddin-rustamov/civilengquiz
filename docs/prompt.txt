@@ -41,3 +41,9 @@ For daily: they can get XP for the content they had done before but it will only
 For first time: say they completed a questions section first time, they get XP reward, but if they do it again the same day, they don't get anymore XP for that completed questions section. If they study all flashcards for a given topic, they get XP. If they watch long video, they get XP. If they watch shorts (first time), they get XP
 
 I need you to check all relevant pages and see if the XP tracking/rewarding is correctly implemented in the pages, DBs loading/saving.
+
+===
+
+Context: We have several subjects, inside each subject, there are several topics. Within each topic, there can be questions (several sections), flashcards and media (long videos and shorts). The site is for Bachelor degree students where they will do quizzes and improve their knowledge basically.
+
+I need you to analyze each of the content pages and focus on the Dashboard page for students. I need you to analyze if the current version is correctly setup with the loading/saving. Especially the quick actions, are they dynamic in the sense, tailored for current students progress. Do the achievements work correctly, are they adequate and correct. Basically the entire dashboard and the content associated with it. Is it correctly set up, saving and loading correctly, and everything else.

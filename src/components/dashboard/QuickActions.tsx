@@ -1,28 +1,141 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { 
-  BookOpen, 
-  Shuffle, 
-  Target, 
-  Clock, 
+import {
+  BookOpen,
+  Shuffle,
+  Target,
+  Clock,
   ArrowRight,
   Sparkles,
   Zap
 } from 'lucide-react';
 import Link from 'next/link';
+import { useDashboard } from '@/context/DashboardProvider';
+
+interface RecentActivity {
+  contentType: string;
+  contentId: string;
+  topicId: string;
+  subjectId: string;
+  sectionId?: string;
+  lastAccessed: string;
+  completed: boolean;
+  score?: number;
+  topicName?: string;
+  subjectName?: string;
+}
+
+interface DailyGoals {
+  target: number;
+  completed: number;
+  type: string;
+}
 
 export function QuickActions() {
+  const { studentProgress, isLoading } = useDashboard();
+  const [recentActivity, setRecentActivity] = useState<RecentActivity | null>(null);
+  const [dailyGoals, setDailyGoals] = useState<DailyGoals>({
+    target: 3,
+    completed: 0,
+    type: 'quiz sessions'
+  });
+  const [loadingRecent, setLoadingRecent] = useState(true);
+
+  useEffect(() => {
+    fetchRecentActivity();
+    fetchDailyProgress();
+  }, []);
+
+  const fetchRecentActivity = async () => {
+    try {
+      const response = await fetch('/api/user/recent-activity');
+      if (response.ok) {
+        const data = await response.json();
+        setRecentActivity(data.lastActivity);
+      }
+    } catch (error) {
+      console.error('Failed to fetch recent activity:', error);
+    } finally {
+      setLoadingRecent(false);
+    }
+  };
+
+  const fetchDailyProgress = async () => {
+    try {
+      const response = await fetch('/api/user/daily-progress');
+      if (response.ok) {
+        const data = await response.json();
+        setDailyGoals({
+          target: data.target || 3,
+          completed: data.completed || 0,
+          type: data.type || 'quiz sessions'
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch daily progress:', error);
+    }
+  };
+
+  // Generate continue learning link based on recent activity
+  const getContinueLearningLink = () => {
+    if (!recentActivity) {
+      // If no recent activity, suggest the first unlocked incomplete topic
+      if (studentProgress) {
+        for (const subject of studentProgress.subjectProgress) {
+          if (subject.isUnlocked) {
+            for (const topic of subject.topics) {
+              if (topic.isUnlocked && !topic.isCompleted) {
+                return `/subjects/${subject.id}/topics/${topic.id}`;
+              }
+            }
+          }
+        }
+      }
+      return '/subjects'; // Fallback to subjects page
+    }
+
+    // If recent activity exists and not completed, continue from there
+    if (!recentActivity.completed) {
+      if (recentActivity.contentType === 'section' && recentActivity.sectionId) {
+        return `/subjects/${recentActivity.subjectId}/topics/${recentActivity.topicId}/sections/${recentActivity.sectionId}/questions`;
+      } else if (recentActivity.contentType === 'flashcard') {
+        return `/subjects/${recentActivity.subjectId}/topics/${recentActivity.topicId}/flashcards`;
+      } else if (recentActivity.contentType === 'media') {
+        return `/subjects/${recentActivity.subjectId}/topics/${recentActivity.topicId}/media`;
+      } else {
+        return `/subjects/${recentActivity.subjectId}/topics/${recentActivity.topicId}`;
+      }
+    }
+
+    // If last activity was completed, suggest next topic
+    return `/subjects/${recentActivity.subjectId}/topics/${recentActivity.topicId}`;
+  };
+
+  const getContinueLearningDescription = () => {
+    if (loadingRecent) return 'Loading...';
+    if (!recentActivity) return 'Start your learning journey';
+
+    const contentTypeLabel = recentActivity.contentType === 'section' ? 'questions' :
+                            recentActivity.contentType === 'flashcard' ? 'flashcards' :
+                            recentActivity.contentType === 'media' ? 'videos' : 'topic';
+
+    return recentActivity.completed
+      ? `Continue with ${recentActivity.topicName || 'next topic'}`
+      : `Resume ${contentTypeLabel} - ${Math.round((recentActivity.score || 0))}% complete`;
+  };
+
   const quickActions = [
     {
       id: 'continue',
       title: 'Continue Learning',
-      description: 'Pick up where you left off',
+      description: getContinueLearningDescription(),
       icon: BookOpen,
       color: 'from-green-500 to-emerald-600',
-      href: '/subjects/structural-analysis/fresh-concrete',
-      badge: 'In Progress'
+      href: getContinueLearningLink(),
+      badge: recentActivity && !recentActivity.completed ? 'In Progress' : 'Resume'
     },
     {
       id: 'random',
@@ -132,22 +245,29 @@ export function QuickActions() {
             </div>
             <div>
               <h4 className="font-semibold text-gray-800">Today's Goal</h4>
-              <p className="text-sm text-gray-600">Complete 3 quiz sessions</p>
+              <p className="text-sm text-gray-600">Complete {dailyGoals.target} {dailyGoals.type}</p>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             {/* Progress */}
             <div className="text-right">
-              <div className="text-sm font-medium text-gray-800">2 / 3 completed</div>
+              <div className="text-sm font-medium text-gray-800">
+                {dailyGoals.completed} / {dailyGoals.target} completed
+              </div>
               <div className="w-24 h-2 bg-gray-200 rounded-full mt-1">
-                <div className="w-2/3 h-full bg-indigo-500 rounded-full"></div>
+                <div
+                  className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min((dailyGoals.completed / dailyGoals.target) * 100, 100)}%` }}
+                ></div>
               </div>
             </div>
-            
-            <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700">
-              Continue
-            </Button>
+
+            <Link href={getContinueLearningLink()}>
+              <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700">
+                {dailyGoals.completed >= dailyGoals.target ? '🎉 Goal Met!' : 'Continue'}
+              </Button>
+            </Link>
           </div>
         </div>
       </motion.div>
