@@ -129,6 +129,12 @@ export default function SectionsPage() {
     }
 
     if (settings.unlockConditions === 'sequential') {
+      // If this section was already completed, keep it unlocked
+      const currentProgress = getSectionProgress(section.id);
+      if (currentProgress && currentProgress.completed) {
+        return true;
+      }
+
       // Check if all previous sections are completed
       for (let i = 0; i < index; i++) {
         const prevSection = topicData!.sections[i];
@@ -143,6 +149,12 @@ export default function SectionsPage() {
     if (settings.unlockConditions === 'score-based') {
       // Check if previous section meets score requirement
       if (index === 0) return true;
+
+      // If this section was already completed, keep it unlocked
+      const currentProgress = getSectionProgress(section.id);
+      if (currentProgress && currentProgress.completed) {
+        return true;
+      }
 
       const prevSection = topicData!.sections[index - 1];
       const prevProgress = getSectionProgress(prevSection.id);

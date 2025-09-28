@@ -23,3 +23,11 @@ The current issue is that the section creation logic is a bit weird in my opinio
 Instead of having a separate section logic like we do now I had this idea, I need you to evaluate if its a good idea. Basically when we have a subject-topic combo, currently in the Questions page, we have the main card which shows Subject -> Topic right? What if we showed that by default for all subject-topic combos regardless if they have questions/sections. But of course, if they are empty, we will disable the reorder button. But we will have a new button next to the reorder which is to add new section. So new sections are directly added in this page instead of having separate section page.
 
 Do you get my idea? Analyze all relevant files to understand the context.
+
+===
+
+I am trying to implement student tracking to the quiz website where our research is to essentially evaluate whether doing the quiz content helps the student get better grades. To do this, we have several subjects, inside each subject, there are several topics. Within each topic, there can be questions (several sections), flashcards and media (long videos and shorts). The idea of tracking is to essentially track every interaction of the student, what they do in the website, where do they click, how long and everything possible to track that would be useful for analysis. We also need to track how long they took in each question when tracking their scores, how long for flashcards, how long for media. You get it right? Check all relevant files to have a thorough understanding first. For the analytics, what I have implemented so far can be found from staged changes, however, it may not be correct, complete or accurate, and may be redundant.
+
+===
+
+One issue is that, in the questions, we can have several sections for questions. and the admin is able to select how these sections are presented (configured in the questions admi page). The issue is, in some cases, it is configured that the subsequent sections are unlocked once the user completes or scores above some score. Say the subsequent sections are set to unlock when user scores > 70%. The user scores > 70% and the next section unlocks and they complete it too! But later the student decides to re-do the first section and they score 0%. Does this cause the latter sections to be locked even if they had unlocked/completed it before?
