@@ -111,7 +111,21 @@ export function LeaderboardWidget({ className = '' }: LeaderboardWidgetProps) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
           <Trophy className="w-5 h-5 text-yellow-500" />
-          <h3 className="text-lg font-semibold text-gray-800">Top Players</h3>
+          <h3 className="text-lg font-semibold text-gray-800">Leaderboard</h3>
+          {(() => {
+            // Show user's rank in header
+            const userInTop = topUsers.find(user => user.isCurrentUser);
+            const userRank = userInTop ? userInTop.rank : currentUserRank?.rank;
+
+            if (userRank) {
+              return (
+                <span className="text-sm text-indigo-600 font-medium">
+                  (You: #{userRank})
+                </span>
+              );
+            }
+            return null;
+          })()}
         </div>
         <Link
           href="/leaderboard"
