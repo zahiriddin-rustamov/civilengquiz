@@ -54,4 +54,14 @@ Context: We have several subjects, inside each subject, there are several topics
 
 I was trying to implement the tracking for the students where in the admin side of things, the admin can see the useful/critical insights (/analytics).
 
-I need you to evaluate whether I have correctly set up the tracking for interactions/engagements. All interaction related implementations are in the commit 44314d23b5f95d7b84a5a67d49a63f9ae3c42197. Because in the admin side, we have things like First-Try Accuracy, Completion Rate, Avg Time, Retry Rate, then Time stuff like Consistent Study, Cramming, Sporadic.
+All interaction related implementations are in the commit 44314d23b5f95d7b84a5a67d49a63f9ae3c42197. 
+
+I need you to check if we correctly implemented the session tracking. How does it currently work?
+
+===
+
+Context: We have several subjects, inside each subject, there are several topics. Within each topic, there can be questions (several sections), flashcards and media (long videos and shorts). The site is for Bachelor degree students where they will do quizzes and improve their knowledge basically.
+
+I am trying to revamp and improve the student dashboard and the latest changes can be found at: commit 134bea2764e7380da02f4464388f9032d06439fc
+
+There is an issue with the /quiz/random where I currently don't see any questions, it's just empty where it doesn't show the question nor answers or anything. Just disabled submit answer and next/previous

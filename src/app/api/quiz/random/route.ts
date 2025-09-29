@@ -61,8 +61,19 @@ export async function GET(request: NextRequest) {
 
     // Get all available questions matching the criteria
     let allQuestions = await Question.find(query)
-      .select('_id type questionText options correctAnswer difficulty topicId sectionId points')
+      .select('_id type text data difficulty topicId sectionId xpReward')
       .lean();
+
+    console.log('Random Quiz Debug:', {
+      queryUsed: query,
+      totalQuestionsFound: allQuestions.length,
+      firstQuestionSample: allQuestions[0] ? {
+        id: allQuestions[0]._id,
+        type: allQuestions[0].type,
+        hasData: !!allQuestions[0].data,
+        dataKeys: allQuestions[0].data ? Object.keys(allQuestions[0].data) : []
+      } : null
+    });
 
     // Prioritize questions for better learning
     const prioritizedQuestions = allQuestions.map(question => {
@@ -117,11 +128,11 @@ export async function GET(request: NextRequest) {
         return {
           id: question._id,
           type: question.type,
-          questionText: question.questionText,
-          options: question.options,
-          correctAnswer: question.correctAnswer,
+          questionText: question.text,
+          options: question.data?.options,
+          correctAnswer: question.data?.correctAnswer,
           difficulty: question.difficulty,
-          points: question.points,
+          points: question.xpReward || 10,
           topicName: topic?.name,
           subjectName: subject?.name,
           userPerformance: question.userPerformance
