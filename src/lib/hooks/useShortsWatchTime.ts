@@ -122,7 +122,7 @@ export function useShortsWatchTime(): ShortsWatchTimeHook {
           topicId: topicId,
           subjectId: subjectId,
           completed: completed,
-          score: 1.0, // Shorts are binary - watched or not
+          score: 100, // Shorts are binary - watched or not (0-100 scale)
           timeSpent: watchData.actualWatchTime,
           data: {
             progressPercentage: 100, // Shorts are either watched or not

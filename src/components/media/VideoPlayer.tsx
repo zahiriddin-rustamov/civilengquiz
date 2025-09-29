@@ -169,7 +169,7 @@ export function VideoPlayer({
             topicId: topicId,
             subjectId: subjectId,
             completed: completed,
-            score: state.played, // Progress as score (0-1)
+            score: Math.round(state.played * 100), // Progress as score (0-100)
             timeSpent: watchData?.actualWatchTime || 0,
             data: {
               progressPercentage: Math.round(state.played * 100),

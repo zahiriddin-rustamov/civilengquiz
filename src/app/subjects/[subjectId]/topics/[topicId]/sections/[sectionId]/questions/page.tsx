@@ -167,7 +167,7 @@ export default function SectionQuestionsPage() {
           subjectId: subjectId,
           sectionId: sectionId,
           completed: true,
-          score: isCorrect ? points : 0,
+          score: isCorrect ? 100 : 0,
           timeSpent: Math.round((Date.now() - startTime) / 1000),
         }),
       });

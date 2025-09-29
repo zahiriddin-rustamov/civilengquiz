@@ -172,8 +172,8 @@ export default function FlashcardsPage() {
           break;
       }
 
-      // Calculate score based on response (for XP calculation)
-      const score = newLevel === 'Easy' ? 1 : newLevel === 'Good' ? 0.8 : newLevel === 'Hard' ? 0.6 : 0.2;
+      // Calculate score based on response (for XP calculation) - using 0-100 scale
+      const score = newLevel === 'Easy' ? 100 : newLevel === 'Good' ? 80 : newLevel === 'Hard' ? 60 : 20;
 
       // Check if this flashcard was already completed in this session
       // Only update progress if it's the first time in this session

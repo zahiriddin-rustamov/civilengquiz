@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import connectToDatabase from '@/lib/mongoose';
-import { Subject, UserInteraction, SessionTracking, UserProgress, User } from '@/models/database';
+import { Subject, Topic, QuestionSection, Question, Flashcard, Media, UserInteraction, SessionTracking, UserProgress, User } from '@/models/database';
 
 // Helper to categorize engagement levels
 function categorizeEngagement(weeklyHours: number): 'high' | 'medium' | 'low' {
@@ -62,13 +62,19 @@ export async function GET(request: NextRequest) {
     const users = await User.find({}).lean();
     const userProgress = await UserProgress.find({}).lean();
 
+    // Get subject-content mapping
+    const subjectContentMap = await buildSubjectContentMap();
+
     // Process data per subject
     const subjectAnalytics = await Promise.all(subjects.map(async (subject) => {
+      // Get all content IDs for this subject
+      const subjectContentIds = subjectContentMap.get(subject._id.toString()) || new Set();
+
       // Filter interactions for this subject's content
       const subjectInteractions = interactions.filter(i => {
-        // Match interactions to subject through topic/content relationships
-        // This is simplified - you'd need to join through Topic collection
-        return i.metadata?.subjectId?.toString() === subject._id.toString();
+        // Match by direct subject metadata or through content ID mapping
+        return i.metadata?.subjectId?.toString() === subject._id.toString() ||
+               (i.contentId && subjectContentIds.has(i.contentId.toString()));
       });
 
       // Calculate unique active students
@@ -97,22 +103,33 @@ export async function GET(request: NextRequest) {
         engagementGroups[eng.level]++;
       });
 
-      // Calculate accuracy metrics
-      const questionInteractions = subjectInteractions.filter(i =>
-        i.contentType === 'question' && i.eventType === 'submit'
+      // Calculate accuracy metrics from UserProgress (more reliable)
+      const subjectProgressRecords = await UserProgress.find({
+        subjectId: subject._id,
+        contentType: 'question'
+      }).lean();
+
+      // Calculate average first-attempt score
+      const firstTryAttempts = subjectProgressRecords.filter(p =>
+        p.attempts >= 1 && p.firstAttemptScore !== undefined
       );
 
-      const firstAttemptAccuracy = questionInteractions.length > 0
-        ? (questionInteractions.filter(i => i.eventData?.isCorrect && i.eventData?.attemptNumber === 1).length /
-           questionInteractions.filter(i => i.eventData?.attemptNumber === 1).length) * 100
+      const firstAttemptAccuracy = firstTryAttempts.length > 0
+        ? Math.round(firstTryAttempts.reduce((sum, p) => sum + p.firstAttemptScore, 0) / firstTryAttempts.length)
         : 0;
 
-      // Calculate completion rate
+      // Calculate completion rate from UserProgress
       const totalContent = await countSubjectContent(subject._id);
-      const completedContent = subjectInteractions.filter(i =>
-        i.eventType === 'complete' || i.eventData?.completed
-      ).length;
-      const completionRate = totalContent > 0 ? (completedContent / totalContent) * 100 : 0;
+      const completedContentRecords = await UserProgress.find({
+        subjectId: subject._id,
+        completed: true
+      }).lean();
+
+      const uniqueCompletedContent = new Set(
+        completedContentRecords.map(p => `${p.contentId}-${p.contentType}`)
+      );
+
+      const completionRate = totalContent > 0 ? (uniqueCompletedContent.size / totalContent) * 100 : 0;
 
       return {
         subjectId: subject._id,
@@ -158,11 +175,68 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Build a map of subject ID to all content IDs within that subject
+async function buildSubjectContentMap(): Promise<Map<string, Set<string>>> {
+  const map = new Map<string, Set<string>>();
+
+  // Get all topics with their subject relationships
+  const topics = await Topic.find({}).lean();
+
+  for (const topic of topics) {
+    const subjectId = topic.subjectId.toString();
+    if (!map.has(subjectId)) {
+      map.set(subjectId, new Set());
+    }
+    const contentIds = map.get(subjectId)!;
+
+    // Add topic content
+    contentIds.add(topic._id.toString());
+
+    // Get questions from all sections in this topic
+    const sections = await QuestionSection.find({ topicId: topic._id }).lean();
+    for (const section of sections) {
+      contentIds.add(section._id.toString());
+
+      const questions = await Question.find({ sectionId: section._id }).lean();
+      questions.forEach(q => contentIds.add(q._id.toString()));
+    }
+
+    // Get flashcards for this topic
+    const flashcards = await Flashcard.find({ topicId: topic._id }).lean();
+    flashcards.forEach(f => contentIds.add(f._id.toString()));
+
+    // Get media for this topic
+    const media = await Media.find({ topicId: topic._id }).lean();
+    media.forEach(m => contentIds.add(m._id.toString()));
+  }
+
+  return map;
+}
+
 async function countSubjectContent(subjectId: any): Promise<number> {
-  // This would need to count all questions, flashcards, and media in a subject
-  // For now, returning a placeholder
-  // In production, you'd aggregate from Topic -> QuestionSection -> Questions, etc.
-  return 100; // Placeholder
+  const topics = await Topic.find({ subjectId }).lean();
+  let totalContent = 0;
+
+  for (const topic of topics) {
+    // Count sections and questions
+    const sections = await QuestionSection.find({ topicId: topic._id }).lean();
+    totalContent += sections.length;
+
+    for (const section of sections) {
+      const questionCount = await Question.countDocuments({ sectionId: section._id });
+      totalContent += questionCount;
+    }
+
+    // Count flashcards
+    const flashcardCount = await Flashcard.countDocuments({ topicId: topic._id });
+    totalContent += flashcardCount;
+
+    // Count media
+    const mediaCount = await Media.countDocuments({ topicId: topic._id });
+    totalContent += mediaCount;
+  }
+
+  return totalContent;
 }
 
 function generateInsights(subjectAnalytics: any[], interactions: any[]): string[] {

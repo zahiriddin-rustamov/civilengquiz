@@ -299,7 +299,16 @@ export interface IUserProgress extends Document {
   contentId: Types.ObjectId; // Can be question, flashcard, or media
   contentType: 'question' | 'flashcard' | 'media' | 'section';
   completed: boolean;
-  score?: number;
+  score?: number; // Current/latest score (kept for backward compatibility)
+  firstAttemptScore?: number; // Score from the very first attempt
+  bestScore?: number; // Highest score achieved across all attempts
+  attemptHistory?: Array<{
+    attemptNumber: number;
+    score: number;
+    timestamp: Date;
+    timeSpent: number;
+    isCorrect: boolean;
+  }>;
   timeSpent: number; // in seconds
   lastAccessed: Date;
   attempts: number;
@@ -321,7 +330,19 @@ const UserProgressSchema = new Schema<IUserProgress>({
   contentId: { type: Schema.Types.ObjectId, required: true },
   contentType: { type: String, enum: ['question', 'flashcard', 'media', 'section'], required: true },
   completed: { type: Boolean, default: false },
-  score: { type: Number },
+  score: { type: Number }, // Current/latest score (kept for backward compatibility)
+  firstAttemptScore: { type: Number }, // Score from the very first attempt
+  bestScore: { type: Number }, // Highest score achieved across all attempts
+  attemptHistory: {
+    type: [{
+      attemptNumber: { type: Number, required: true },
+      score: { type: Number, required: true },
+      timestamp: { type: Date, required: true },
+      timeSpent: { type: Number, required: true },
+      isCorrect: { type: Boolean, required: true }
+    }],
+    default: []
+  },
   timeSpent: { type: Number, default: 0 },
   lastAccessed: { type: Date, default: Date.now },
   attempts: { type: Number, default: 0 },

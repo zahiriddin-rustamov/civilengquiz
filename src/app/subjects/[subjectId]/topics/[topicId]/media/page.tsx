@@ -636,7 +636,7 @@ export default function MediaPage() {
             topicId: topicId,
             subjectId: subjectId,
             completed: true, // Shorts are completed when viewed
-            score: 1.0, // Full completion for shorts
+            score: 100, // Full completion for shorts (0-100 scale)
             timeSpent: watchTime,
             data: {
               watchTime: watchTime,

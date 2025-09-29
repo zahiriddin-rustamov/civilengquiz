@@ -1,8 +1,9 @@
 'use client';
 
-import React, { ReactElement, cloneElement, useRef, useEffect, useCallback } from 'react';
+import React, { ReactElement, cloneElement, useRef, useEffect, useCallback, useState } from 'react';
 import { useTimeTracking } from '../hooks/useTimeTracking';
 import { useTracking } from './TrackingProvider';
+import { useSession } from 'next-auth/react';
 
 export interface QuestionMetrics {
   questionId: string;
@@ -28,6 +29,7 @@ export interface QuestionMetrics {
   mouseMovements: number;
   submitted: boolean;
   skipped: boolean;
+  attemptNumber: number;
 }
 
 export interface QuestionTrackerProps {
@@ -50,6 +52,9 @@ export function QuestionTracker({
   onQuestionComplete
 }: QuestionTrackerProps) {
   const { trackInteraction, trackEvent } = useTracking();
+  const { data: session } = useSession();
+  const [attemptNumber, setAttemptNumber] = useState(1);
+
   const metricsRef = useRef<QuestionMetrics>({
     questionId,
     questionType,
@@ -63,7 +68,8 @@ export function QuestionTracker({
     idlePeriods: [],
     mouseMovements: 0,
     submitted: false,
-    skipped: false
+    skipped: false,
+    attemptNumber: 1
   });
 
   const previousAnswerRef = useRef<any>(null);
@@ -81,11 +87,32 @@ export function QuestionTracker({
   });
 
   useEffect(() => {
+    // Fetch current attempt count
+    const fetchAttemptCount = async () => {
+      if (session?.user) {
+        try {
+          const response = await fetch(`/api/user/progress?contentId=${questionId}&contentType=question`);
+          if (response.ok) {
+            const data = await response.json();
+            const currentAttempts = data.progress?.attempts || 0;
+            const nextAttempt = currentAttempts + 1;
+            setAttemptNumber(nextAttempt);
+            metricsRef.current.attemptNumber = nextAttempt;
+          }
+        } catch (error) {
+          console.error('Failed to fetch attempt count:', error);
+        }
+      }
+    };
+
+    fetchAttemptCount();
+
     // Track question view
     trackInteraction('question', questionId, 'view_start', {
       questionType,
       questionText,
       difficulty,
+      attemptNumber: metricsRef.current.attemptNumber,
       ...metadata
     });
 
@@ -132,6 +159,7 @@ export function QuestionTracker({
 
       trackInteraction('question', questionId, 'first_interaction', {
         timeToFirstInteraction: metricsRef.current.timeToFirstInteraction,
+        attemptNumber: metricsRef.current.attemptNumber,
         ...metadata
       });
     }
@@ -153,6 +181,7 @@ export function QuestionTracker({
         from: change.from,
         to: change.to,
         timeElapsed: change.timeElapsed,
+        attemptNumber: metricsRef.current.attemptNumber,
         ...metadata
       });
     }
@@ -161,7 +190,7 @@ export function QuestionTracker({
     metricsRef.current.finalAnswer = newAnswer;
   }, [questionId, metadata, trackInteraction]);
 
-  const handleSubmit = useCallback((answer: any, isCorrect?: boolean, score?: number) => {
+  const handleSubmit = useCallback(async (answer: any, isCorrect?: boolean, score?: number) => {
     const now = Date.now();
     const finalMetrics = timeTracking.getMetrics();
 
@@ -178,15 +207,36 @@ export function QuestionTracker({
       submitted: true
     };
 
+    // Track the interaction with current attempt number
     trackInteraction('question', questionId, 'submit', {
       ...metricsRef.current,
+      attemptNumber: metricsRef.current.attemptNumber,
       ...metadata
     });
+
+    // Update progress and increment attempt count for next time
+    if (session?.user) {
+      try {
+        await fetch('/api/user/progress/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contentId: questionId,
+            contentType: 'question',
+            completed: isCorrect || false,
+            score: score || 0,
+            timeSpent: Math.round(finalMetrics.totalTime)
+          })
+        });
+      } catch (error) {
+        console.error('Failed to update progress:', error);
+      }
+    }
 
     if (onQuestionComplete) {
       onQuestionComplete(metricsRef.current);
     }
-  }, [questionId, metadata, timeTracking, trackInteraction, onQuestionComplete]);
+  }, [questionId, metadata, timeTracking, trackInteraction, onQuestionComplete, session]);
 
   const handleSkip = useCallback(() => {
     const now = Date.now();
@@ -204,6 +254,7 @@ export function QuestionTracker({
 
     trackInteraction('question', questionId, 'skip', {
       ...metricsRef.current,
+      attemptNumber: metricsRef.current.attemptNumber,
       ...metadata
     });
 

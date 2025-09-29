@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     const questionPerformance = new Map();
     userProgress.forEach(progress => {
       questionPerformance.set(progress.contentId.toString(), {
-        score: progress.score || 0,
+        score: progress.bestScore || progress.score || 0, // Use best score for prioritization
         attempts: progress.attempts || 0,
         completed: progress.completed
       });

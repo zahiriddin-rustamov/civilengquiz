@@ -20,9 +20,27 @@ export async function GET(request: NextRequest) {
 
     const userId = session.user.id;
 
-    // Check if this is a topic-specific request
+    // Check request parameters
     const { searchParams } = new URL(request.url);
     const topicId = searchParams.get('topicId');
+    const contentId = searchParams.get('contentId');
+    const contentType = searchParams.get('contentType');
+
+    // If contentId and contentType are provided, return specific content progress
+    if (contentId && contentType) {
+      await connectToDatabase();
+      const { UserProgress } = await import('@/models/database');
+
+      const progress = await UserProgress.findOne({
+        userId,
+        contentId,
+        contentType
+      }).lean();
+
+      return NextResponse.json({
+        progress: progress || { attempts: 0, completed: false, score: null }
+      });
+    }
 
     // If topicId is provided, return topic-specific progress
     if (topicId) {
@@ -65,11 +83,12 @@ export async function GET(request: NextRequest) {
             watchCount: progress.attempts || 1
           };
         } else if (mediaItem.videoType === 'video') {
-          // Long-form video
+          // Long-form video - use best progress achieved
+          const videoScore = progress.bestScore || progress.score || 0;
           videoProgress[contentId] = {
-            progress: progress.score || 0,
+            progress: videoScore,
             completed: progress.completed,
-            points: progress.completed ? mediaItem.xpReward : Math.round((progress.score || 0) * mediaItem.xpReward)
+            points: progress.completed ? mediaItem.xpReward : Math.round(videoScore * mediaItem.xpReward)
           };
         } else {
           // Unknown video type, log for debugging

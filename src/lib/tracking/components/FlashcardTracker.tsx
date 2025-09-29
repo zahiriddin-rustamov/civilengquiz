@@ -1,8 +1,9 @@
 'use client';
 
-import React, { ReactElement, cloneElement, useRef, useEffect, useCallback } from 'react';
+import React, { ReactElement, cloneElement, useRef, useEffect, useCallback, useState } from 'react';
 import { useTimeTracking } from '../hooks/useTimeTracking';
 import { useTracking } from './TrackingProvider';
+import { useSession } from 'next-auth/react';
 
 export interface FlashcardMetrics {
   flashcardId: string;
@@ -31,6 +32,7 @@ export interface FlashcardMetrics {
   sessionPattern: 'linear' | 'review' | 'mixed';
   engagementScore: number;
   idlePeriods: Array<{ start: number; end: number; duration: number }>;
+  attemptNumber: number;
 }
 
 export interface CardMetrics {
@@ -63,6 +65,8 @@ export function FlashcardTracker({
   onSessionComplete
 }: FlashcardTrackerProps) {
   const { trackInteraction, trackEvent } = useTracking();
+  const { data: session } = useSession();
+  const [attemptNumber, setAttemptNumber] = useState(1);
   const sessionStartRef = useRef<number>(Date.now());
   const currentCardRef = useRef<CardMetrics | null>(null);
   const cardsMapRef = useRef<Map<string, CardMetrics>>(new Map());
@@ -78,7 +82,8 @@ export function FlashcardTracker({
     cardsCompleted: 0,
     sessionPattern: 'linear',
     engagementScore: 100,
-    idlePeriods: []
+    idlePeriods: [],
+    attemptNumber: 1
   });
 
   const timeTracking = useTimeTracking({
@@ -93,9 +98,30 @@ export function FlashcardTracker({
   });
 
   useEffect(() => {
+    // Fetch current attempt count
+    const fetchAttemptCount = async () => {
+      if (session?.user) {
+        try {
+          const response = await fetch(`/api/user/progress?contentId=${flashcardId}&contentType=flashcard`);
+          if (response.ok) {
+            const data = await response.json();
+            const currentAttempts = data.progress?.attempts || 0;
+            const nextAttempt = currentAttempts + 1;
+            setAttemptNumber(nextAttempt);
+            sessionMetricsRef.current.attemptNumber = nextAttempt;
+          }
+        } catch (error) {
+          console.error('Failed to fetch attempt count:', error);
+        }
+      }
+    };
+
+    fetchAttemptCount();
+
     // Track session start
     trackInteraction('flashcard', flashcardId, 'session_start', {
       totalCards,
+      attemptNumber: sessionMetricsRef.current.attemptNumber,
       ...metadata
     });
 
@@ -252,16 +278,35 @@ export function FlashcardTracker({
     });
   }, [flashcardId, metadata, trackInteraction]);
 
-  const handleSessionComplete = useCallback(() => {
+  const handleSessionComplete = useCallback(async () => {
     sessionMetricsRef.current.cardsCompleted = cardsMapRef.current.size;
     const finalMetrics = prepareFinalMetrics();
 
     trackInteraction('flashcard', flashcardId, 'session_complete', finalMetrics);
 
+    // Update progress
+    if (session?.user) {
+      try {
+        await fetch('/api/user/progress/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contentId: flashcardId,
+            contentType: 'flashcard',
+            completed: true,
+            score: 100, // Flashcards are considered complete when session ends
+            timeSpent: Math.round(finalMetrics.totalTime)
+          })
+        });
+      } catch (error) {
+        console.error('Failed to update progress:', error);
+      }
+    }
+
     if (onSessionComplete) {
       onSessionComplete(finalMetrics);
     }
-  }, [flashcardId, trackInteraction, onSessionComplete]);
+  }, [flashcardId, trackInteraction, onSessionComplete, session]);
 
   // Clone the child element and inject tracking props
   const enhancedChild = cloneElement(children, {

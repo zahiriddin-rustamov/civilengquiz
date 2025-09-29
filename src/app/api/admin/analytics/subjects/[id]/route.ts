@@ -32,6 +32,8 @@ interface LearningPattern {
   count: number;
   avgAccuracy: number;
   description: string;
+  effectiveness: 'high' | 'medium' | 'low';
+  avgTimePerContent: number; // in minutes
 }
 
 export async function GET(
@@ -85,21 +87,25 @@ export async function GET(
         // Calculate metrics
         const questionInteractions = topicInteractions.filter(i => i.contentType === 'question');
 
-        // First-try accuracy
-        const firstAttempts = questionInteractions.filter(i =>
-          i.eventType === 'submit' && i.eventData?.attemptNumber === 1
+        // First-try accuracy - use firstAttemptScore for accurate calculation
+        const questionProgressRecords = await UserProgress.find({
+          topicId: topic._id,
+          contentType: 'question'
+        }).lean();
+
+        // Calculate average first-attempt score
+        const firstTryAttempts = questionProgressRecords.filter(p =>
+          p.attempts >= 1 && p.firstAttemptScore !== undefined
         );
-        const correctFirstAttempts = firstAttempts.filter(i => i.eventData?.isCorrect);
-        const firstTryAccuracy = firstAttempts.length > 0
-          ? (correctFirstAttempts.length / firstAttempts.length) * 100
+
+        const firstTryAccuracy = firstTryAttempts.length > 0
+          ? Math.round(firstTryAttempts.reduce((sum, p) => sum + p.firstAttemptScore, 0) / firstTryAttempts.length)
           : 0;
 
-        // Retry rate
-        const retryAttempts = questionInteractions.filter(i =>
-          i.eventType === 'submit' && i.eventData?.attemptNumber > 1
-        );
-        const retryRate = questionInteractions.length > 0
-          ? (retryAttempts.length / questionInteractions.length) * 100
+        // Retry rate - calculate from UserProgress attempts
+        const retryQuestions = questionProgressRecords.filter(p => p.attempts > 1);
+        const retryRate = questionProgressRecords.length > 0
+          ? (retryQuestions.length / questionProgressRecords.length) * 100
           : 0;
 
         // Average time
@@ -108,19 +114,26 @@ export async function GET(
           ? timingInteractions.reduce((sum, i) => sum + (i.totalTime || 0), 0) / timingInteractions.length / 60
           : 0;
 
-        // Completion rate
-        const completions = topicInteractions.filter(i =>
-          i.eventType === 'complete' || i.eventData?.completed
+        // Completion rate - calculate based on UserProgress data, not interactions
+        const topicProgressRecords = await UserProgress.find({
+          topicId: topic._id,
+          completed: true
+        }).lean();
+
+        // Get unique completed content items
+        const uniqueCompletedContent = new Set(
+          topicProgressRecords.map(p => `${p.contentId}-${p.contentType}`)
         );
+
         const totalContent = questionCount + flashcardCount + mediaCount;
         const completionRate = totalContent > 0
-          ? (completions.length / totalContent) * 100
+          ? (uniqueCompletedContent.size / totalContent) * 100
           : 0;
 
-        // Determine difficulty based on metrics
+        // Determine difficulty based on metrics (adjusted for average scores)
         let difficulty: 'easy' | 'medium' | 'hard' = 'medium';
-        if (firstTryAccuracy > 70 && retryRate < 30) difficulty = 'easy';
-        else if (firstTryAccuracy < 50 || retryRate > 60) difficulty = 'hard';
+        if (firstTryAccuracy > 75 && retryRate < 30) difficulty = 'easy';
+        else if (firstTryAccuracy < 60 || retryRate > 60) difficulty = 'hard';
 
         return {
           topicId: topic._id.toString(),
@@ -228,47 +241,142 @@ async function analyzeLearningPatterns(
     }
   });
 
-  // Create pattern objects
+  // Create pattern objects with effectiveness analysis
   if (videoFirst > 0) {
+    const avgTime = calculateAverageTimePerContent(userPatterns, 'video-first');
     patterns.push({
       pattern: 'Video → Questions',
       count: videoFirst,
       avgAccuracy: Math.round(videoFirstAccuracy / videoFirst),
-      description: 'Watch videos before attempting questions'
+      description: 'Watch videos before attempting questions',
+      effectiveness: getEffectivenessRating(videoFirstAccuracy / videoFirst, avgTime),
+      avgTimePerContent: Math.round(avgTime)
     });
   }
 
   if (flashcardFirst > 0) {
+    const avgTime = calculateAverageTimePerContent(userPatterns, 'flashcard-first');
     patterns.push({
       pattern: 'Flashcards → Questions',
       count: flashcardFirst,
       avgAccuracy: Math.round(flashcardFirstAccuracy / flashcardFirst),
-      description: 'Study flashcards before questions'
+      description: 'Study flashcards before questions',
+      effectiveness: getEffectivenessRating(flashcardFirstAccuracy / flashcardFirst, avgTime),
+      avgTimePerContent: Math.round(avgTime)
     });
   }
 
   if (questionOnly > 0) {
+    const avgTime = calculateAverageTimePerContent(userPatterns, 'question-only');
     patterns.push({
       pattern: 'Questions Only',
       count: questionOnly,
       avgAccuracy: Math.round(questionOnlyAccuracy / questionOnly),
-      description: 'Attempt questions directly'
+      description: 'Attempt questions directly',
+      effectiveness: getEffectivenessRating(questionOnlyAccuracy / questionOnly, avgTime),
+      avgTimePerContent: Math.round(avgTime)
     });
   }
 
   if (mixed > 0) {
+    const avgTime = calculateAverageTimePerContent(userPatterns, 'mixed');
     patterns.push({
       pattern: 'Mixed Approach',
       count: mixed,
       avgAccuracy: Math.round(mixedAccuracy / mixed),
-      description: 'Various content types interleaved'
+      description: 'Various content types interleaved',
+      effectiveness: getEffectivenessRating(mixedAccuracy / mixed, avgTime),
+      avgTimePerContent: Math.round(avgTime)
     });
   }
 
-  // Sort by effectiveness (accuracy)
+
+  // Sort by effectiveness (accuracy) and add cross-content transition analysis
   patterns.sort((a, b) => b.avgAccuracy - a.avgAccuracy);
 
+  // Add transition pattern analysis
+  const transitionPatterns = analyzeContentTransitions(userPatterns);
+  patterns.push(...transitionPatterns);
+
   return patterns;
+}
+
+// Helper function to calculate effectiveness rating
+function getEffectivenessRating(accuracy: number, avgTime: number): 'high' | 'medium' | 'low' {
+  // High: >75% accuracy with reasonable time (<10 min per content)
+  if (accuracy > 75 && avgTime < 10) return 'high';
+  // Medium: >60% accuracy or efficient time usage
+  if (accuracy > 60 || avgTime < 8) return 'medium';
+  return 'low';
+}
+
+// Helper function to calculate average time per content for a learning pattern
+function calculateAverageTimePerContent(userPatterns: Map<any, any>, patternType: string): number {
+  let totalTime = 0;
+  let contentCount = 0;
+
+  userPatterns.forEach((userInteractions) => {
+    if (detectLearningSequence(userInteractions) === patternType) {
+      const timeSum = userInteractions.reduce((sum: number, interaction: any) => {
+        return sum + (interaction.totalTime || 0);
+      }, 0);
+      const uniqueContent = new Set(userInteractions.map((i: any) => i.contentId?.toString()).filter(Boolean));
+
+      totalTime += timeSum;
+      contentCount += uniqueContent.size;
+    }
+  });
+
+  return contentCount > 0 ? (totalTime / contentCount / 60) : 0; // Convert to minutes
+}
+
+// Analyze content transition patterns (cross-content analytics)
+function analyzeContentTransitions(userPatterns: Map<any, any>): LearningPattern[] {
+  const transitionPatterns: LearningPattern[] = [];
+
+  // Track common transitions
+  const transitions: { [key: string]: { count: number; accuracy: number; time: number } } = {};
+
+  userPatterns.forEach((userInteractions) => {
+    const accuracy = calculateUserAccuracy(userInteractions);
+    const totalTime = userInteractions.reduce((sum: number, i: any) => sum + (i.totalTime || 0), 0);
+
+    for (let i = 0; i < userInteractions.length - 1; i++) {
+      const current = userInteractions[i];
+      const next = userInteractions[i + 1];
+
+      if (current.contentType && next.contentType && current.contentType !== next.contentType) {
+        const transitionKey = `${current.contentType} → ${next.contentType}`;
+
+        if (!transitions[transitionKey]) {
+          transitions[transitionKey] = { count: 0, accuracy: 0, time: 0 };
+        }
+
+        transitions[transitionKey].count++;
+        transitions[transitionKey].accuracy += accuracy;
+        transitions[transitionKey].time += totalTime;
+      }
+    }
+  });
+
+  // Convert to patterns if significant enough (>= 3 occurrences)
+  Object.entries(transitions).forEach(([key, data]) => {
+    if (data.count >= 3) {
+      const avgAccuracy = data.accuracy / data.count;
+      const avgTime = data.time / data.count / 60; // minutes
+
+      transitionPatterns.push({
+        pattern: key,
+        count: data.count,
+        avgAccuracy: Math.round(avgAccuracy),
+        description: `Transition pattern: ${key.toLowerCase()}`,
+        effectiveness: getEffectivenessRating(avgAccuracy, avgTime),
+        avgTimePerContent: Math.round(avgTime)
+      });
+    }
+  });
+
+  return transitionPatterns;
 }
 
 function detectLearningSequence(interactions: any[]): string {
@@ -302,8 +410,8 @@ function calculateUserAccuracy(interactions: any[]): number {
 async function calculateTimeDistribution(
   subjectId: string,
   startDate: Date
-): Promise<{ consistent: number; cramming: number; sporadic: number }> {
-  // Get sessions for this subject
+): Promise<{ consistent: number; cramming: number; sporadic: number; binge: number; perfectionist: number }> {
+  // Get detailed session data for this subject
   const sessions = await UserInteraction.aggregate([
     {
       $match: {
@@ -317,14 +425,31 @@ async function calculateTimeDistribution(
           userId: '$userId',
           day: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } }
         },
-        count: { $sum: 1 }
+        count: { $sum: 1 },
+        totalTime: { $sum: '$totalTime' },
+        activeTime: { $sum: '$activeTime' },
+        firstActivity: { $min: '$timestamp' },
+        lastActivity: { $max: '$timestamp' }
       }
     },
     {
       $group: {
         _id: '$_id.userId',
         studyDays: { $sum: 1 },
-        totalInteractions: { $sum: '$count' }
+        totalInteractions: { $sum: '$count' },
+        totalStudyTime: { $sum: '$totalTime' },
+        totalActiveTime: { $sum: '$activeTime' },
+        dailySessions: {
+          $push: {
+            day: '$_id.day',
+            interactions: '$count',
+            studyTime: '$totalTime',
+            activeTime: '$activeTime',
+            sessionLength: {
+              $subtract: ['$lastActivity', '$firstActivity']
+            }
+          }
+        }
       }
     }
   ]);
@@ -332,18 +457,38 @@ async function calculateTimeDistribution(
   let consistent = 0;
   let cramming = 0;
   let sporadic = 0;
+  let binge = 0;
+  let perfectionist = 0;
 
   sessions.forEach(session => {
     const avgInteractionsPerDay = session.totalInteractions / session.studyDays;
+    const avgStudyTimePerDay = (session.totalStudyTime || 0) / session.studyDays; // in seconds
+    const engagementRatio = session.totalActiveTime / Math.max(session.totalStudyTime, 1);
 
-    if (session.studyDays >= 5 && avgInteractionsPerDay < 50) {
-      consistent++; // Regular study pattern
-    } else if (session.studyDays <= 2 && avgInteractionsPerDay > 100) {
-      cramming++; // Few days, high intensity
+    // Sort daily sessions by study time to analyze patterns
+    const sortedSessions = session.dailySessions.sort((a: any, b: any) => b.studyTime - a.studyTime);
+    const maxDayTime = sortedSessions[0]?.studyTime || 0;
+    const avgDayTime = avgStudyTimePerDay;
+
+    // Calculate study distribution (how evenly distributed across days)
+    const variance = sortedSessions.reduce((sum: number, day: any) => {
+      return sum + Math.pow((day.studyTime || 0) - avgDayTime, 2);
+    }, 0) / session.studyDays;
+    const studyDistributionScore = Math.sqrt(variance) / Math.max(avgDayTime, 1);
+
+    // Enhanced pattern classification
+    if (session.studyDays >= 7 && studyDistributionScore < 0.5 && avgInteractionsPerDay >= 15 && avgInteractionsPerDay <= 60) {
+      consistent++; // Regular, distributed study pattern
+    } else if (session.studyDays <= 3 && avgInteractionsPerDay > 80 && maxDayTime > avgDayTime * 2) {
+      cramming++; // High intensity, short period
+    } else if (session.studyDays >= 1 && maxDayTime > avgDayTime * 3 && avgStudyTimePerDay > 7200) { // >2 hours avg
+      binge++; // Long study sessions, potentially irregular
+    } else if (engagementRatio > 0.85 && avgInteractionsPerDay < 30 && session.studyDays >= 3) {
+      perfectionist++; // High engagement, methodical approach
     } else {
-      sporadic++; // Irregular pattern
+      sporadic++; // Irregular or unclassified patterns
     }
   });
 
-  return { consistent, cramming, sporadic };
+  return { consistent, cramming, sporadic, binge, perfectionist };
 }

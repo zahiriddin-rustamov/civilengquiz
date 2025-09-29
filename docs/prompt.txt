@@ -47,3 +47,11 @@ I need you to check all relevant pages and see if the XP tracking/rewarding is c
 Context: We have several subjects, inside each subject, there are several topics. Within each topic, there can be questions (several sections), flashcards and media (long videos and shorts). The site is for Bachelor degree students where they will do quizzes and improve their knowledge basically.
 
 I need you to analyze each of the content pages and focus on the Dashboard page for students. I need you to analyze if the current version is correctly setup with the loading/saving. Especially the quick actions, are they dynamic in the sense, tailored for current students progress. Do the achievements work correctly, are they adequate and correct. Basically the entire dashboard and the content associated with it. Is it correctly set up, saving and loading correctly, and everything else.
+
+===
+
+Context: We have several subjects, inside each subject, there are several topics. Within each topic, there can be questions (several sections), flashcards and media (long videos and shorts). The site is for Bachelor degree students where they will do quizzes and improve their knowledge basically.
+
+I was trying to implement the tracking for the students where in the admin side of things, the admin can see the useful/critical insights (/analytics).
+
+I need you to evaluate whether I have correctly set up the tracking for interactions/engagements. All interaction related implementations are in the commit 44314d23b5f95d7b84a5a67d49a63f9ae3c42197. Because in the admin side, we have things like First-Try Accuracy, Completion Rate, Avg Time, Retry Rate, then Time stuff like Consistent Study, Cramming, Sporadic.

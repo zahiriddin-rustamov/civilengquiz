@@ -179,14 +179,16 @@ export class XPService {
       p => p.contentType === 'media' && p.completed
     ).length;
 
-    // Calculate average score from question attempts
-    const questionAttempts = progressRecords.filter(p => p.contentType === 'question' && p.score !== undefined);
-    const averageScore = questionAttempts.length > 0 
-      ? Math.round(questionAttempts.reduce((sum, p) => sum + (p.score || 0), 0) / questionAttempts.length)
+    // Calculate average score from question attempts using best scores
+    const questionAttempts = progressRecords.filter(p =>
+      p.contentType === 'question' && (p.bestScore !== undefined || p.score !== undefined)
+    );
+    const averageScore = questionAttempts.length > 0
+      ? Math.round(questionAttempts.reduce((sum, p) => sum + (p.bestScore || p.score || 0), 0) / questionAttempts.length)
       : 0;
 
-    // Count perfect scores (90%+ on questions)
-    const perfectScores = questionAttempts.filter(p => (p.score || 0) >= 90).length;
+    // Count perfect scores (90%+ on questions) using best scores
+    const perfectScores = questionAttempts.filter(p => (p.bestScore || p.score || 0) >= 90).length;
 
     // Get subjects and topics completed
     const subjects = await Subject.find({}).lean();

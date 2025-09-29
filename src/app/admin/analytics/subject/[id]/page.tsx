@@ -55,6 +55,8 @@ interface LearningPattern {
   count: number;
   avgAccuracy: number;
   description: string;
+  effectiveness: 'high' | 'medium' | 'low';
+  avgTimePerContent: number;
 }
 
 interface SubjectAnalytics {
@@ -69,6 +71,8 @@ interface SubjectAnalytics {
     consistent: number;
     cramming: number;
     sporadic: number;
+    binge: number;
+    perfectionist: number;
   };
   dateRange: {
     from: string;
@@ -122,9 +126,15 @@ export default function SubjectAnalyticsPage() {
   };
 
   const getAccuracyColor = (accuracy: number) => {
-    if (accuracy >= 70) return 'text-green-600';
-    if (accuracy >= 50) return 'text-yellow-600';
+    if (accuracy >= 75) return 'text-green-600';
+    if (accuracy >= 60) return 'text-yellow-600';
     return 'text-red-600';
+  };
+
+  const getAccuracyIndicator = (accuracy: number) => {
+    if (accuracy >= 75) return '🟢';
+    if (accuracy >= 60) return '🔶';
+    return '🔴';
   };
 
   if (isLoading) {
@@ -168,7 +178,9 @@ export default function SubjectAnalyticsPage() {
   const successfulPattern = analytics.learningPatterns[0]; // Sorted by accuracy
   const totalStudents = analytics.timeDistribution.consistent +
                        analytics.timeDistribution.cramming +
-                       analytics.timeDistribution.sporadic;
+                       analytics.timeDistribution.sporadic +
+                       analytics.timeDistribution.binge +
+                       analytics.timeDistribution.perfectionist;
 
   return (
     <div className="space-y-6">
@@ -211,14 +223,24 @@ export default function SubjectAnalyticsPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Avg Accuracy</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">First-Try Avg Score</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">
-              {Math.round(
-                analytics.topics.reduce((sum, t) => sum + t.firstTryAccuracy, 0) /
-                  (analytics.topics.length || 1)
-              )}%
+            <div className="flex items-center gap-2">
+              <div className="text-2xl font-bold text-gray-900">
+                {Math.round(
+                  analytics.topics.reduce((sum, t) => sum + t.firstTryAccuracy, 0) /
+                    (analytics.topics.length || 1)
+                )}%
+              </div>
+              <span className="text-lg">
+                {getAccuracyIndicator(
+                  Math.round(
+                    analytics.topics.reduce((sum, t) => sum + t.firstTryAccuracy, 0) /
+                      (analytics.topics.length || 1)
+                  )
+                )}
+              </span>
             </div>
             <p className="text-xs text-gray-500">First attempt</p>
           </CardContent>
@@ -267,7 +289,7 @@ export default function SubjectAnalyticsPage() {
                 <TableHead>Topic</TableHead>
                 <TableHead className="text-center">Difficulty</TableHead>
                 <TableHead className="text-center">Avg Time</TableHead>
-                <TableHead className="text-center">First-Try %</TableHead>
+                <TableHead className="text-center">First-Try Avg</TableHead>
                 <TableHead className="text-center">Retry Rate</TableHead>
                 <TableHead className="text-center">Completion</TableHead>
                 <TableHead className="text-center">Content</TableHead>
@@ -289,9 +311,12 @@ export default function SubjectAnalyticsPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-center">
-                    <span className={`font-semibold ${getAccuracyColor(topic.firstTryAccuracy)}`}>
-                      {topic.firstTryAccuracy}%
-                    </span>
+                    <div className="flex items-center justify-center gap-1">
+                      <span className={`font-semibold ${getAccuracyColor(topic.firstTryAccuracy)}`}>
+                        {topic.firstTryAccuracy}%
+                      </span>
+                      <span className="text-sm">{getAccuracyIndicator(topic.firstTryAccuracy)}</span>
+                    </div>
                   </TableCell>
                   <TableCell className="text-center">
                     <span className={topic.retryRate > 50 ? 'text-red-600 font-semibold' : ''}>
@@ -337,7 +362,7 @@ export default function SubjectAnalyticsPage() {
           </Table>
 
           {/* Problem Topics Alert */}
-          {analytics.topics.some(t => t.firstTryAccuracy < 50 || t.retryRate > 60) && (
+          {analytics.topics.some(t => t.firstTryAccuracy < 60 || t.retryRate > 60) && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
@@ -345,10 +370,10 @@ export default function SubjectAnalyticsPage() {
                   <h4 className="font-semibold text-red-900">Topics Requiring Attention</h4>
                   <ul className="mt-1 text-sm text-red-700">
                     {analytics.topics
-                      .filter(t => t.firstTryAccuracy < 50 || t.retryRate > 60)
+                      .filter(t => t.firstTryAccuracy < 60 || t.retryRate > 60)
                       .map(t => (
                         <li key={t.topicId}>
-                          • {t.topicName}: {t.firstTryAccuracy}% accuracy, {t.retryRate}% retry rate
+                          • {t.topicName}: {t.firstTryAccuracy}% avg score, {t.retryRate}% retry rate
                         </li>
                       ))}
                   </ul>
@@ -371,25 +396,42 @@ export default function SubjectAnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {analytics.learningPatterns.map((pattern, index) => (
-                <div
-                  key={index}
-                  className={`p-3 rounded-lg border ${
-                    index === 0 ? 'border-green-200 bg-green-50' : 'border-gray-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium">{pattern.pattern}</span>
-                    <span className={`font-semibold ${getAccuracyColor(pattern.avgAccuracy)}`}>
-                      {pattern.avgAccuracy}% accuracy
-                    </span>
+              {analytics.learningPatterns.map((pattern, index) => {
+                const getEffectivenessColor = (effectiveness: string) => {
+                  switch (effectiveness) {
+                    case 'high': return 'text-green-600 bg-green-100';
+                    case 'medium': return 'text-yellow-600 bg-yellow-100';
+                    case 'low': return 'text-red-600 bg-red-100';
+                    default: return 'text-gray-600 bg-gray-100';
+                  }
+                };
+
+                return (
+                  <div
+                    key={index}
+                    className={`p-3 rounded-lg border ${
+                      index === 0 ? 'border-green-200 bg-green-50' : 'border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium">{pattern.pattern}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs px-2 py-1 rounded-full ${getEffectivenessColor(pattern.effectiveness)}`}>
+                          {pattern.effectiveness}
+                        </span>
+                        <span className={`font-semibold ${getAccuracyColor(pattern.avgAccuracy)}`}>
+                          {pattern.avgAccuracy}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-600 mb-1">{pattern.description}</div>
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>{pattern.count} student{pattern.count !== 1 ? 's' : ''}</span>
+                      <span>~{pattern.avgTimePerContent} min/content</span>
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600">{pattern.description}</div>
-                  <div className="text-sm text-gray-500 mt-1">
-                    Used by {pattern.count} student{pattern.count !== 1 ? 's' : ''}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -446,6 +488,50 @@ export default function SubjectAnalyticsPage() {
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">Intensive study in short periods</p>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-medium">Binge Learning</span>
+                  <span className="text-sm text-gray-600">
+                    {analytics.timeDistribution.binge} students
+                  </span>
+                </div>
+                <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-purple-600"
+                    style={{
+                      width: `${
+                        totalStudents > 0
+                          ? (analytics.timeDistribution.binge / totalStudents) * 100
+                          : 0
+                      }%`
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Long, intensive study sessions</p>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-medium">Perfectionist</span>
+                  <span className="text-sm text-gray-600">
+                    {analytics.timeDistribution.perfectionist} students
+                  </span>
+                </div>
+                <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-blue-600"
+                    style={{
+                      width: `${
+                        totalStudents > 0
+                          ? (analytics.timeDistribution.perfectionist / totalStudents) * 100
+                          : 0
+                      }%`
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">High engagement, methodical approach</p>
               </div>
 
               <div>

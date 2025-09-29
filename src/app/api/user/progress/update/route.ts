@@ -139,6 +139,11 @@ export async function POST(request: NextRequest) {
     });
 
     const now = new Date();
+
+    // Calculate score tracking fields first
+    const currentScore = body.score || 0;
+    const isCorrect = body.completed || (currentScore >= 70); // Consider 70%+ as correct
+
     let totalXPEarned = 0;
     let xpEarnedThisTime = 0;
     let xpResult = null;
@@ -147,13 +152,14 @@ export async function POST(request: NextRequest) {
     let isFirstTime = false;
 
     // Determine XP to award based on completion status and timing
-    if (body.completed && body.score && body.score > 0) {
+    // Only award XP for first-time completion or daily XP
+    if (body.completed && currentScore && currentScore > 0) {
       if (!existingProgress || !existingProgress.completed || !existingProgress.firstCompletedDate) {
         // First-time completion - award full XP
         isFirstTime = true;
         xpEarnedThisTime = XPService.calculateContentXP(
           body.contentType,
-          body.score,
+          currentScore,
           body.data?.difficulty,
           body.data
         );
@@ -165,7 +171,7 @@ export async function POST(request: NextRequest) {
         isDailyXP = true;
         xpEarnedThisTime = XPService.calculateDailyXP(
           body.contentType,
-          body.score,
+          currentScore,
           body.data?.difficulty,
           body.data
         );
@@ -179,7 +185,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update progress document with daily XP tracking
+    // Prepare attempt history entry
+    const attemptEntry = {
+      attemptNumber: (existingProgress?.attempts || 0) + 1,
+      score: currentScore,
+      timestamp: now,
+      timeSpent: body.timeSpent || 0,
+      isCorrect
+    };
+
+    // Update progress document with enhanced score tracking
     const updateData: any = {
       userId,
       subjectId: body.subjectId,
@@ -187,30 +202,73 @@ export async function POST(request: NextRequest) {
       contentId: body.contentId,
       contentType: body.contentType,
       completed: body.completed,
-      score: body.score,
+      score: currentScore, // Keep current score for backward compatibility
       timeSpent: body.timeSpent,
       lastAccessed: now,
       data: body.data,
       ...(body.sectionId && { sectionId: body.sectionId })
     };
 
+    // Debug logging to understand the issue
+    console.log('[DEBUG] existingProgress:', JSON.stringify(existingProgress, null, 2));
+    console.log('[DEBUG] attempts:', existingProgress?.attempts);
+    console.log('[DEBUG] isFirstTime condition:', !existingProgress || (existingProgress.attempts || 0) === 0);
+
+    // Handle first attempt vs subsequent attempts
+    if (!existingProgress || (existingProgress.attempts || 0) === 0) {
+      console.log('[DEBUG] Treating as FIRST attempt');
+      // First attempt - set all score fields
+      updateData.firstAttemptScore = currentScore;
+      updateData.bestScore = currentScore;
+      updateData.attemptHistory = [attemptEntry];
+    } else {
+      console.log('[DEBUG] Treating as SUBSEQUENT attempt');
+      // Subsequent attempts - update best score and add to history
+      updateData.bestScore = Math.max(existingProgress.bestScore || 0, currentScore);
+      // Safely handle attemptHistory - ensure it exists before pushing
+      if (existingProgress.attemptHistory && existingProgress.attemptHistory.length > 0) {
+        updateData.$push = { attemptHistory: attemptEntry };
+      } else {
+        // Edge case: existing progress but no attempt history yet
+        console.log('[DEBUG] No attempt history found, initializing array');
+        updateData.attemptHistory = [attemptEntry];
+      }
+      // Keep firstAttemptScore unchanged (don't include in updateData)
+    }
+
+    // Separate direct assignments from MongoDB operators
+    const mongoOperations: any = {};
+
     // Update daily XP tracking fields
     if (isFirstTime) {
       updateData.firstCompletedDate = now;
-      updateData.$inc = {
+      mongoOperations.$inc = {
         attempts: 1,
         totalXPEarned: xpEarnedThisTime
       };
     } else if (isDailyXP) {
       updateData.lastDailyXPDate = now;
-      updateData.$inc = {
+      mongoOperations.$inc = {
         attempts: 1,
         dailyXPCount: 1,
         totalXPEarned: xpEarnedThisTime
       };
     } else {
-      updateData.$inc = { attempts: 1 };
+      mongoOperations.$inc = { attempts: 1 };
     }
+
+    // Move $push operation to mongoOperations if it exists
+    if (updateData.$push) {
+      mongoOperations.$push = updateData.$push;
+      delete updateData.$push;
+    }
+
+    // Combine direct assignments with MongoDB operators
+    const finalUpdateData = {
+      $set: updateData,
+      ...mongoOperations
+    };
+
 
     // Update the progress document
     const progress = await UserProgress.findOneAndUpdate(
@@ -219,13 +277,14 @@ export async function POST(request: NextRequest) {
         contentId: body.contentId,
         contentType: body.contentType
       },
-      updateData,
+      finalUpdateData,
       {
         upsert: true,
         new: true,
         runValidators: true
       }
     );
+
 
     // Award XP if earned
     if (xpEarnedThisTime > 0) {
@@ -254,6 +313,18 @@ export async function POST(request: NextRequest) {
             completionBonusXP = XPService.calculateCompletionBonus('section', body.data?.difficulty);
             console.log(`[XP] Section completion bonus for ${body.sectionId}: ${completionBonusXP} XP`);
 
+            // Calculate average score from completed questions in this section
+            const sectionQuestionProgress = await UserProgress.find({
+              userId,
+              sectionId: body.sectionId,
+              contentType: 'question',
+              completed: true
+            });
+
+            const averageScore = sectionQuestionProgress.length > 0
+              ? Math.round(sectionQuestionProgress.reduce((sum, p) => sum + (p.bestScore || p.score || 0), 0) / sectionQuestionProgress.length)
+              : 100;
+
             // Save section completion record
             await UserProgress.create({
               userId,
@@ -263,7 +334,7 @@ export async function POST(request: NextRequest) {
               subjectId: body.subjectId,
               sectionId: body.sectionId,
               completed: true,
-              score: 100,
+              score: averageScore,
               timeSpent: 0,
               firstCompletedDate: now,
               totalXPEarned: completionBonusXP

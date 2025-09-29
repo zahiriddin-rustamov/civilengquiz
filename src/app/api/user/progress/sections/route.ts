@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     const progressData = sectionProgress.map(progress => ({
       sectionId: progress.contentId.toString(),
       completed: progress.completed,
-      score: progress.score || 0,
+      score: progress.bestScore || progress.score || 0, // Show best score to user
       questionsAnswered: progress.data?.questionsAnswered || 0,
       totalQuestions: progress.data?.totalQuestions || 0,
       timeSpent: progress.timeSpent,
