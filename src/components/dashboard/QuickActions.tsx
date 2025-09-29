@@ -10,7 +10,8 @@ import {
   Clock,
   ArrowRight,
   Sparkles,
-  Zap
+  Zap,
+  Trophy
 } from 'lucide-react';
 import Link from 'next/link';
 import { useDashboard } from '@/context/DashboardProvider';
@@ -97,6 +98,11 @@ export function QuickActions() {
       return '/subjects'; // Fallback to subjects page
     }
 
+    // Validate that required IDs exist
+    if (!recentActivity.subjectId || !recentActivity.topicId) {
+      return '/subjects';
+    }
+
     // If recent activity exists and not completed, continue from there
     if (!recentActivity.completed) {
       if (recentActivity.contentType === 'section' && recentActivity.sectionId) {
@@ -144,26 +150,25 @@ export function QuickActions() {
       icon: Shuffle,
       color: 'from-purple-500 to-violet-600',
       href: '/quiz/random',
-      badge: 'Quick Study'
-    },
-    {
-      id: 'daily',
-      title: 'Daily Challenge',
-      description: 'Complete today\'s special challenge',
-      icon: Target,
-      color: 'from-orange-500 to-red-600',
-      href: '/challenges/daily',
-      badge: 'New!',
-      isNew: true
+      badge: 'Practice Mode'
     },
     {
       id: 'timed',
-      title: '5-Min Sprint',
-      description: 'Quick knowledge check',
+      title: 'Timed Quiz',
+      description: '10 seconds per question challenge',
       icon: Clock,
       color: 'from-cyan-500 to-blue-600',
-      href: '/quiz/sprint',
-      badge: 'Fast Track'
+      href: '/quiz/timed',
+      badge: 'Time Challenge'
+    },
+    {
+      id: 'leaderboard',
+      title: 'Leaderboard',
+      description: 'See how you rank against others',
+      icon: Trophy,
+      color: 'from-yellow-500 to-orange-600',
+      href: '/leaderboard',
+      badge: 'Compete'
     }
   ];
 

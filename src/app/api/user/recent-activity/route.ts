@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import connectToDatabase from '@/lib/mongoose';
 import { UserProgress, Topic, Subject } from '@/models/database';
 
-// GET /api/user/recent-activity - Get user's most recent learning activity
+// GET /api/user/recent-activity - Get user's most recent contextual learning activity (excludes random quizzes)
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -19,9 +19,13 @@ export async function GET(request: NextRequest) {
     const userId = session.user.id;
     await connectToDatabase();
 
-    // Get the most recent activity
+    // Get the most recent contextual learning activity (exclude random quiz and other non-topic activities)
     const recentProgress = await UserProgress
-      .findOne({ userId })
+      .findOne({
+        userId,
+        contentType: { $in: ['question', 'section', 'flashcard', 'media'] }, // Exclude 'quiz' and other non-contextual types
+        topicId: { $exists: true, $ne: null } // Ensure we have a valid topicId
+      })
       .sort({ lastAccessed: -1 })
       .lean();
 
@@ -35,11 +39,17 @@ export async function GET(request: NextRequest) {
     // Get topic and subject names for better context
     let topicName = '';
     let subjectName = '';
+    let derivedSubjectId = recentProgress.subjectId;
 
     if (recentProgress.topicId) {
       const topic = await Topic.findById(recentProgress.topicId).lean();
       if (topic) {
         topicName = topic.name;
+
+        // If subjectId is not in the progress record, derive it from the topic
+        if (!derivedSubjectId && topic.subjectId) {
+          derivedSubjectId = topic.subjectId;
+        }
 
         if (topic.subjectId) {
           const subject = await Subject.findById(topic.subjectId).lean();
@@ -50,11 +60,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get recent incomplete activities (up to 5)
+    // Get recent incomplete contextual activities (up to 5)
     const incompleteActivities = await UserProgress
       .find({
         userId,
-        completed: false
+        completed: false,
+        contentType: { $in: ['question', 'section', 'flashcard', 'media'] }, // Exclude non-contextual types
+        topicId: { $exists: true, $ne: null } // Ensure we have a valid topicId
       })
       .sort({ lastAccessed: -1 })
       .limit(5)
@@ -109,10 +121,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       lastActivity: {
         contentType: recentProgress.contentType,
-        contentId: recentProgress.contentId,
-        topicId: recentProgress.topicId,
-        subjectId: recentProgress.subjectId,
-        sectionId: recentProgress.sectionId,
+        contentId: recentProgress.contentId?.toString(),
+        topicId: recentProgress.topicId?.toString(),
+        subjectId: derivedSubjectId?.toString(),
+        sectionId: recentProgress.sectionId?.toString(),
         lastAccessed: recentProgress.lastAccessed,
         completed: recentProgress.completed,
         score: recentProgress.score,
@@ -121,8 +133,8 @@ export async function GET(request: NextRequest) {
       },
       incompleteActivities: incompleteActivities.map(activity => ({
         contentType: activity.contentType,
-        contentId: activity.contentId,
-        topicId: activity.topicId,
+        contentId: activity.contentId?.toString(),
+        topicId: activity.topicId?.toString(),
         completed: activity.completed,
         score: activity.score,
         lastAccessed: activity.lastAccessed
