@@ -46,11 +46,23 @@ export async function POST(request: NextRequest) {
     let newLevel = null;
     let newAchievements = [];
 
-    // If no progress today, award XP (higher for timed quiz due to difficulty)
+    // If no progress today, award XP
     if (!existingProgress) {
-      // Award more XP for timed quiz - base 8 XP + bonus based on performance
-      const baseXP = 8;
-      const performanceBonus = score >= 80 ? 3 : score >= 60 ? 2 : score >= 40 ? 1 : 0;
+      // Award XP for timed quiz - base 5 XP + bonus based on performance
+      const baseXP = 5;
+      let performanceBonus = 0;
+
+      if (score >= 100) {
+        performanceBonus = 4; // 100% gets +4 total (9 XP)
+      } else if (score >= 90) {
+        performanceBonus = 3; // 90-99% gets +3 (8 XP)
+      } else if (score >= 80) {
+        performanceBonus = 2; // 80-89% gets +2 (7 XP)
+      } else if (score >= 70) {
+        performanceBonus = 1; // 70-79% gets +1 (6 XP)
+      }
+      // Below 70% gets no bonus (5 XP base)
+
       xpGained = baseXP + performanceBonus;
       xpAwarded = true;
 
@@ -137,7 +149,7 @@ export async function POST(request: NextRequest) {
       newAchievements,
       message: xpAwarded
         ? `Excellent! You earned ${xpGained} XP for completing the timed quiz!${
-            xpGained > 8 ? ` (${xpGained - 8} performance bonus!)` : ''
+            xpGained > 5 ? ` (${xpGained - 5} performance bonus!)` : ''
           }`
         : 'Quiz completed! You already earned XP for timed quiz today.'
     });
