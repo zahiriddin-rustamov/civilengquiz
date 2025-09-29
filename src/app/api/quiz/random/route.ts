@@ -64,17 +64,6 @@ export async function GET(request: NextRequest) {
       .select('_id type text data difficulty topicId sectionId xpReward')
       .lean();
 
-    console.log('Random Quiz Debug:', {
-      queryUsed: query,
-      totalQuestionsFound: allQuestions.length,
-      firstQuestionSample: allQuestions[0] ? {
-        id: allQuestions[0]._id,
-        type: allQuestions[0].type,
-        hasData: !!allQuestions[0].data,
-        dataKeys: allQuestions[0].data ? Object.keys(allQuestions[0].data) : []
-      } : null
-    });
-
     // Prioritize questions for better learning
     const prioritizedQuestions = allQuestions.map(question => {
       const questionId = question._id.toString();

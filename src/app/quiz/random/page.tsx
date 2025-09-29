@@ -124,29 +124,35 @@ export default function RandomQuizPage() {
 
     const totalQuestions = quizData.questions.length;
     const correctAnswers = Array.from(answers.values()).filter(a => a.isCorrect).length;
-    const totalPoints = Array.from(answers.values()).reduce((sum, a) => sum + (a.isCorrect ? a.points : 0), 0);
     const score = (correctAnswers / totalQuestions) * 100;
     const timeSpent = Math.round((Date.now() - startTime) / 1000);
 
-    // Save progress for each question
-    for (const [questionId, answer] of answers.entries()) {
-      try {
-        await fetch('/api/user/progress/update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contentId: questionId,
-            contentType: 'question',
-            topicId: quizData.questions.find(q => q.id === questionId)?.topicName || '',
-            subjectId: quizData.questions.find(q => q.id === questionId)?.subjectName || '',
-            completed: answer.isCorrect,
-            score: answer.isCorrect ? 100 : 0,
-            timeSpent: Math.round(timeSpent / totalQuestions)
-          })
-        });
-      } catch (error) {
-        console.error('Failed to save question progress:', error);
+    // Award 5 XP for completing the random quiz (once per day)
+    try {
+      const response = await fetch('/api/user/progress/random-quiz-complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          score,
+          correctAnswers,
+          totalQuestions,
+          timeSpent
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.xpAwarded) {
+          setXpNotification({
+            xpGained: result.xpGained,
+            leveledUp: result.leveledUp,
+            newLevel: result.newLevel,
+            newAchievements: result.newAchievements || []
+          });
+        }
       }
+    } catch (error) {
+      console.error('Failed to save random quiz completion:', error);
     }
 
     setQuizCompleted(true);

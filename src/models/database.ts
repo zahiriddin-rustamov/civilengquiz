@@ -296,8 +296,8 @@ export interface IUserProgress extends Document {
   subjectId?: Types.ObjectId;
   topicId?: Types.ObjectId;
   sectionId?: Types.ObjectId; // Section progress tracking
-  contentId: Types.ObjectId; // Can be question, flashcard, or media
-  contentType: 'question' | 'flashcard' | 'media' | 'section';
+  contentId: Types.ObjectId | string; // Can be question, flashcard, media, or special string for quiz tracking
+  contentType: 'question' | 'flashcard' | 'media' | 'section' | 'quiz';
   completed: boolean;
   score?: number; // Current/latest score (kept for backward compatibility)
   firstAttemptScore?: number; // Score from the very first attempt
@@ -327,8 +327,8 @@ const UserProgressSchema = new Schema<IUserProgress>({
   subjectId: { type: Schema.Types.ObjectId, ref: 'Subject' },
   topicId: { type: Schema.Types.ObjectId, ref: 'Topic' },
   sectionId: { type: Schema.Types.ObjectId, ref: 'QuestionSection' },
-  contentId: { type: Schema.Types.ObjectId, required: true },
-  contentType: { type: String, enum: ['question', 'flashcard', 'media', 'section'], required: true },
+  contentId: { type: Schema.Types.Mixed, required: true }, // ObjectId or String for special cases
+  contentType: { type: String, enum: ['question', 'flashcard', 'media', 'section', 'quiz'], required: true },
   completed: { type: Boolean, default: false },
   score: { type: Number }, // Current/latest score (kept for backward compatibility)
   firstAttemptScore: { type: Number }, // Score from the very first attempt
