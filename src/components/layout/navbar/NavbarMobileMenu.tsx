@@ -5,15 +5,14 @@ import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  User, 
-  X, 
-  BookOpen, 
+import {
+  User,
+  X,
+  BookOpen,
   BarChart3,
   Trophy,
   Crown,
-  Settings,
-  Target
+  Settings
 } from 'lucide-react';
 import type { Session } from 'next-auth';
 
@@ -99,12 +98,12 @@ export function NavbarMobileMenu({
                     <span className="font-medium">Study Worlds</span>
                   </Link>
                   <Link
-                    href="/challenges"
-                    className={getMobileLinkClassName('/challenges')}
+                    href="/leaderboard"
+                    className={getMobileLinkClassName('/leaderboard')}
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    <Target className="h-5 w-5 text-orange-600" />
-                    <span className="font-medium">Daily Challenges</span>
+                    <Trophy className="h-5 w-5 text-yellow-600" />
+                    <span className="font-medium">Leaderboard</span>
                   </Link>
                   <Link
                     href="/achievements"

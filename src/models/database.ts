@@ -18,6 +18,17 @@ export interface IUser extends Document {
   maxStreak: number;
   lastActiveDate?: Date;
   achievements: string[]; // Array of achievement IDs
+  // Enhanced streak tracking
+  learningStreak: number; // Consecutive days with learning activity
+  lastLearningDate?: Date; // Last date user completed learning content
+  // Daily rank tracking
+  dailyRankHistory: Array<{
+    date: Date;
+    rank: number;
+    totalXP: number;
+  }>;
+  // Leaderboard preferences
+  showOnLeaderboard: boolean; // Privacy setting for leaderboard visibility
   createdAt: Date;
   updatedAt: Date;
 }
@@ -38,6 +49,17 @@ const UserSchema = new Schema<IUser>({
   maxStreak: { type: Number, default: 0 },
   lastActiveDate: { type: Date },
   achievements: [{ type: String }],
+  // Enhanced streak tracking
+  learningStreak: { type: Number, default: 0 },
+  lastLearningDate: { type: Date },
+  // Daily rank tracking
+  dailyRankHistory: [{
+    date: { type: Date, required: true },
+    rank: { type: Number, required: true },
+    totalXP: { type: Number, required: true }
+  }],
+  // Leaderboard preferences
+  showOnLeaderboard: { type: Boolean, default: true },
 }, {
   timestamps: true
 });
@@ -626,6 +648,45 @@ const SessionTrackingSchema = new Schema<ISessionTracking>({
 SessionTrackingSchema.index({ userId: 1, startTime: -1 });
 SessionTrackingSchema.index({ startTime: -1 });
 
+// Daily Rank Snapshot Schema for efficient leaderboard tracking
+export interface IDailyRankSnapshot extends Document {
+  _id: Types.ObjectId;
+  date: Date;
+  rankings: Array<{
+    userId: Types.ObjectId;
+    rank: number;
+    totalXP: number;
+    level: number;
+    currentStreak: number;
+    learningStreak: number;
+    previousRank?: number;
+    rankChange: number; // Positive for improvement, negative for decline
+  }>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const DailyRankSnapshotSchema = new Schema<IDailyRankSnapshot>({
+  date: { type: Date, required: true, unique: true },
+  rankings: [{
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    rank: { type: Number, required: true },
+    totalXP: { type: Number, required: true },
+    level: { type: Number, required: true },
+    currentStreak: { type: Number, required: true },
+    learningStreak: { type: Number, required: true },
+    previousRank: { type: Number },
+    rankChange: { type: Number, default: 0 }
+  }]
+}, {
+  timestamps: true
+});
+
+// Create indexes for better query performance
+DailyRankSnapshotSchema.index({ date: -1 });
+DailyRankSnapshotSchema.index({ 'rankings.userId': 1 });
+DailyRankSnapshotSchema.index({ 'rankings.rank': 1 });
+
 // Export models
 export const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 export const Subject = mongoose.models.Subject || mongoose.model<ISubject>('Subject', SubjectSchema);
@@ -652,3 +713,4 @@ export const Survey = mongoose.models.Survey || mongoose.model<ISurvey>('Survey'
 export const SurveyResponse = mongoose.models.SurveyResponse || mongoose.model<ISurveyResponse>('SurveyResponse', SurveyResponseSchema);
 export const UserInteraction = mongoose.models.UserInteraction || mongoose.model<IUserInteraction>('UserInteraction', UserInteractionSchema);
 export const SessionTracking = mongoose.models.SessionTracking || mongoose.model<ISessionTracking>('SessionTracking', SessionTrackingSchema);
+export const DailyRankSnapshot = mongoose.models.DailyRankSnapshot || mongoose.model<IDailyRankSnapshot>('DailyRankSnapshot', DailyRankSnapshotSchema);

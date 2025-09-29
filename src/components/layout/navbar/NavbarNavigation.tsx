@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Crown, BookOpen, Target } from 'lucide-react';
+import { Crown, BookOpen, Trophy } from 'lucide-react';
 
 interface NavbarNavigationProps {
   isAuthenticated: boolean;
@@ -45,11 +45,11 @@ export function NavbarNavigation({ isAuthenticated }: NavbarNavigationProps) {
         Study Worlds
       </Link>
       <Link
-        href="/challenges"
-        className={getLinkClassName('/challenges')}
+        href="/leaderboard"
+        className={getLinkClassName('/leaderboard')}
       >
-        <Target className="h-4 w-4" />
-        Challenges
+        <Trophy className="h-4 w-4" />
+        Leaderboard
       </Link>
     </div>
   );

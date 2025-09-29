@@ -8,6 +8,7 @@ import { QuickActions } from '@/components/dashboard/QuickActions';
 import { SubjectSkillTrees } from '@/components/dashboard/SubjectSkillTrees';
 import { AchievementsSidebar } from '@/components/dashboard/AchievementsSidebar';
 import { ProgressSummary } from '@/components/dashboard/ProgressSummary';
+import { LeaderboardWidget } from '@/components/dashboard/LeaderboardWidget';
 import { DashboardProvider } from '@/context/DashboardProvider';
 import { XPDebugger } from '@/components/gamification';
 
@@ -60,6 +61,7 @@ export default function DashboardPage() {
 
             {/* Right Sidebar */}
             <div className="xl:col-span-1 space-y-6">
+              <LeaderboardWidget />
               <AchievementsSidebar />
             </div>
           </div>

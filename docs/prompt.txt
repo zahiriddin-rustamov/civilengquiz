@@ -65,3 +65,8 @@ Context: We have several subjects, inside each subject, there are several topics
 I am trying to revamp and improve the student dashboard and the latest changes can be found at: commit 134bea2764e7380da02f4464388f9032d06439fc
 
 There is an issue with the /quiz/random where I currently don't see any questions, it's just empty where it doesn't show the question nor answers or anything. Just disabled submit answer and next/previous
+===
+
+Context: We have several subjects, inside each subject, there are several topics. Within each topic, there can be questions (several sections), flashcards and media (long videos and shorts). The site is for Bachelor degree students where they will do quizzes and improve their knowledge basically.
+
+I need to implement the Leaderboard for students (so we can link it in the Navbar as a new button and also student dashboard). How do you suggest we go about it. Check all relevant files.
