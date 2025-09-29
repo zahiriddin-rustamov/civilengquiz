@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
     }));
 
     // Generate research insights
-    const insights = generateInsights(subjectAnalytics, interactions);
+    const insights = await generateInsights(subjectAnalytics, interactions);
 
     // Calculate overall statistics
     const overallStats = {
@@ -239,7 +239,7 @@ async function countSubjectContent(subjectId: any): Promise<number> {
   return totalContent;
 }
 
-function generateInsights(subjectAnalytics: any[], interactions: any[]): string[] {
+async function generateInsights(subjectAnalytics: any[], interactions: any[]): Promise<string[]> {
   const insights: string[] = [];
 
   // Insight 1: Engagement vs Performance
@@ -263,24 +263,109 @@ function generateInsights(subjectAnalytics: any[], interactions: any[]): string[
   );
   insights.push(`Average content completion rate: ${avgCompletion}%`);
 
-  // Insight 4: Learning patterns
-  const flashcardFirst = interactions.filter(i => {
-    if (i.contentType === 'flashcard' && i.eventType === 'session_start') {
-      // Check if questions were done after
-      const userId = i.userId;
-      const afterFlashcard = interactions.find(j =>
-        j.userId?.toString() === userId?.toString() &&
-        j.contentType === 'question' &&
-        j.timestamp > i.timestamp
-      );
-      return !!afterFlashcard;
-    }
-    return false;
-  });
-
-  if (flashcardFirst.length > 0) {
-    insights.push(`Students doing flashcards before questions show better performance`);
+  // Insight 4: Learning patterns - data-driven performance comparison
+  const learningPatternInsight = await analyzeLearningPatternPerformance();
+  if (learningPatternInsight) {
+    insights.push(learningPatternInsight);
   }
 
   return insights;
+}
+
+async function analyzeLearningPatternPerformance(): Promise<string | null> {
+  try {
+    // Get all user progress records for questions to analyze learning patterns
+    const questionProgress = await UserProgress.find({
+      contentType: 'question',
+      attempts: { $gte: 1 },
+      firstAttemptScore: { $exists: true }
+    }).lean();
+
+    if (questionProgress.length === 0) return null;
+
+    // Group by user to analyze their learning sequences
+    const userPatterns = new Map<string, any[]>();
+
+    // Get all user progress records (all content types) to determine sequences
+    const allProgress = await UserProgress.find({
+      userId: { $in: questionProgress.map(p => p.userId) }
+    }).sort({ updatedAt: 1 }).lean();
+
+    // Group all progress by user
+    allProgress.forEach(progress => {
+      const userId = progress.userId.toString();
+      if (!userPatterns.has(userId)) {
+        userPatterns.set(userId, []);
+      }
+      userPatterns.get(userId)!.push(progress);
+    });
+
+    // Categorize users by their learning patterns
+    const flashcardFirstUsers: string[] = [];
+    const directQuestionUsers: string[] = [];
+
+    userPatterns.forEach((userProgress, userId) => {
+      // Look for users who did flashcards before questions in the same topic
+      const hasFlashcardBeforeQuestion = userProgress.some((progress, index) => {
+        if (progress.contentType === 'flashcard') {
+          // Check if there's a question in the same topic after this flashcard
+          const laterQuestion = userProgress.slice(index + 1).find(p =>
+            p.contentType === 'question' &&
+            p.topicId?.toString() === progress.topicId?.toString()
+          );
+          return !!laterQuestion;
+        }
+        return false;
+      });
+
+      // Check if user went directly to questions (first interaction per topic was question)
+      const topicFirstInteractions = new Map<string, any>();
+      userProgress.forEach(progress => {
+        const topicId = progress.topicId?.toString();
+        if (topicId && !topicFirstInteractions.has(topicId)) {
+          topicFirstInteractions.set(topicId, progress);
+        }
+      });
+
+      const hasDirectQuestionStart = Array.from(topicFirstInteractions.values())
+        .some(first => first.contentType === 'question');
+
+      if (hasFlashcardBeforeQuestion) {
+        flashcardFirstUsers.push(userId);
+      } else if (hasDirectQuestionStart) {
+        directQuestionUsers.push(userId);
+      }
+    });
+
+    // Calculate performance for each group
+    if (flashcardFirstUsers.length < 3 || directQuestionUsers.length < 3) {
+      return null; // Need sufficient sample size
+    }
+
+    const flashcardFirstPerformance = questionProgress
+      .filter(p => flashcardFirstUsers.includes(p.userId.toString()))
+      .reduce((sum, p) => sum + p.firstAttemptScore, 0) /
+      questionProgress.filter(p => flashcardFirstUsers.includes(p.userId.toString())).length;
+
+    const directQuestionPerformance = questionProgress
+      .filter(p => directQuestionUsers.includes(p.userId.toString()))
+      .reduce((sum, p) => sum + p.firstAttemptScore, 0) /
+      questionProgress.filter(p => directQuestionUsers.includes(p.userId.toString())).length;
+
+    const performanceDiff = Math.round(flashcardFirstPerformance - directQuestionPerformance);
+
+    // Only generate insight if there's a meaningful difference (>5%)
+    if (Math.abs(performanceDiff) >= 5) {
+      if (performanceDiff > 0) {
+        return `Students who study flashcards before questions score ${performanceDiff}% higher (${Math.round(flashcardFirstPerformance)}% vs ${Math.round(directQuestionPerformance)}%)`;
+      } else {
+        return `Students who go directly to questions score ${Math.abs(performanceDiff)}% higher (${Math.round(directQuestionPerformance)}% vs ${Math.round(flashcardFirstPerformance)}%)`;
+      }
+    }
+
+    return null; // No significant difference found
+  } catch (error) {
+    console.error('Error analyzing learning patterns:', error);
+    return null;
+  }
 }
