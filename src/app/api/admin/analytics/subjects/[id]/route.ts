@@ -218,9 +218,10 @@ async function analyzeLearningPatterns(
   let questionOnlyAccuracy = 0;
   let mixedAccuracy = 0;
 
-  userPatterns.forEach((userInteractions) => {
+  // Process user patterns sequentially to handle async calculateUserAccuracy
+  for (const [userId, userInteractions] of userPatterns.entries()) {
     const sequence = detectLearningSequence(userInteractions);
-    const accuracy = calculateUserAccuracy(userInteractions);
+    const accuracy = await calculateUserAccuracy(userId, subjectId);
 
     switch (sequence) {
       case 'video-first':
@@ -239,7 +240,7 @@ async function analyzeLearningPatterns(
         mixed++;
         mixedAccuracy += accuracy;
     }
-  });
+  }
 
   // Create pattern objects with effectiveness analysis
   if (videoFirst > 0) {
@@ -295,7 +296,7 @@ async function analyzeLearningPatterns(
   patterns.sort((a, b) => b.avgAccuracy - a.avgAccuracy);
 
   // Add transition pattern analysis
-  const transitionPatterns = analyzeContentTransitions(userPatterns);
+  const transitionPatterns = await analyzeContentTransitions(userPatterns, subjectId);
   patterns.push(...transitionPatterns);
 
   return patterns;
@@ -331,14 +332,15 @@ function calculateAverageTimePerContent(userPatterns: Map<any, any>, patternType
 }
 
 // Analyze content transition patterns (cross-content analytics)
-function analyzeContentTransitions(userPatterns: Map<any, any>): LearningPattern[] {
+async function analyzeContentTransitions(userPatterns: Map<any, any>, subjectId: string): Promise<LearningPattern[]> {
   const transitionPatterns: LearningPattern[] = [];
 
   // Track common transitions
   const transitions: { [key: string]: { count: number; accuracy: number; time: number } } = {};
 
-  userPatterns.forEach((userInteractions) => {
-    const accuracy = calculateUserAccuracy(userInteractions);
+  // Process user patterns sequentially to handle async calculateUserAccuracy
+  for (const [userId, userInteractions] of userPatterns.entries()) {
+    const accuracy = await calculateUserAccuracy(userId, subjectId);
     const totalTime = userInteractions.reduce((sum: number, i: any) => sum + (i.totalTime || 0), 0);
 
     for (let i = 0; i < userInteractions.length - 1; i++) {
@@ -357,7 +359,7 @@ function analyzeContentTransitions(userPatterns: Map<any, any>): LearningPattern
         transitions[transitionKey].time += totalTime;
       }
     }
-  });
+  }
 
   // Convert to patterns if significant enough (>= 3 occurrences)
   Object.entries(transitions).forEach(([key, data]) => {
@@ -396,15 +398,24 @@ function detectLearningSequence(interactions: any[]): string {
   return 'mixed';
 }
 
-function calculateUserAccuracy(interactions: any[]): number {
-  const submissions = interactions.filter(i =>
-    i.eventType === 'submit' && i.contentType === 'question'
-  );
+async function calculateUserAccuracy(userId: string, subjectId: string): Promise<number> {
+  // Get UserProgress records for this user and subject - more reliable than UserInteraction
+  const userProgressRecords = await UserProgress.find({
+    userId: userId,
+    subjectId: subjectId,
+    contentType: 'question',
+    attempts: { $gte: 1 }, // Only include attempted questions
+    firstAttemptScore: { $exists: true } // Ensure we have first attempt data
+  }).lean();
 
-  if (submissions.length === 0) return 0;
+  if (userProgressRecords.length === 0) return 0;
 
-  const correct = submissions.filter(i => i.eventData?.isCorrect);
-  return (correct.length / submissions.length) * 100;
+  // Calculate average first-attempt accuracy (consistent with main analytics)
+  const totalFirstAttemptScore = userProgressRecords.reduce((sum, record) => {
+    return sum + (record.firstAttemptScore || 0);
+  }, 0);
+
+  return Math.round(totalFirstAttemptScore / userProgressRecords.length);
 }
 
 async function calculateTimeDistribution(
