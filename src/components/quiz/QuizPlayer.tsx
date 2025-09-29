@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -14,7 +14,9 @@ import {
   CheckCircle,
   XCircle,
   ArrowRight,
-  RotateCcw
+  RotateCcw,
+  Timer,
+  AlertTriangle
 } from 'lucide-react';
 import Link from 'next/link';
 import { MultipleChoiceQuestion } from '@/components/quiz/MultipleChoiceQuestion';
@@ -51,7 +53,19 @@ interface QuizData {
   type: string;
 }
 
-export default function RandomQuizPage() {
+interface QuizPlayerProps {
+  mode: 'random' | 'timed';
+  timePerQuestion?: number; // seconds per question (for timed mode)
+  totalTimeLimit?: number; // total time limit in seconds
+  questionCount?: number;
+}
+
+export function QuizPlayer({
+  mode,
+  timePerQuestion = 10,
+  totalTimeLimit,
+  questionCount = 10
+}: QuizPlayerProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const { triggerRefresh } = useDashboard();
@@ -65,6 +79,13 @@ export default function RandomQuizPage() {
   const [startTime] = useState(Date.now());
   const [xpNotification, setXpNotification] = useState<any>(null);
 
+  // Timer states
+  const [timeLeft, setTimeLeft] = useState(timePerQuestion);
+  const [totalTimeLeft, setTotalTimeLeft] = useState(totalTimeLimit || 0);
+  const [isTimerActive, setIsTimerActive] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const totalTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login');
@@ -72,11 +93,73 @@ export default function RandomQuizPage() {
     }
 
     if (status === 'authenticated') {
-      fetchRandomQuiz();
+      fetchQuiz();
     }
   }, [status, router]);
 
-  const fetchRandomQuiz = async (count: number = 10) => {
+  // Timer effects
+  useEffect(() => {
+    if (mode === 'timed' && quizData && !quizCompleted && !isLoading) {
+      setIsTimerActive(true);
+      setTimeLeft(timePerQuestion);
+    }
+  }, [currentQuestionIndex, quizData, mode, timePerQuestion, quizCompleted, isLoading]);
+
+  useEffect(() => {
+    if (mode === 'timed' && isTimerActive && timeLeft > 0 && !quizCompleted) {
+      timerRef.current = setTimeout(() => {
+        setTimeLeft(prev => prev - 1);
+      }, 1000);
+    } else if (mode === 'timed' && timeLeft === 0 && !quizCompleted) {
+      // Time's up for this question - auto advance or complete quiz
+      handleTimeUp();
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [timeLeft, isTimerActive, mode, quizCompleted]);
+
+  // Total timer effect
+  useEffect(() => {
+    if (mode === 'timed' && totalTimeLimit && isTimerActive && totalTimeLeft > 0 && !quizCompleted) {
+      totalTimerRef.current = setTimeout(() => {
+        setTotalTimeLeft(prev => prev - 1);
+      }, 1000);
+    } else if (mode === 'timed' && totalTimeLimit && totalTimeLeft === 0 && !quizCompleted) {
+      // Total time's up - complete quiz
+      handleQuizComplete();
+    }
+
+    return () => {
+      if (totalTimerRef.current) {
+        clearTimeout(totalTimerRef.current);
+      }
+    };
+  }, [totalTimeLeft, isTimerActive, mode, totalTimeLimit, quizCompleted]);
+
+  const handleTimeUp = () => {
+    const currentQuestion = quizData?.questions[currentQuestionIndex];
+    if (!currentQuestion) return;
+
+    // If no answer given, record as incorrect
+    if (!answers.has(currentQuestion.id)) {
+      const newAnswers = new Map(answers);
+      newAnswers.set(currentQuestion.id, { answer: null, isCorrect: false, points: 0 });
+      setAnswers(newAnswers);
+    }
+
+    // Move to next question or complete quiz
+    if (quizData && currentQuestionIndex < quizData.questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+    } else {
+      handleQuizComplete();
+    }
+  };
+
+  const fetchQuiz = async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -84,15 +167,25 @@ export default function RandomQuizPage() {
       setCurrentQuestionIndex(0);
       setQuizCompleted(false);
 
-      const response = await fetch(`/api/quiz/random?count=${count}`);
+      const params = new URLSearchParams({
+        count: questionCount.toString(),
+        mode: mode
+      });
+
+      const response = await fetch(`/api/quiz/random?${params}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch random quiz');
+        throw new Error('Failed to fetch quiz');
       }
 
       const data = await response.json();
       setQuizData(data.quiz);
+
+      // Initialize total timer if specified
+      if (totalTimeLimit) {
+        setTotalTimeLeft(totalTimeLimit);
+      }
     } catch (err) {
-      console.error('Error fetching random quiz:', err);
+      console.error('Error fetching quiz:', err);
       setError(err instanceof Error ? err.message : 'Failed to load quiz');
     } finally {
       setIsLoading(false);
@@ -103,6 +196,13 @@ export default function RandomQuizPage() {
     const newAnswers = new Map(answers);
     newAnswers.set(questionId, { answer, isCorrect, points });
     setAnswers(newAnswers);
+
+    // For timed mode, auto advance after answer
+    if (mode === 'timed') {
+      setTimeout(() => {
+        handleNextQuestion();
+      }, 1500); // Short delay to show result
+    }
   };
 
   const handleNextQuestion = () => {
@@ -114,6 +214,9 @@ export default function RandomQuizPage() {
   };
 
   const handlePreviousQuestion = () => {
+    // Don't allow going back in timed mode
+    if (mode === 'timed') return;
+
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prev => prev - 1);
     }
@@ -122,21 +225,26 @@ export default function RandomQuizPage() {
   const handleQuizComplete = async () => {
     if (!quizData) return;
 
+    setIsTimerActive(false);
+
     const totalQuestions = quizData.questions.length;
     const correctAnswers = Array.from(answers.values()).filter(a => a.isCorrect).length;
     const score = (correctAnswers / totalQuestions) * 100;
     const timeSpent = Math.round((Date.now() - startTime) / 1000);
 
-    // Award 5 XP for completing the random quiz (once per day)
+    // Award XP based on mode
+    const endpoint = mode === 'timed' ? '/api/user/progress/timed-quiz-complete' : '/api/user/progress/random-quiz-complete';
+
     try {
-      const response = await fetch('/api/user/progress/random-quiz-complete', {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           score,
           correctAnswers,
           totalQuestions,
-          timeSpent
+          timeSpent,
+          mode
         })
       });
 
@@ -152,7 +260,7 @@ export default function RandomQuizPage() {
         }
       }
     } catch (error) {
-      console.error('Failed to save random quiz completion:', error);
+      console.error('Failed to save quiz completion:', error);
     }
 
     setQuizCompleted(true);
@@ -185,7 +293,6 @@ export default function RandomQuizPage() {
           />
         );
       case 'true-false':
-        // TrueFalseQuestion expects text and boolean correctAnswer
         return (
           <TrueFalseQuestion
             key={question.id}
@@ -200,7 +307,6 @@ export default function RandomQuizPage() {
           />
         );
       case 'fill-in-blank':
-        // FillInBlankQuestion may have different structure
         return (
           <FillInBlankQuestion
             key={question.id}
@@ -219,7 +325,6 @@ export default function RandomQuizPage() {
           />
         );
       case 'numerical':
-        // NumericalQuestion expects numeric answer
         return (
           <NumericalQuestion
             key={question.id}
@@ -239,7 +344,6 @@ export default function RandomQuizPage() {
           />
         );
       case 'matching':
-        // MatchingQuestion has pairs structure
         return (
           <MatchingQuestion
             key={question.id}
@@ -261,12 +365,30 @@ export default function RandomQuizPage() {
     }
   };
 
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getTimerColor = (seconds: number) => {
+    if (seconds > timePerQuestion * 0.5) return 'text-green-600';
+    if (seconds > timePerQuestion * 0.25) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
         <div className="text-center">
-          <Shuffle className="w-16 h-16 text-indigo-600 animate-spin mx-auto mb-4" />
-          <p className="text-indigo-600 font-medium">Generating random quiz...</p>
+          {mode === 'timed' ? (
+            <Timer className="w-16 h-16 text-indigo-600 animate-pulse mx-auto mb-4" />
+          ) : (
+            <Shuffle className="w-16 h-16 text-indigo-600 animate-spin mx-auto mb-4" />
+          )}
+          <p className="text-indigo-600 font-medium">
+            {mode === 'timed' ? 'Preparing timed quiz...' : 'Generating random quiz...'}
+          </p>
         </div>
       </div>
     );
@@ -277,7 +399,7 @@ export default function RandomQuizPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
         <div className="text-center">
           <p className="text-red-600 mb-4">{error}</p>
-          <Button onClick={() => fetchRandomQuiz()}>Try Again</Button>
+          <Button onClick={() => fetchQuiz()}>Try Again</Button>
         </div>
       </div>
     );
@@ -298,7 +420,9 @@ export default function RandomQuizPage() {
           >
             <div className="text-center">
               <Trophy className="w-20 h-20 text-yellow-500 mx-auto mb-4" />
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">Quiz Complete!</h1>
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">
+                {mode === 'timed' ? 'Timed Quiz Complete!' : 'Quiz Complete!'}
+              </h1>
               <p className="text-xl text-gray-600 mb-6">
                 You scored {correctAnswers} out of {totalQuestions}
               </p>
@@ -325,11 +449,20 @@ export default function RandomQuizPage() {
 
               <div className="flex justify-center space-x-4">
                 <Button
-                  onClick={() => fetchRandomQuiz()}
+                  onClick={() => fetchQuiz()}
                   className="bg-indigo-600 hover:bg-indigo-700"
                 >
-                  <Shuffle className="w-4 h-4 mr-2" />
-                  New Random Quiz
+                  {mode === 'timed' ? (
+                    <>
+                      <Timer className="w-4 h-4 mr-2" />
+                      New Timed Quiz
+                    </>
+                  ) : (
+                    <>
+                      <Shuffle className="w-4 h-4 mr-2" />
+                      New Random Quiz
+                    </>
+                  )}
                 </Button>
                 <Link href="/dashboard">
                   <Button variant="outline">
@@ -383,8 +516,24 @@ export default function RandomQuizPage() {
           </Link>
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-600">
-              Random Quiz • {quizData.totalQuestions} Questions
+              {mode === 'timed' ? 'Timed Quiz' : 'Random Quiz'} • {quizData.totalQuestions} Questions
             </span>
+            {mode === 'timed' && (
+              <div className="flex items-center space-x-2">
+                <Timer className="w-4 h-4 text-indigo-600" />
+                <span className={`text-sm font-mono font-bold ${getTimerColor(timeLeft)}`}>
+                  {formatTime(timeLeft)}
+                </span>
+                {totalTimeLimit && (
+                  <>
+                    <span className="text-gray-400">|</span>
+                    <span className="text-sm font-mono text-gray-600">
+                      Total: {formatTime(totalTimeLeft)}
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -400,11 +549,29 @@ export default function RandomQuizPage() {
           </div>
           <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-300"
+              className={`h-full transition-all duration-300 ${
+                mode === 'timed'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600'
+                  : 'bg-gradient-to-r from-indigo-500 to-purple-600'
+              }`}
               style={{ width: `${((currentQuestionIndex + 1) / quizData.totalQuestions) * 100}%` }}
             />
           </div>
         </div>
+
+        {/* Timer Warning */}
+        {mode === 'timed' && timeLeft <= 5 && timeLeft > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 flex items-center justify-center space-x-2"
+          >
+            <AlertTriangle className="w-5 h-5 text-red-600" />
+            <span className="text-red-600 font-medium">
+              Time running out! {timeLeft} seconds left
+            </span>
+          </motion.div>
+        )}
 
         {/* Question Card */}
         <motion.div
@@ -418,13 +585,20 @@ export default function RandomQuizPage() {
               <span className="text-sm text-gray-500">
                 {currentQuestion.subjectName} • {currentQuestion.topicName}
               </span>
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                currentQuestion.difficulty === 'Advanced' ? 'bg-red-100 text-red-600' :
-                currentQuestion.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-600' :
-                'bg-green-100 text-green-600'
-              }`}>
-                {currentQuestion.difficulty}
-              </span>
+              <div className="flex items-center space-x-2">
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  currentQuestion.difficulty === 'Advanced' ? 'bg-red-100 text-red-600' :
+                  currentQuestion.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-600' :
+                  'bg-green-100 text-green-600'
+                }`}>
+                  {currentQuestion.difficulty}
+                </span>
+                {mode === 'timed' && (
+                  <span className="px-2 py-1 bg-blue-100 text-blue-600 rounded-full text-xs font-medium">
+                    Timed
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -435,7 +609,7 @@ export default function RandomQuizPage() {
             <Button
               variant="outline"
               onClick={handlePreviousQuestion}
-              disabled={currentQuestionIndex === 0}
+              disabled={currentQuestionIndex === 0 || mode === 'timed'}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Previous
@@ -445,14 +619,25 @@ export default function RandomQuizPage() {
               {currentQuestion.points} points
             </span>
 
-            <Button
-              onClick={handleNextQuestion}
-              disabled={!currentAnswer}
-              className="bg-indigo-600 hover:bg-indigo-700"
-            >
-              {currentQuestionIndex === quizData.questions.length - 1 ? 'Finish' : 'Next'}
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
+            {mode !== 'timed' && (
+              <Button
+                onClick={handleNextQuestion}
+                disabled={!currentAnswer}
+                className="bg-indigo-600 hover:bg-indigo-700"
+              >
+                {currentQuestionIndex === quizData.questions.length - 1 ? 'Finish' : 'Next'}
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            )}
+
+            {mode === 'timed' && (
+              <div className="text-right">
+                <div className="text-xs text-gray-500">Auto-advancing...</div>
+                <div className={`text-lg font-mono font-bold ${getTimerColor(timeLeft)}`}>
+                  {formatTime(timeLeft)}
+                </div>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>

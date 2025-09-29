@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import connectToDatabase from '@/lib/mongoose';
 import { Question, UserProgress, Topic, Subject } from '@/models/database';
 
-// GET /api/quiz/random - Get a random set of questions for practice
+// GET /api/quiz/random - Get a random set of questions for practice (supports timed mode)
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     const difficulty = searchParams.get('difficulty'); // Optional: 'Beginner', 'Intermediate', 'Advanced'
     const topicId = searchParams.get('topicId'); // Optional: specific topic
     const subjectId = searchParams.get('subjectId'); // Optional: specific subject
+    const mode = searchParams.get('mode') || 'random'; // 'random' or 'timed'
 
     const userId = session.user.id;
     await connectToDatabase();
@@ -64,28 +65,38 @@ export async function GET(request: NextRequest) {
       .select('_id type text data difficulty topicId sectionId xpReward')
       .lean();
 
-    // Prioritize questions for better learning
+    // Prioritize questions for better learning (different strategy for timed mode)
     const prioritizedQuestions = allQuestions.map(question => {
       const questionId = question._id.toString();
       const performance = questionPerformance.get(questionId);
 
       let priority = 0;
 
-      if (!performance) {
-        // Never attempted - highest priority
-        priority = 100;
-      } else if (!performance.completed) {
-        // Started but not completed
-        priority = 80;
-      } else if (performance.score < 70) {
-        // Struggled with this question
-        priority = 60 + (70 - performance.score) / 2;
-      } else if (performance.attempts === 1 && performance.score < 100) {
-        // Only attempted once and didn't get perfect
-        priority = 40;
+      if (mode === 'timed') {
+        // For timed mode, prioritize questions user has seen before but struggled with
+        // This creates a more challenging but fair experience
+        if (!performance) {
+          priority = 60; // Some new questions, but not the majority
+        } else if (performance.score < 70) {
+          priority = 100; // Highest priority for questions they struggled with
+        } else if (performance.score < 90) {
+          priority = 80; // Medium priority for questions they got right but not perfect
+        } else {
+          priority = 40; // Lower priority for questions they mastered
+        }
       } else {
-        // Completed successfully
-        priority = 20 - Math.min(performance.attempts, 10);
+        // Original random quiz logic - prioritize learning
+        if (!performance) {
+          priority = 100; // Never attempted - highest priority
+        } else if (!performance.completed) {
+          priority = 80; // Started but not completed
+        } else if (performance.score < 70) {
+          priority = 60 + (70 - performance.score) / 2; // Struggled with this question
+        } else if (performance.attempts === 1 && performance.score < 100) {
+          priority = 40; // Only attempted once and didn't get perfect
+        } else {
+          priority = 20 - Math.min(performance.attempts, 10); // Completed successfully
+        }
       }
 
       return {
@@ -141,7 +152,7 @@ export async function GET(request: NextRequest) {
         totalPoints,
         estimatedTime,
         difficulty: difficulty || 'mixed',
-        type: 'random'
+        type: mode
       },
       metadata: {
         requestedCount: count,
