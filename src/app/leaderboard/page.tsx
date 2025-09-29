@@ -208,7 +208,7 @@ export default function LeaderboardPage() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-gray-800">
-                    {leaderboardData?.leaderboard[0]?.totalXP.toLocaleString() || '0'}
+                    {leaderboardData?.leaderboard[0]?.totalXP?.toLocaleString() || '0'}
                   </div>
                   <div className="text-sm text-gray-600">Top Score</div>
                 </div>
