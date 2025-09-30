@@ -53,6 +53,7 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
             role: user.role || "student",
             isVerified: user.isVerified,
+            createdAt: user.createdAt,
           };
         } catch (error) {
           console.error("Authentication error:", error);
@@ -71,6 +72,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = user.role || 'student';
         token.isVerified = Boolean(user.isVerified);
+        token.createdAt = user.createdAt;
       }
       return token;
     },
@@ -80,6 +82,7 @@ export const authOptions: NextAuthOptions = {
         // Use type assertions to avoid TypeScript errors
         (session.user as any).role = token.role as string;
         (session.user as any).isVerified = Boolean(token.isVerified);
+        (session.user as any).createdAt = token.createdAt;
       }
       return session;
     }
