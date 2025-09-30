@@ -22,6 +22,7 @@ export async function GET(req: Request) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const skip = (page - 1) * limit;
+    const includeAllTopics = searchParams.get('includeAllTopics') === 'true';
 
     // Build query
     const query: any = {};
@@ -63,8 +64,42 @@ export async function GET(req: Request) {
     // Get total count for pagination
     const totalCount = await Media.countDocuments(query);
 
+    let allTopicCombinations = [];
+
+    // If includeAllTopics is requested (for admin Media page), get all subject-topic combinations
+    if (includeAllTopics) {
+      allTopicCombinations = await Topic.aggregate([
+        {
+          $lookup: {
+            from: 'subjects',
+            localField: 'subjectId',
+            foreignField: '_id',
+            as: 'subject'
+          }
+        },
+        {
+          $addFields: {
+            subjectName: { $arrayElemAt: ['$subject.name', 0] }
+          }
+        },
+        {
+          $project: {
+            _id: 1,
+            name: 1,
+            subjectId: 1,
+            subjectName: 1,
+            order: 1
+          }
+        },
+        {
+          $sort: { 'subject.order': 1, order: 1 }
+        }
+      ]);
+    }
+
     return NextResponse.json({
       media,
+      allTopicCombinations,
       pagination: {
         page,
         limit,

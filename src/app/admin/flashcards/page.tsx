@@ -84,6 +84,7 @@ export default function FlashcardsPage() {
   const [subjects, setSubjects] = useState<ISubject[]>([]);
   const [topics, setTopics] = useState<ITopic[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [allTopicCombinations, setAllTopicCombinations] = useState<any[]>([]);
   const [filteredFlashcards, setFilteredFlashcards] = useState<EnhancedFlashcard[]>([]);
   const [groupedFlashcards, setGroupedFlashcards] = useState<FlashcardGroup[]>([]);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
@@ -148,23 +149,24 @@ export default function FlashcardsPage() {
 
   useEffect(() => {
     // Group filtered flashcards by subject-topic combination
-    const groups = groupFlashcardsByTopic(filteredFlashcards);
+    const groups = groupFlashcardsByTopic(filteredFlashcards, allTopicCombinations);
     setGroupedFlashcards(groups);
-  }, [filteredFlashcards, subjects]);
+  }, [filteredFlashcards, allTopicCombinations, subjects]);
 
   const fetchFlashcards = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      
-      const response = await fetch('/api/admin/flashcards');
+
+      const response = await fetch('/api/admin/flashcards?includeAllTopics=true');
       if (!response.ok) {
         throw new Error('Failed to fetch flashcards');
       }
-      
+
       const data = await response.json();
       setFlashcards(data.flashcards || []);
       setCategories(data.categories || []);
+      setAllTopicCombinations(data.allTopicCombinations || []);
     } catch (err) {
       console.error('Error fetching flashcards:', err);
       setError(err instanceof Error ? err.message : 'Failed to load flashcards');
@@ -288,9 +290,30 @@ export default function FlashcardsPage() {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
 
-  const groupFlashcardsByTopic = (flashcardItems: EnhancedFlashcard[]): FlashcardGroup[] => {
+  const groupFlashcardsByTopic = (flashcardItems: EnhancedFlashcard[], allTopics: any[] = []): FlashcardGroup[] => {
     const groupMap = new Map<string, FlashcardGroup>();
 
+    // First, create groups from all available topics (including empty ones)
+    allTopics.forEach(topic => {
+      if (!topic._id || !topic.name || !topic.subjectName) {
+        return;
+      }
+
+      const topicKey = `${topic.subjectName}-${topic._id.toString()}`;
+      if (!groupMap.has(topicKey)) {
+        groupMap.set(topicKey, {
+          subjectName: topic.subjectName,
+          topicId: topic._id.toString(),
+          topicName: topic.name,
+          flashcards: [],
+          totalFlashcards: 0,
+          totalXP: 0,
+          categoryBreakdown: {},
+        });
+      }
+    });
+
+    // Then, populate with existing flashcards
     flashcardItems.forEach(item => {
       // Handle missing properties safely
       if (!item.topicId || !item.topicName || !item.subjectName) {
@@ -300,6 +323,7 @@ export default function FlashcardsPage() {
 
       const key = `${item.subjectName}-${item.topicId.toString()}`;
 
+      // Create topic group if it doesn't exist (fallback for flashcards without matching allTopics)
       if (!groupMap.has(key)) {
         groupMap.set(key, {
           subjectName: item.subjectName,
@@ -545,18 +569,29 @@ export default function FlashcardsPage() {
               {groupedFlashcards.map((group) => {
                 const groupKey = `${group.subjectName}-${group.topicId}`;
                 const isExpanded = expandedGroups.has(groupKey);
+                const hasFlashcards = group.totalFlashcards > 0;
 
                 return (
                   <div key={groupKey} className="border rounded-lg overflow-hidden">
                     {/* Group Header */}
                     <div
-                      className="bg-gray-50 border-b p-4 cursor-pointer hover:bg-gray-100 transition-colors"
-                      onClick={() => toggleGroupExpansion(groupKey)}
+                      className={`bg-gray-50 border-b p-4 transition-colors ${
+                        hasFlashcards
+                          ? 'cursor-pointer hover:bg-gray-100'
+                          : 'cursor-default'
+                      }`}
+                      onClick={() => hasFlashcards && toggleGroupExpansion(groupKey)}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <div className="flex items-center space-x-2">
-                            {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                            {hasFlashcards ? (
+                              isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />
+                            ) : (
+                              <div className="w-5 h-5 flex items-center justify-center">
+                                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                              </div>
+                            )}
                             <div className="text-left">
                               <div className="font-semibold text-gray-900">
                                 {group.subjectName} → {group.topicName}
@@ -632,7 +667,7 @@ export default function FlashcardsPage() {
                     </div>
 
                     {/* Expanded Content */}
-                    {isExpanded && (
+                    {isExpanded && hasFlashcards && (
                       <div className="p-4">
                         <div className="space-y-3">
                           {group.flashcards

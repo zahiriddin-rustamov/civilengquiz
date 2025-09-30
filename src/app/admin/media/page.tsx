@@ -72,6 +72,7 @@ export default function MediaPage() {
   const [media, setMedia] = useState<EnhancedMedia[]>([]);
   const [subjects, setSubjects] = useState<ISubject[]>([]);
   const [topics, setTopics] = useState<ITopic[]>([]);
+  const [allTopicCombinations, setAllTopicCombinations] = useState<any[]>([]);
   const [filteredMedia, setFilteredMedia] = useState<EnhancedMedia[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
@@ -133,16 +134,39 @@ export default function MediaPage() {
     setFilteredMedia(filtered);
 
     // Group filtered media by subject-topic combination
-    const groups = groupMediaByTopic(filtered);
+    const groups = groupMediaByTopic(filtered, allTopicCombinations);
     setGroupedMedia(groups);
-  }, [media, searchTerm, selectedSubject, selectedTopic, selectedVideoType, selectedDifficulty, subjects]);
+  }, [media, searchTerm, selectedSubject, selectedTopic, selectedVideoType, selectedDifficulty, allTopicCombinations, subjects]);
 
-  const groupMediaByTopic = (mediaItems: EnhancedMedia[]): MediaGroup[] => {
+  const groupMediaByTopic = (mediaItems: EnhancedMedia[], allTopics: any[] = []): MediaGroup[] => {
     const groupMap = new Map<string, MediaGroup>();
 
+    // First, create groups from all available topics (including empty ones)
+    allTopics.forEach(topic => {
+      if (!topic._id || !topic.name || !topic.subjectName || !topic.subjectId) {
+        return;
+      }
+
+      const topicKey = `${topic.subjectId.toString()}-${topic._id.toString()}`;
+      if (!groupMap.has(topicKey)) {
+        groupMap.set(topicKey, {
+          subjectId: topic.subjectId.toString(),
+          subjectName: topic.subjectName,
+          topicId: topic._id.toString(),
+          topicName: topic.name,
+          media: [],
+          videoCount: 0,
+          shortCount: 0,
+          totalXP: 0,
+        });
+      }
+    });
+
+    // Then, populate with existing media
     mediaItems.forEach(item => {
       const key = `${item.subjectId}-${item.topicId}`;
 
+      // Create topic group if it doesn't exist (fallback for media without matching allTopics)
       if (!groupMap.has(key)) {
         groupMap.set(key, {
           subjectId: item.subjectId.toString(),
@@ -192,14 +216,15 @@ export default function MediaPage() {
     try {
       setIsLoading(true);
       setError(null);
-      
-      const response = await fetch('/api/admin/media');
+
+      const response = await fetch('/api/admin/media?includeAllTopics=true');
       if (!response.ok) {
         throw new Error('Failed to fetch media');
       }
-      
+
       const data = await response.json();
       setMedia(data.media || []);
+      setAllTopicCombinations(data.allTopicCombinations || []);
     } catch (err) {
       console.error('Error fetching media:', err);
       setError(err instanceof Error ? err.message : 'Failed to load media');
@@ -481,18 +506,29 @@ export default function MediaPage() {
               {groupedMedia.map((group) => {
                 const groupKey = `${group.subjectId}-${group.topicId}`;
                 const isExpanded = expandedGroups.has(groupKey);
+                const hasMedia = group.videoCount > 0 || group.shortCount > 0;
 
                 return (
                   <div key={groupKey} className="border rounded-lg overflow-hidden">
                     {/* Group Header */}
                     <div
-                      className="bg-gray-50 border-b p-4 cursor-pointer hover:bg-gray-100 transition-colors"
-                      onClick={() => toggleGroupExpansion(groupKey)}
+                      className={`bg-gray-50 border-b p-4 transition-colors ${
+                        hasMedia
+                          ? 'cursor-pointer hover:bg-gray-100'
+                          : 'cursor-default'
+                      }`}
+                      onClick={() => hasMedia && toggleGroupExpansion(groupKey)}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <div className="flex items-center space-x-2">
-                            {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                            {hasMedia ? (
+                              isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />
+                            ) : (
+                              <div className="w-5 h-5 flex items-center justify-center">
+                                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                              </div>
+                            )}
                             <div className="text-left">
                               <div className="font-semibold text-gray-900">
                                 {group.subjectName} → {group.topicName}
@@ -561,7 +597,7 @@ export default function MediaPage() {
                     </div>
 
                     {/* Expanded Content */}
-                    {isExpanded && (
+                    {isExpanded && hasMedia && (
                       <div className="p-4">
                         <div className="space-y-3">
                           {group.media
