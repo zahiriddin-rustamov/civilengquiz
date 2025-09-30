@@ -15,28 +15,37 @@ export async function GET(
 
     const client = await clientPromise;
     const db = client.db();
-    
+
     // Find user with this verification token
     const user = await db.collection('users').findOne({
-      verificationToken: token,
-      verificationExpires: { $gt: new Date() } // Token not expired
+      verificationToken: token
     });
 
+    // If user not found, token is invalid
     if (!user) {
       return errorResponse('Invalid or expired verification token', 400);
     }
 
-    // Mark user as verified and remove verification token
+    // If user is already verified, return success message
+    if (user.isVerified) {
+      return successResponse(
+        { email: user.email },
+        'Your email is already verified. You can log in to your account.'
+      );
+    }
+
+    // Check if token has expired
+    if (user.verificationExpires && new Date(user.verificationExpires) < new Date()) {
+      return errorResponse('Verification token has expired. Please request a new one.', 400);
+    }
+
+    // Mark user as verified (keep token so we can recognize already-verified users)
     await db.collection('users').updateOne(
       { _id: user._id },
       {
         $set: {
           isVerified: true,
           updatedAt: new Date()
-        },
-        $unset: {
-          verificationToken: 1,
-          verificationExpires: 1
         }
       }
     );
