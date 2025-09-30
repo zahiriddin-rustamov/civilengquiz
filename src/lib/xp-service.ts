@@ -168,7 +168,7 @@ export class XPService {
     
     // Calculate statistics
     const totalQuizzesCompleted = progressRecords.filter(
-      p => p.contentType === 'question' && p.completed
+      p => p.contentType === 'quiz' && p.completed
     ).length;
     
     const totalFlashcardsCompleted = progressRecords.filter(
@@ -179,9 +179,9 @@ export class XPService {
       p => p.contentType === 'media' && p.completed
     ).length;
 
-    // Calculate average score from question attempts using best scores
+    // Calculate average score from completed question attempts using best scores
     const questionAttempts = progressRecords.filter(p =>
-      p.contentType === 'question' && (p.bestScore !== undefined || p.score !== undefined)
+      p.contentType === 'question' && p.completed && (p.bestScore !== undefined || p.score !== undefined)
     );
     const averageScore = questionAttempts.length > 0
       ? Math.round(questionAttempts.reduce((sum, p) => sum + (p.bestScore || p.score || 0), 0) / questionAttempts.length)
