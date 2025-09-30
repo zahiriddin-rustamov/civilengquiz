@@ -10,7 +10,7 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -19,8 +19,11 @@ export async function GET(
     }
 
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const includeRelated = searchParams.get('includeRelated') === 'true';
+
     const topic = await TopicService.getTopicById(id);
-    
+
     if (!topic) {
       return NextResponse.json(
         { error: 'Topic not found' },
@@ -68,6 +71,16 @@ export async function GET(
         media: 0
       }
     };
+
+    // If includeRelated is requested, fetch sibling topics for the same subject
+    if (includeRelated) {
+      const siblingTopics = await TopicService.getTopicsBySubject(topic.subjectId.toString());
+
+      return NextResponse.json({
+        ...enhancedTopic,
+        siblingTopics
+      });
+    }
 
     return NextResponse.json(enhancedTopic);
   } catch (error) {

@@ -233,18 +233,14 @@ export default function NewMediaPage() {
 
   const fetchTopicAndSubject = async (topicId: string) => {
     try {
-      const response = await fetch(`/api/topics/${topicId}`);
+      const response = await fetch(`/api/topics/${topicId}?includeRelated=true`);
       if (response.ok) {
-        const topic = await response.json();
-        setSelectedSubject(topic.subjectId.toString());
-        const subjectResponse = await fetch(`/api/subjects/${topic.subjectId}/topics`);
-        if (subjectResponse.ok) {
-          const topicsData = await subjectResponse.json();
-          setTopics(topicsData);
+        const data = await response.json();
+        setSelectedSubject(data.subjectId.toString());
+        setTopics(data.siblingTopics || []);
 
-          // Re-set the topic selection AFTER topics are loaded to ensure it appears in dropdown
-          setFormData(prev => ({ ...prev, topicId }));
-        }
+        // Re-set the topic selection AFTER topics are loaded to ensure it appears in dropdown
+        setFormData(prev => ({ ...prev, topicId }));
       }
     } catch (err) {
       console.error('Error fetching topic and subject:', err);
