@@ -76,13 +76,7 @@ export function NavbarUserMenu({ session, firstName }: NavbarUserMenuProps) {
         <DropdownMenuItem asChild>
           <Link href="/profile" className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50">
             <User className="h-4 w-4 text-gray-600" />
-            <span>Profile Settings</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/progress" className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50">
-            <BarChart3 className="h-4 w-4 text-gray-600" />
-            <span>Progress Analytics</span>
+            <span>Profile</span>
           </Link>
         </DropdownMenuItem>
         {session?.user?.role === 'admin' && (

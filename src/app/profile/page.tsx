@@ -45,15 +45,6 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
       <div className="container mx-auto px-4 py-12">
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Building className="h-8 w-8 text-indigo-600" />
-            <h1 className="text-3xl font-bold text-gray-900">Account Profile</h1>
-          </div>
-          <p className="text-gray-600">View your account information</p>
-        </div>
-
         {/* Profile Card */}
         <div className="max-w-2xl mx-auto">
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">

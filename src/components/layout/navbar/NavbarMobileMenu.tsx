@@ -119,21 +119,13 @@ export function NavbarMobileMenu({
                 <div className="border-t border-gray-200 pt-4">
                   <h3 className="mb-2 text-sm font-medium text-gray-600 px-3">Account</h3>
                   <div className="space-y-1">
-                    <Link 
+                    <Link
                       href="/profile"
                       className="flex w-full items-center gap-3 rounded-lg p-3 hover:bg-gray-50 transition-colors"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       <User className="h-5 w-5 text-gray-600" />
-                      <span className="font-medium">Profile Settings</span>
-                    </Link>
-                    <Link 
-                      href="/progress"
-                      className="flex w-full items-center gap-3 rounded-lg p-3 hover:bg-gray-50 transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <BarChart3 className="h-5 w-5 text-gray-600" />
-                      <span className="font-medium">Progress Analytics</span>
+                      <span className="font-medium">Profile</span>
                     </Link>
                     {session?.user?.role === 'admin' && (
                       <Link 
