@@ -198,11 +198,20 @@ export default function NewQuestionPage() {
       if (response.ok) {
         const data = await response.json();
         console.log('Topic data received:', data);
+        console.log('subjectId type:', typeof data.subjectId);
+        console.log('subjectId value:', data.subjectId);
 
         // Handle both ObjectId and string formats for subjectId
         const subjectIdStr = typeof data.subjectId === 'object' && data.subjectId._id
           ? data.subjectId._id.toString()
-          : data.subjectId.toString();
+          : (data.subjectId ? data.subjectId.toString() : '');
+
+        console.log('Extracted subjectIdStr:', subjectIdStr);
+
+        if (!subjectIdStr) {
+          console.error('Failed to extract subjectId from topic data');
+          return;
+        }
 
         setSelectedSubject(subjectIdStr);
         setTopics(data.siblingTopics || []);
