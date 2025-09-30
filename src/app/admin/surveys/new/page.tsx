@@ -20,7 +20,6 @@ import {
   CheckCircle,
   MessageSquare
 } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
 
 interface SurveyQuestion {
   id: string;
@@ -83,7 +82,7 @@ export default function NewSurveyPage() {
 
   const addQuestion = (type: 'rating' | 'multiple_choice' | 'text') => {
     const newQuestion: SurveyQuestion = {
-      id: uuidv4(),
+      id: crypto.randomUUID(),
       type,
       question: '',
       required: false,

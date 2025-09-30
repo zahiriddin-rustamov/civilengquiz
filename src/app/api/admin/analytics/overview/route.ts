@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     const subjectContentMap = await buildSubjectContentMap();
 
     // Process data per subject
-    const subjectAnalytics = await Promise.all(subjects.map(async (subject) => {
+    const subjectAnalytics = await Promise.all(subjects.map(async (subject: any) => {
       // Get all content IDs for this subject
       const subjectContentIds = subjectContentMap.get(subject._id.toString()) || new Set();
 
@@ -99,8 +99,8 @@ export async function GET(request: NextRequest) {
         medium: 0,
         low: 0
       };
-      userEngagement.forEach(eng => {
-        engagementGroups[eng.level]++;
+      userEngagement.forEach((eng: any) => {
+        engagementGroups[eng.level as 'high' | 'medium' | 'low']++;
       });
 
       // Calculate accuracy metrics from UserProgress (more reliable)
@@ -195,19 +195,19 @@ async function buildSubjectContentMap(): Promise<Map<string, Set<string>>> {
     // Get questions from all sections in this topic
     const sections = await QuestionSection.find({ topicId: topic._id }).lean();
     for (const section of sections) {
-      contentIds.add(section._id.toString());
+      contentIds.add((section as any)._id.toString());
 
-      const questions = await Question.find({ sectionId: section._id }).lean();
-      questions.forEach(q => contentIds.add(q._id.toString()));
+      const questions = await Question.find({ sectionId: (section as any)._id }).lean();
+      questions.forEach((q: any) => contentIds.add(q._id.toString()));
     }
 
     // Get flashcards for this topic
     const flashcards = await Flashcard.find({ topicId: topic._id }).lean();
-    flashcards.forEach(f => contentIds.add(f._id.toString()));
+    flashcards.forEach((f: any) => contentIds.add(f._id.toString()));
 
     // Get media for this topic
     const media = await Media.find({ topicId: topic._id }).lean();
-    media.forEach(m => contentIds.add(m._id.toString()));
+    media.forEach((m: any) => contentIds.add(m._id.toString()));
   }
 
   return map;

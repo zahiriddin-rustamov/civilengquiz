@@ -16,7 +16,6 @@ import { ImageUrlInput } from '@/components/ui/image-url-input';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { SettingsSection } from '@/components/admin/SettingsSection';
 import { ISubject, ITopic } from '@/models/database';
-import { v4 as uuidv4 } from 'uuid';
 
 interface QuestionData {
   topicId: string;
@@ -100,7 +99,7 @@ export default function NewQuestionPage() {
 
   const [fillInBlankData, setFillInBlankData] = useState({
     blanks: [{
-      id: uuidv4(),
+      id: crypto.randomUUID(),
       correctAnswers: [''],
       caseSensitive: false
     }]
@@ -115,8 +114,8 @@ export default function NewQuestionPage() {
 
   const [matchingData, setMatchingData] = useState({
     pairs: [
-      { id: uuidv4(), left: '', right: '' },
-      { id: uuidv4(), left: '', right: '' }
+      { id: crypto.randomUUID(), left: '', right: '' },
+      { id: crypto.randomUUID(), left: '', right: '' }
     ]
   });
 
@@ -246,7 +245,7 @@ export default function NewQuestionPage() {
         break;
       case 'fill-in-blank':
         setFillInBlankData({
-          blanks: [{ id: uuidv4(), correctAnswers: [''], caseSensitive: false }]
+          blanks: [{ id: crypto.randomUUID(), correctAnswers: [''], caseSensitive: false }]
         });
         break;
       case 'numerical':
@@ -255,8 +254,8 @@ export default function NewQuestionPage() {
       case 'matching':
         setMatchingData({
           pairs: [
-            { id: uuidv4(), left: '', right: '' },
-            { id: uuidv4(), left: '', right: '' }
+            { id: crypto.randomUUID(), left: '', right: '' },
+            { id: crypto.randomUUID(), left: '', right: '' }
           ]
         });
         break;
@@ -574,7 +573,7 @@ export default function NewQuestionPage() {
               onClick={() => {
                 setFillInBlankData(prev => ({
                   blanks: [...prev.blanks, {
-                    id: uuidv4(),
+                    id: crypto.randomUUID(),
                     correctAnswers: [''],
                     caseSensitive: false
                   }]
@@ -696,7 +695,7 @@ export default function NewQuestionPage() {
               variant="outline"
               onClick={() => {
                 setMatchingData(prev => ({
-                  pairs: [...prev.pairs, { id: uuidv4(), left: '', right: '' }]
+                  pairs: [...prev.pairs, { id: crypto.randomUUID(), left: '', right: '' }]
                 }));
               }}
             >
