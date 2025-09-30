@@ -194,32 +194,27 @@ export default function NewQuestionPage() {
 
   const fetchTopicAndSubject = async (topicId: string) => {
     try {
-      const response = await fetch(`/api/topics/${topicId}?includeRelated=true`);
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Topic data received:', data);
-        console.log('subjectId type:', typeof data.subjectId);
-        console.log('subjectId value:', data.subjectId);
+      // Fetch topic to get subjectId
+      const topicResponse = await fetch(`/api/topics/${topicId}`);
+      if (!topicResponse.ok) {
+        console.error('Failed to fetch topic:', topicResponse.status);
+        return;
+      }
 
-        // Handle both ObjectId and string formats for subjectId
-        const subjectIdStr = typeof data.subjectId === 'object' && data.subjectId._id
-          ? data.subjectId._id.toString()
-          : (data.subjectId ? data.subjectId.toString() : '');
+      const topic = await topicResponse.json();
+      const subjectIdStr = typeof topic.subjectId === 'object'
+        ? topic.subjectId.toString()
+        : topic.subjectId;
 
-        console.log('Extracted subjectIdStr:', subjectIdStr);
+      // Now fetch topics for that subject and set both at once
+      const topicsResponse = await fetch(`/api/subjects/${subjectIdStr}/topics`);
+      if (topicsResponse.ok) {
+        const topicsData = await topicsResponse.json();
 
-        if (!subjectIdStr) {
-          console.error('Failed to extract subjectId from topic data');
-          return;
-        }
-
+        // Set everything at once to avoid timing issues
         setSelectedSubject(subjectIdStr);
-        setTopics(data.siblingTopics || []);
-
-        // Re-set the topic selection AFTER topics are loaded to ensure it appears in dropdown
+        setTopics(topicsData);
         setFormData(prev => ({ ...prev, topicId }));
-      } else {
-        console.error('Failed to fetch topic:', response.status, response.statusText);
       }
     } catch (err) {
       console.error('Error fetching topic and subject:', err);
