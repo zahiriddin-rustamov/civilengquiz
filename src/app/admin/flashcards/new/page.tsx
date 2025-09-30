@@ -129,11 +129,20 @@ export default function NewFlashcardPage() {
       const response = await fetch(`/api/topics/${topicId}?includeRelated=true`);
       if (response.ok) {
         const data = await response.json();
-        setSelectedSubject(data.subjectId.toString());
+        console.log('Topic data received:', data);
+
+        // Handle both ObjectId and string formats for subjectId
+        const subjectIdStr = typeof data.subjectId === 'object' && data.subjectId._id
+          ? data.subjectId._id.toString()
+          : data.subjectId.toString();
+
+        setSelectedSubject(subjectIdStr);
         setTopics(data.siblingTopics || []);
 
         // Re-set the topic selection AFTER topics are loaded to ensure it appears in dropdown
         setFormData(prev => ({ ...prev, topicId }));
+      } else {
+        console.error('Failed to fetch topic:', response.status, response.statusText);
       }
     } catch (err) {
       console.error('Error fetching topic and subject:', err);
