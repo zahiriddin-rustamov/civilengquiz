@@ -7,9 +7,9 @@ import bcrypt from 'bcryptjs';
 import { Types } from 'mongoose';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     await connectToDatabase();
 
-    const userId = params.id;
+    const { id: userId } = await params;
 
     if (!Types.ObjectId.isValid(userId)) {
       return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
@@ -138,7 +138,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     await connectToDatabase();
 
-    const userId = params.id;
+    const { id: userId } = await params;
 
     if (!Types.ObjectId.isValid(userId)) {
       return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
@@ -205,7 +205,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     await connectToDatabase();
 
-    const userId = params.id;
+    const { id: userId } = await params;
 
     if (!Types.ObjectId.isValid(userId)) {
       return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
