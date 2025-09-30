@@ -70,3 +70,9 @@ There is an issue with the /quiz/random where I currently don't see any question
 Context: We have several subjects, inside each subject, there are several topics. Within each topic, there can be questions (several sections), flashcards and media (long videos and shorts). The site is for Bachelor degree students where they will do quizzes and improve their knowledge basically.
 
 I need to implement the Leaderboard for students (so we can link it in the Navbar as a new button and also student dashboard). How do you suggest we go about it. Check all relevant files.
+
+===
+
+Context: We have several subjects, inside each subject, there are several topics. Within each topic, there can be questions (several sections), flashcards and media (long videos and shorts). The site is for Bachelor degree students where they will do quizzes and improve their knowledge basically.
+
+Do you see in the admin side of things, we have unimplemented /admin/users (User Management) page. What do you suggest we should implement/include in that page. Analyze all relevant files thoroughly and provide a plan.

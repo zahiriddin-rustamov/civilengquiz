@@ -38,7 +38,7 @@ const navigation: NavigationItem[] = [
     name: 'User Management',
     href: '/admin/users',
     icon: Users,
-    disabled: true,
+    disabled: false,
   },
   {
     name: 'Analytics',
