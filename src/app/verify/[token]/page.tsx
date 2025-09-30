@@ -4,14 +4,18 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, Mail } from 'lucide-react';
 
 export default function VerifyPage() {
   const params = useParams();
   const router = useRouter();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Verifying your email...');
+  const [email, setEmail] = useState('');
+  const [isResending, setIsResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   useEffect(() => {
     const verifyEmail = async () => {
@@ -43,6 +47,39 @@ export default function VerifyPage() {
 
     verifyEmail();
   }, [params.token]);
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      setMessage('Please enter your email address');
+      return;
+    }
+
+    setIsResending(true);
+    setResendSuccess(false);
+
+    try {
+      const response = await fetch('/api/resend-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setResendSuccess(true);
+        setMessage('Verification email sent! Please check your inbox.');
+      } else {
+        setMessage(data.error || 'Failed to resend verification email');
+      }
+    } catch (error) {
+      setMessage('An error occurred. Please try again.');
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   return (
     <div className="container mx-auto flex flex-col items-center justify-center px-4 py-16">
@@ -77,10 +114,46 @@ export default function VerifyPage() {
             <div className="flex justify-center">
               <AlertCircle className="h-16 w-16 text-red-500" />
             </div>
-            <Alert variant="destructive">
-              <AlertDescription>{message}</AlertDescription>
-            </Alert>
+            {resendSuccess ? (
+              <Alert className="bg-green-50 border-green-200">
+                <AlertDescription>{message}</AlertDescription>
+              </Alert>
+            ) : (
+              <Alert variant="destructive">
+                <AlertDescription>{message}</AlertDescription>
+              </Alert>
+            )}
             <div className="mt-6 space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="resend-email" className="block text-sm font-medium text-gray-700 text-left">
+                  Resend verification email
+                </label>
+                <Input
+                  id="resend-email"
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isResending}
+                />
+                <Button
+                  onClick={handleResendVerification}
+                  className="w-full"
+                  disabled={isResending}
+                >
+                  {isResending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="mr-2 h-4 w-4" />
+                      Resend Verification Email
+                    </>
+                  )}
+                </Button>
+              </div>
               <Button onClick={() => router.push('/register')} variant="outline" className="w-full">
                 Return to Registration
               </Button>
