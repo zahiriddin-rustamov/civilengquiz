@@ -215,7 +215,6 @@ export default function ViewFlashcardPage({ params }: { params: Promise<{ id: st
                 }}
                 onMasteryUpdate={() => {}}
                 showControls={false}
-                autoFlip={false}
                 showHeader={false}
               />
             </CardContent>
