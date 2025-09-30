@@ -38,7 +38,7 @@ interface LearningPattern {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -48,7 +48,8 @@ export async function GET(
 
     await connectToDatabase();
 
-    const subjectId = params.id;
+    const { id } = await params;
+    const subjectId = id;
 
     // Get date range from query params
     const searchParams = request.nextUrl.searchParams;

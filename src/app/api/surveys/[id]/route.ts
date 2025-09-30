@@ -8,7 +8,7 @@ import { Types } from 'mongoose';
 // GET /api/surveys/[id] - Get a specific survey
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectToDatabase();
@@ -18,11 +18,13 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!Types.ObjectId.isValid(params.id)) {
+    const { id } = await params;
+
+    if (!Types.ObjectId.isValid(id)) {
       return NextResponse.json({ error: 'Invalid survey ID' }, { status: 400 });
     }
 
-    const survey = await Survey.findById(params.id).lean();
+    const survey = await Survey.findById(id).lean();
 
     if (!survey) {
       return NextResponse.json({ error: 'Survey not found' }, { status: 404 });
@@ -41,7 +43,7 @@ export async function GET(
 // PUT /api/surveys/[id] - Update a survey
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectToDatabase();
@@ -51,7 +53,9 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!Types.ObjectId.isValid(params.id)) {
+    const { id } = await params;
+
+    if (!Types.ObjectId.isValid(id)) {
       return NextResponse.json({ error: 'Invalid survey ID' }, { status: 400 });
     }
 
@@ -109,7 +113,7 @@ export async function PUT(
     }
 
     const survey = await Survey.findByIdAndUpdate(
-      params.id,
+      id,
       {
         title,
         description,
@@ -137,21 +141,23 @@ export async function PUT(
 // DELETE /api/surveys/[id] - Delete a survey
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectDB();
+    await connectToDatabase();
 
     const session = await getServerSession(authOptions);
     if (!session?.user || session.user.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!Types.ObjectId.isValid(params.id)) {
+    const { id } = await params;
+
+    if (!Types.ObjectId.isValid(id)) {
       return NextResponse.json({ error: 'Invalid survey ID' }, { status: 400 });
     }
 
-    const survey = await Survey.findByIdAndDelete(params.id);
+    const survey = await Survey.findByIdAndDelete(id);
 
     if (!survey) {
       return NextResponse.json({ error: 'Survey not found' }, { status: 404 });
