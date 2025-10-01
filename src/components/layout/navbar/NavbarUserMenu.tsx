@@ -44,7 +44,7 @@ export function NavbarUserMenu({ session, firstName }: NavbarUserMenuProps) {
           
           <div className="text-left">
             <div className="text-sm font-semibold text-gray-800">{firstName}</div>
-            <div className="text-xs text-gray-600">Student</div>
+            <div className="text-xs text-gray-600 capitalize">{session?.user?.role || 'Student'}</div>
           </div>
         </Button>
       </DropdownMenuTrigger>
