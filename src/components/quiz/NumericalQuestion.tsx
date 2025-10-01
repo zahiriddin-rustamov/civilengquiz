@@ -22,14 +22,16 @@ interface NumericalQuestionProps {
   showResult?: boolean;
   selectedAnswer?: number;
   isCorrect?: boolean;
+  hideMetadata?: boolean;
 }
 
-export function NumericalQuestion({ 
-  question, 
-  onAnswer, 
-  showResult = false, 
+export function NumericalQuestion({
+  question,
+  onAnswer,
+  showResult = false,
   selectedAnswer,
-  isCorrect 
+  isCorrect,
+  hideMetadata = false
 }: NumericalQuestionProps) {
   const [answer, setAnswer] = useState<string>(selectedAnswer?.toString() || '');
   const [hasAnswered, setHasAnswered] = useState(showResult);
@@ -94,15 +96,17 @@ export function NumericalQuestion({
       className="bg-white rounded-xl shadow-lg border border-gray-200 p-6"
     >
       {/* Question Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${getDifficultyColor(question.difficulty)}`}>
-          {question.difficulty}
+      {!hideMetadata && (
+        <div className="flex items-center justify-between mb-6">
+          <div className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${getDifficultyColor(question.difficulty)}`}>
+            {question.difficulty}
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Calculator className="w-4 h-4" />
+            <span className="font-medium">{question.points} XP</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Calculator className="w-4 h-4" />
-          <span className="font-medium">{question.points} XP</span>
-        </div>
-      </div>
+      )}
 
       {/* Question Text */}
       <div className="mb-6">

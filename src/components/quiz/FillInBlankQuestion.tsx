@@ -23,14 +23,16 @@ interface FillInBlankQuestionProps {
   showResult?: boolean;
   selectedAnswers?: string[];
   isCorrect?: boolean;
+  hideMetadata?: boolean;
 }
 
-export function FillInBlankQuestion({ 
-  question, 
-  onAnswer, 
-  showResult = false, 
+export function FillInBlankQuestion({
+  question,
+  onAnswer,
+  showResult = false,
   selectedAnswers = [],
-  isCorrect 
+  isCorrect,
+  hideMetadata = false
 }: FillInBlankQuestionProps) {
   const [answers, setAnswers] = useState<string[]>(
     selectedAnswers.length > 0 ? selectedAnswers : new Array(question.blanks.length).fill('')
@@ -134,14 +136,16 @@ export function FillInBlankQuestion({
       className="bg-white rounded-xl shadow-lg border border-gray-200 p-6"
     >
       {/* Question Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${getDifficultyColor(question.difficulty)}`}>
-          {question.difficulty}
+      {!hideMetadata && (
+        <div className="flex items-center justify-between mb-6">
+          <div className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${getDifficultyColor(question.difficulty)}`}>
+            {question.difficulty}
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <span className="font-medium">{question.points} XP</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <span className="font-medium">{question.points} XP</span>
-        </div>
-      </div>
+      )}
 
       {/* Question Text with Blanks */}
       <div className="mb-6">

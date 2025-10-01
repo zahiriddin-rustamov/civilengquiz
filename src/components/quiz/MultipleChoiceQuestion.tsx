@@ -19,6 +19,7 @@ interface MultipleChoiceQuestionProps {
   showResult?: boolean;
   selectedAnswer?: number;
   isCorrect?: boolean;
+  hideMetadata?: boolean;
 }
 
 export function MultipleChoiceQuestion({
@@ -26,7 +27,8 @@ export function MultipleChoiceQuestion({
   onAnswer,
   showResult = false,
   selectedAnswer,
-  isCorrect
+  isCorrect,
+  hideMetadata = false
 }: MultipleChoiceQuestionProps) {
   const [selected, setSelected] = useState<number | null>(selectedAnswer ?? null);
   const [hasAnswered, setHasAnswered] = useState(showResult);
@@ -108,17 +110,19 @@ export function MultipleChoiceQuestion({
       className="bg-white rounded-xl shadow-lg border border-gray-200 p-6"
     >
       {/* Question Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${getDifficultyColor(question.difficulty)}`}>
-          {question.difficulty}
+      {!hideMetadata && (
+        <div className="flex items-center justify-between mb-6">
+          <div className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${getDifficultyColor(question.difficulty)}`}>
+            {question.difficulty}
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <span className="font-medium">{question.points} XP</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <span className="font-medium">{question.points} XP</span>
-        </div>
-      </div>
+      )}
 
       {/* Question Text */}
-      <div className="mb-6">
+      <div className={hideMetadata ? 'mb-6' : 'mb-6'}>
         <h3 className="text-lg font-semibold text-gray-900 leading-relaxed">
           {question.text}
         </h3>

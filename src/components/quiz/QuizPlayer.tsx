@@ -290,6 +290,7 @@ export function QuizPlayer({
             showResult={!!existingAnswer}
             selectedAnswer={existingAnswer?.answer}
             isCorrect={existingAnswer?.isCorrect}
+            hideMetadata={true}
           />
         );
       case 'true-false':
@@ -304,6 +305,7 @@ export function QuizPlayer({
             showResult={!!existingAnswer}
             selectedAnswer={existingAnswer?.answer}
             isCorrect={existingAnswer?.isCorrect}
+            hideMetadata={true}
           />
         );
       case 'fill-in-blank':
@@ -322,6 +324,7 @@ export function QuizPlayer({
             showResult={!!existingAnswer}
             selectedAnswers={existingAnswer?.answer}
             isCorrect={existingAnswer?.isCorrect}
+            hideMetadata={true}
           />
         );
       case 'numerical':
@@ -341,6 +344,7 @@ export function QuizPlayer({
             showResult={!!existingAnswer}
             selectedAnswer={existingAnswer?.answer}
             isCorrect={existingAnswer?.isCorrect}
+            hideMetadata={true}
           />
         );
       case 'matching':
@@ -358,6 +362,7 @@ export function QuizPlayer({
             showResult={!!existingAnswer}
             selectedMatches={existingAnswer?.answer}
             isCorrect={existingAnswer?.isCorrect}
+            hideMetadata={true}
           />
         );
       default:

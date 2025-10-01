@@ -22,14 +22,16 @@ interface MatchingQuestionProps {
   showResult?: boolean;
   selectedMatches?: Record<string, string>;
   isCorrect?: boolean;
+  hideMetadata?: boolean;
 }
 
-export function MatchingQuestion({ 
-  question, 
-  onAnswer, 
-  showResult = false, 
+export function MatchingQuestion({
+  question,
+  onAnswer,
+  showResult = false,
   selectedMatches = {},
-  isCorrect 
+  isCorrect,
+  hideMetadata = false
 }: MatchingQuestionProps) {
   const [matches, setMatches] = useState<Record<string, string>>(selectedMatches);
   const [hasAnswered, setHasAnswered] = useState(showResult);
@@ -185,14 +187,16 @@ export function MatchingQuestion({
       className="bg-white rounded-xl shadow-lg border border-gray-200 p-6"
     >
       {/* Question Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${getDifficultyColor(question.difficulty)}`}>
-          {question.difficulty}
+      {!hideMetadata && (
+        <div className="flex items-center justify-between mb-6">
+          <div className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${getDifficultyColor(question.difficulty)}`}>
+            {question.difficulty}
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <span className="font-medium">{question.points} XP</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <span className="font-medium">{question.points} XP</span>
-        </div>
-      </div>
+      )}
 
       {/* Question Text */}
       <div className="mb-6">

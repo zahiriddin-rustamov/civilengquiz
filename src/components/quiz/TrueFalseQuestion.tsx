@@ -18,14 +18,16 @@ interface TrueFalseQuestionProps {
   showResult?: boolean;
   selectedAnswer?: boolean;
   isCorrect?: boolean;
+  hideMetadata?: boolean;
 }
 
-export function TrueFalseQuestion({ 
-  question, 
-  onAnswer, 
-  showResult = false, 
+export function TrueFalseQuestion({
+  question,
+  onAnswer,
+  showResult = false,
   selectedAnswer,
-  isCorrect 
+  isCorrect,
+  hideMetadata = false
 }: TrueFalseQuestionProps) {
   const [selected, setSelected] = useState<boolean | null>(selectedAnswer ?? null);
   const [hasAnswered, setHasAnswered] = useState(showResult);
@@ -112,14 +114,16 @@ export function TrueFalseQuestion({
       className="bg-white rounded-xl shadow-lg border border-gray-200 p-6"
     >
       {/* Question Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${getDifficultyColor(question.difficulty)}`}>
-          {question.difficulty}
+      {!hideMetadata && (
+        <div className="flex items-center justify-between mb-6">
+          <div className={`px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${getDifficultyColor(question.difficulty)}`}>
+            {question.difficulty}
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <span className="font-medium">{question.points} XP</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <span className="font-medium">{question.points} XP</span>
-        </div>
-      </div>
+      )}
 
       {/* Question Text */}
       <div className="mb-6">
