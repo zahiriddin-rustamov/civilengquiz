@@ -314,9 +314,9 @@ export function QuizPlayer({
               id: question.id,
               text: question.questionText,
               blanks: question.options?.blanks || [],
-              correctAnswers: question.correctAnswer || [],
               difficulty: question.difficulty,
-              points: question.points
+              points: question.points,
+              explanation: question.explanation
             }}
             onAnswer={handleAnswer}
             showResult={!!existingAnswer}

@@ -125,17 +125,34 @@ export async function GET(request: NextRequest) {
         const topic = await Topic.findById(question.topicId).select('name subjectId');
         const subject = topic ? await Subject.findById(topic.subjectId).select('name') : null;
 
+        // Handle different question data structures
+        let options = question.data?.options;
+        let correctAnswer = question.data?.correctAnswer;
+
+        // For fill-in-blank, structure the data properly
+        if (question.type === 'fill-in-blank' && question.data?.blanks) {
+          options = { blanks: question.data.blanks };
+          correctAnswer = question.data.blanks.map((b: any) => b.correctAnswers);
+        }
+
+        // For matching, include pairs
+        if (question.type === 'matching' && question.data?.pairs) {
+          options = { pairs: question.data.pairs };
+          correctAnswer = question.data.pairs;
+        }
+
         return {
           id: question._id,
           type: question.type,
           questionText: question.text,
-          options: question.data?.options,
-          correctAnswer: question.data?.correctAnswer,
+          options,
+          correctAnswer,
           difficulty: question.difficulty,
           points: question.xpReward || 10,
           topicName: topic?.name,
           subjectName: subject?.name,
-          userPerformance: question.userPerformance
+          userPerformance: question.userPerformance,
+          explanation: question.data?.explanation
         };
       })
     );
