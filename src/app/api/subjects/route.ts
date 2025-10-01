@@ -70,7 +70,10 @@ export async function GET() {
       })
     );
 
-    return NextResponse.json(subjectsWithData);
+    // Filter out subjects with no topics
+    const subjectsWithTopics = subjectsWithData.filter(s => s.topicCount > 0);
+
+    return NextResponse.json(subjectsWithTopics);
   } catch (error) {
     console.error('Error fetching subjects:', error);
     return NextResponse.json(
