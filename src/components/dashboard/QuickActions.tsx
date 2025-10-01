@@ -193,7 +193,7 @@ export function QuickActions() {
             className="group"
           >
             <Link href={action.href}>
-              <div className={`relative bg-gradient-to-br ${action.color} rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden`}>
+              <div className={`relative bg-gradient-to-br ${action.color} rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden h-full min-h-[180px] flex flex-col`}>
                 {/* Background Pattern */}
                 <div className="absolute inset-0 opacity-10">
                   <div className="absolute top-2 right-2 w-16 h-16 border border-white/30 rounded-full"></div>
@@ -203,8 +203,8 @@ export function QuickActions() {
                 {/* Badge */}
                 <div className="absolute top-3 right-3">
                   <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                    action.isNew 
-                      ? 'bg-yellow-400 text-yellow-900 animate-pulse' 
+                    action.isNew
+                      ? 'bg-yellow-400 text-yellow-900 animate-pulse'
                       : 'bg-white/20 text-white'
                   }`}>
                     {action.badge}
@@ -212,17 +212,17 @@ export function QuickActions() {
                 </div>
 
                 {/* Content */}
-                <div className="relative space-y-3">
+                <div className="relative space-y-3 flex-1 flex flex-col">
                   <div className="flex items-center justify-between">
                     <action.icon className="w-8 h-8" />
                     {action.isNew && (
                       <Zap className="w-5 h-5 text-yellow-300 animate-bounce" />
                     )}
                   </div>
-                  
-                  <div>
+
+                  <div className="flex-1">
                     <h4 className="font-bold text-lg mb-1">{action.title}</h4>
-                    <p className="text-sm opacity-90">{action.description}</p>
+                    <p className="text-sm opacity-90 line-clamp-2">{action.description}</p>
                   </div>
 
                   <div className="flex items-center justify-between pt-2">
