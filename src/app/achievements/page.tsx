@@ -48,21 +48,35 @@ export default function AchievementsPage() {
 
       const data = await response.json();
 
-      // Build user stats
-      const stats: UserStats = {
-        totalXP: data.xp || 0,
-        level: data.level || 1,
-        totalQuizzesCompleted: data.totalQuizzesCompleted || 0,
-        totalFlashcardsCompleted: 0, // TODO: Add to API
-        totalMediaCompleted: 0, // TODO: Add to API
-        averageScore: data.averageScore || 0,
-        currentStreak: data.currentStreak || 0,
-        maxStreak: data.currentStreak || 0,
-        subjectsCompleted: 0,
-        topicsCompleted: data.subjectProgress?.reduce((sum: number, s: any) => sum + s.completedTopics, 0) || 0,
-        perfectScores: 0, // TODO: Add to API
-        studyDays: 0
-      };
+      // Build user stats from user service stats
+      const statsResponse = await fetch('/api/user/stats');
+      let stats: UserStats;
+
+      if (statsResponse.ok) {
+        stats = await statsResponse.json();
+      } else {
+        // Fallback to basic stats
+        stats = {
+          totalXP: data.xp || 0,
+          level: data.level || 0,
+          totalQuizzesCompleted: 0,
+          totalFlashcardsCompleted: 0,
+          totalMediaCompleted: 0,
+          totalSectionsCompleted: 0,
+          averageScore: data.averageScore || 0,
+          currentStreak: data.currentStreak || 0,
+          maxStreak: data.currentStreak || 0,
+          subjectsCompleted: 0,
+          topicsCompleted: 0,
+          perfectScores: 0,
+          studyDays: 0,
+          multipleChoiceCorrect: 0,
+          trueFalseCorrect: 0,
+          fillInBlankCorrect: 0,
+          numericalCorrect: 0,
+          matchingCorrect: 0
+        };
+      }
 
       setUserStats(stats);
       buildAchievementsList(data.badges || [], stats);

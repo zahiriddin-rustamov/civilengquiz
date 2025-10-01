@@ -20,24 +20,39 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
     await connectToDatabase();
 
-    // Check if user already completed a timed quiz today
+    // Generate unique ID for this quiz completion
+    const quizId = `timed-quiz-${Date.now()}-${userId}`;
+
+    // Check for duplicate submission (last 2 minutes)
+    const recentTime = new Date(Date.now() - 2 * 60 * 1000);
+    const isDuplicate = await UserProgress.findOne({
+      userId,
+      contentType: 'quiz',
+      'data.quizType': 'timed',
+      lastAccessed: { $gte: recentTime }
+    });
+
+    if (isDuplicate) {
+      return NextResponse.json({
+        success: true,
+        xpAwarded: false,
+        xpGained: 0,
+        message: 'Duplicate submission detected'
+      });
+    }
+
+    // Check if user already got XP for timed quiz today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Use a special contentId for timed quiz tracking
-    const timedQuizContentId = 'timed-quiz-daily';
-
-    // Find existing timed quiz progress for today
-    const existingProgress = await UserProgress.findOne({
+    const todayXPRecord = await UserProgress.findOne({
       userId,
-      contentId: timedQuizContentId,
       contentType: 'quiz',
-      lastAccessed: {
-        $gte: today,
-        $lt: tomorrow
-      }
+      'data.quizType': 'timed',
+      'data.xpAwarded': { $exists: true, $gt: 0 },
+      lastAccessed: { $gte: today, $lt: tomorrow }
     });
 
     let xpAwarded = false;
@@ -46,24 +61,28 @@ export async function POST(request: NextRequest) {
     let newLevel = null;
     let newAchievements = [];
 
-    // If no progress today, award XP
-    if (!existingProgress) {
-      // Award XP for timed quiz - base 5 XP + bonus based on performance
-      const baseXP = 5;
-      let performanceBonus = 0;
+    // Calculate XP with performance bonus
+    const baseXP = 10;
+    let performanceBonus = 0;
 
-      if (score >= 100) {
-        performanceBonus = 4; // 100% gets +4 total (9 XP)
-      } else if (score >= 90) {
-        performanceBonus = 3; // 90-99% gets +3 (8 XP)
-      } else if (score >= 80) {
-        performanceBonus = 2; // 80-89% gets +2 (7 XP)
-      } else if (score >= 70) {
-        performanceBonus = 1; // 70-79% gets +1 (6 XP)
-      }
-      // Below 70% gets no bonus (5 XP base)
+    if (score >= 100) {
+      performanceBonus = 5; // 100% gets +5 (15 XP total)
+    } else if (score >= 90) {
+      performanceBonus = 4; // 90-99% gets +4 (14 XP)
+    } else if (score >= 80) {
+      performanceBonus = 3; // 80-89% gets +3 (13 XP)
+    } else if (score >= 70) {
+      performanceBonus = 2; // 70-79% gets +2 (12 XP)
+    } else if (score >= 60) {
+      performanceBonus = 1; // 60-69% gets +1 (11 XP)
+    }
+    // Below 60% gets no bonus (10 XP base)
 
-      xpGained = baseXP + performanceBonus;
+    const calculatedXP = baseXP + performanceBonus;
+
+    // Award XP only if user hasn't received XP today
+    if (!todayXPRecord) {
+      xpGained = calculatedXP;
       xpAwarded = true;
 
       // Get current user data
@@ -86,59 +105,29 @@ export async function POST(request: NextRequest) {
         level: calculatedLevel,
         lastActiveDate: new Date()
       });
-
-      // Create or update progress record
-      await UserProgress.findOneAndUpdate(
-        {
-          userId,
-          contentId: timedQuizContentId,
-          contentType: 'quiz'
-        },
-        {
-          userId,
-          contentId: timedQuizContentId,
-          contentType: 'quiz',
-          completed: true,
-          score,
-          timeSpent,
-          lastAccessed: new Date(),
-          attempts: 1,
-          data: {
-            correctAnswers,
-            totalQuestions,
-            completionDate: new Date(),
-            xpAwarded: xpGained,
-            mode: 'timed',
-            performanceBonus
-          },
-          totalXPEarned: xpGained,
-          firstCompletedDate: new Date(),
-          lastDailyXPDate: new Date(),
-          dailyXPCount: 1
-        },
-        {
-          upsert: true,
-          new: true
-        }
-      );
-    } else {
-      // Update existing progress without awarding XP
-      await UserProgress.findByIdAndUpdate(existingProgress._id, {
-        score: Math.max(existingProgress.score || 0, score), // Keep best score
-        timeSpent: existingProgress.timeSpent + timeSpent,
-        lastAccessed: new Date(),
-        attempts: (existingProgress.attempts || 0) + 1,
-        $push: {
-          'data.attempts': {
-            score,
-            correctAnswers,
-            totalQuestions,
-            timeSpent,
-            timestamp: new Date()
-          }
-        }
-      });
     }
+
+    // Always create a progress record for achievements tracking (even if no XP awarded)
+    await UserProgress.create({
+      userId,
+      contentId: quizId,
+      contentType: 'quiz',
+      completed: true,
+      score,
+      timeSpent,
+      lastAccessed: new Date(),
+      attempts: 1,
+      data: {
+        quizType: 'timed',
+        correctAnswers,
+        totalQuestions,
+        completionDate: new Date(),
+        xpAwarded: xpGained,
+        performanceBonus
+      },
+      totalXPEarned: xpGained,
+      firstCompletedDate: new Date()
+    });
 
     return NextResponse.json({
       success: true,
@@ -148,10 +137,10 @@ export async function POST(request: NextRequest) {
       newLevel,
       newAchievements,
       message: xpAwarded
-        ? `Excellent! You earned ${xpGained} XP for completing the timed quiz!${
-            xpGained > 5 ? ` (${xpGained - 5} performance bonus!)` : ''
+        ? `Excellent! You earned ${xpGained} XP for completing a timed quiz!${
+            performanceBonus > 0 ? ` (${performanceBonus} performance bonus!)` : ''
           }`
-        : 'Quiz completed! You already earned XP for timed quiz today.'
+        : 'Quiz completed! You already earned XP for a timed quiz today, but this attempt counts toward achievements.'
     });
 
   } catch (error) {

@@ -170,14 +170,55 @@ export class XPService {
     const totalQuizzesCompleted = progressRecords.filter(
       p => p.contentType === 'quiz' && p.completed
     ).length;
-    
+
     const totalFlashcardsCompleted = progressRecords.filter(
       p => p.contentType === 'flashcard' && p.completed
     ).length;
-    
+
     const totalMediaCompleted = progressRecords.filter(
       p => p.contentType === 'media' && p.completed
     ).length;
+
+    // Count section completions
+    const totalSectionsCompleted = progressRecords.filter(
+      p => p.contentType === 'section' && p.completed
+    ).length;
+
+    // Calculate question type statistics - need to get actual question data
+    const questionProgress = progressRecords.filter(p => p.contentType === 'question');
+    const questionIds = questionProgress.map(p => p.contentId);
+
+    const questions = await Question.find({ _id: { $in: questionIds } }).lean();
+    const questionTypeMap = new Map(questions.map(q => [q._id.toString(), q.type]));
+
+    let multipleChoiceCorrect = 0;
+    let trueFalseCorrect = 0;
+    let fillInBlankCorrect = 0;
+    let numericalCorrect = 0;
+    let matchingCorrect = 0;
+
+    questionProgress.forEach(p => {
+      if (p.completed && (p.bestScore || p.score || 0) >= 70) {
+        const questionType = questionTypeMap.get(p.contentId.toString());
+        switch (questionType) {
+          case 'multiple-choice':
+            multipleChoiceCorrect++;
+            break;
+          case 'true-false':
+            trueFalseCorrect++;
+            break;
+          case 'fill-in-blank':
+            fillInBlankCorrect++;
+            break;
+          case 'numerical':
+            numericalCorrect++;
+            break;
+          case 'matching':
+            matchingCorrect++;
+            break;
+        }
+      }
+    });
 
     // Calculate average score from completed question attempts using best scores
     const questionAttempts = progressRecords.filter(p =>
@@ -240,13 +281,19 @@ export class XPService {
       totalQuizzesCompleted,
       totalFlashcardsCompleted,
       totalMediaCompleted,
+      totalSectionsCompleted,
       averageScore,
       currentStreak: user.currentStreak || 0,
       maxStreak: user.maxStreak || 0,
       subjectsCompleted,
       topicsCompleted,
       perfectScores,
-      studyDays
+      studyDays,
+      multipleChoiceCorrect,
+      trueFalseCorrect,
+      fillInBlankCorrect,
+      numericalCorrect,
+      matchingCorrect
     };
   }
 

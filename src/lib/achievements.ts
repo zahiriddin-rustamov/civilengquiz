@@ -14,6 +14,7 @@ export interface UserStats {
   totalQuizzesCompleted: number;
   totalFlashcardsCompleted: number;
   totalMediaCompleted: number;
+  totalSectionsCompleted: number;
   averageScore: number;
   currentStreak: number;
   maxStreak: number;
@@ -21,6 +22,12 @@ export interface UserStats {
   topicsCompleted: number;
   perfectScores: number;
   studyDays: number;
+  // Question type counts
+  multipleChoiceCorrect: number;
+  trueFalseCorrect: number;
+  fillInBlankCorrect: number;
+  numericalCorrect: number;
+  matchingCorrect: number;
 }
 
 export const ACHIEVEMENTS: Achievement[] = [
@@ -42,6 +49,15 @@ export const ACHIEVEMENTS: Achievement[] = [
     rarity: 'common',
     condition: (stats) => stats.totalQuizzesCompleted >= 10,
     xpReward: 100
+  },
+  {
+    id: 'section_starter',
+    name: 'Section Starter',
+    description: 'Complete your first section',
+    icon: '📝',
+    rarity: 'common',
+    condition: (stats) => stats.totalSectionsCompleted >= 1,
+    xpReward: 50
   },
   {
     id: 'flashcard_novice',
@@ -109,6 +125,33 @@ export const ACHIEVEMENTS: Achievement[] = [
     xpReward: 400
   },
   {
+    id: 'section_regular',
+    name: 'Section Regular',
+    description: 'Complete 10 sections',
+    icon: '📚',
+    rarity: 'rare',
+    condition: (stats) => stats.totalSectionsCompleted >= 10,
+    xpReward: 200
+  },
+  {
+    id: 'multiple_choice_master',
+    name: 'Multiple Choice Master',
+    description: 'Answer 50 multiple choice questions correctly',
+    icon: '✓',
+    rarity: 'rare',
+    condition: (stats) => stats.multipleChoiceCorrect >= 50,
+    xpReward: 250
+  },
+  {
+    id: 'true_false_expert',
+    name: 'True/False Expert',
+    description: 'Answer 50 true/false questions correctly',
+    icon: '⚖️',
+    rarity: 'rare',
+    condition: (stats) => stats.trueFalseCorrect >= 50,
+    xpReward: 200
+  },
+  {
     id: 'flashcard_adept',
     name: 'Flashcard Adept',
     description: 'Complete 100 flashcards',
@@ -156,6 +199,56 @@ export const ACHIEVEMENTS: Achievement[] = [
     xpReward: 750
   },
   {
+    id: 'section_expert',
+    name: 'Section Expert',
+    description: 'Complete 50 sections',
+    icon: '🏆',
+    rarity: 'epic',
+    condition: (stats) => stats.totalSectionsCompleted >= 50,
+    xpReward: 500
+  },
+  {
+    id: 'fill_master',
+    name: 'Fill-in Master',
+    description: 'Answer 25 fill-in-blank questions correctly',
+    icon: '📝',
+    rarity: 'epic',
+    condition: (stats) => stats.fillInBlankCorrect >= 25,
+    xpReward: 300
+  },
+  {
+    id: 'numerical_genius',
+    name: 'Numerical Genius',
+    description: 'Answer 25 numerical questions correctly',
+    icon: '🔢',
+    rarity: 'epic',
+    condition: (stats) => stats.numericalCorrect >= 25,
+    xpReward: 400
+  },
+  {
+    id: 'matching_pro',
+    name: 'Matching Pro',
+    description: 'Answer 25 matching questions correctly',
+    icon: '🔗',
+    rarity: 'epic',
+    condition: (stats) => stats.matchingCorrect >= 25,
+    xpReward: 300
+  },
+  {
+    id: 'versatile_learner',
+    name: 'Versatile Learner',
+    description: 'Master all question types (10+ correct in each)',
+    icon: '🌟',
+    rarity: 'epic',
+    condition: (stats) =>
+      stats.multipleChoiceCorrect >= 10 &&
+      stats.trueFalseCorrect >= 10 &&
+      stats.fillInBlankCorrect >= 10 &&
+      stats.numericalCorrect >= 10 &&
+      stats.matchingCorrect >= 10,
+    xpReward: 600
+  },
+  {
     id: 'perfectionist',
     name: 'Perfectionist',
     description: 'Maintain a 95% average score',
@@ -192,6 +285,42 @@ export const ACHIEVEMENTS: Achievement[] = [
     rarity: 'legendary',
     condition: (stats) => stats.totalQuizzesCompleted >= 200,
     xpReward: 2500
+  },
+  {
+    id: 'concrete_specialist',
+    name: 'Concrete Specialist',
+    description: 'Complete all Concrete Technology content',
+    icon: '🏗️',
+    rarity: 'legendary',
+    condition: (stats) => {
+      // This will be updated by backend to check specific subject completion
+      return stats.subjectsCompleted >= 1;
+    },
+    xpReward: 800
+  },
+  {
+    id: 'environmental_guardian',
+    name: 'Environmental Guardian',
+    description: 'Complete all Environmental Engineering content',
+    icon: '🌍',
+    rarity: 'legendary',
+    condition: (stats) => {
+      // This will be updated by backend to check specific subject completion
+      return stats.subjectsCompleted >= 2;
+    },
+    xpReward: 800
+  },
+  {
+    id: 'water_resources_expert',
+    name: 'Water Resources Expert',
+    description: 'Complete all Water Resources Engineering content',
+    icon: '💧',
+    rarity: 'legendary',
+    condition: (stats) => {
+      // This will be updated by backend to check specific subject completion
+      return stats.subjectsCompleted >= 3;
+    },
+    xpReward: 800
   },
   {
     id: 'knowledge_deity',

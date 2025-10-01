@@ -20,24 +20,39 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
     await connectToDatabase();
 
-    // Check if user already completed a random quiz today
+    // Generate unique ID for this quiz completion
+    const quizId = `random-quiz-${Date.now()}-${userId}`;
+
+    // Check for duplicate submission (last 2 minutes)
+    const recentTime = new Date(Date.now() - 2 * 60 * 1000);
+    const isDuplicate = await UserProgress.findOne({
+      userId,
+      contentType: 'quiz',
+      'data.quizType': 'random',
+      lastAccessed: { $gte: recentTime }
+    });
+
+    if (isDuplicate) {
+      return NextResponse.json({
+        success: true,
+        xpAwarded: false,
+        xpGained: 0,
+        message: 'Duplicate submission detected'
+      });
+    }
+
+    // Check if user already got XP for random quiz today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Use a special contentId for random quiz tracking
-    const randomQuizContentId = 'random-quiz-daily';
-
-    // Find existing random quiz progress for today
-    const existingProgress = await UserProgress.findOne({
+    const todayXPRecord = await UserProgress.findOne({
       userId,
-      contentId: randomQuizContentId,
       contentType: 'quiz',
-      lastAccessed: {
-        $gte: today,
-        $lt: tomorrow
-      }
+      'data.quizType': 'random',
+      'data.xpAwarded': { $exists: true, $gt: 0 },
+      lastAccessed: { $gte: today, $lt: tomorrow }
     });
 
     let xpAwarded = false;
@@ -46,9 +61,9 @@ export async function POST(request: NextRequest) {
     let newLevel = null;
     let newAchievements = [];
 
-    // If no progress today, award XP
-    if (!existingProgress) {
-      xpGained = 5; // Fixed 5 XP for random quiz completion
+    // Award XP only if user hasn't received XP today
+    if (!todayXPRecord) {
+      xpGained = 10; // 10 XP for first random quiz of the day
       xpAwarded = true;
 
       // Get current user data
@@ -71,57 +86,28 @@ export async function POST(request: NextRequest) {
         level: calculatedLevel,
         lastActiveDate: new Date()
       });
-
-      // Create or update progress record
-      await UserProgress.findOneAndUpdate(
-        {
-          userId,
-          contentId: randomQuizContentId,
-          contentType: 'quiz'
-        },
-        {
-          userId,
-          contentId: randomQuizContentId,
-          contentType: 'quiz',
-          completed: true,
-          score,
-          timeSpent,
-          lastAccessed: new Date(),
-          attempts: 1,
-          data: {
-            correctAnswers,
-            totalQuestions,
-            completionDate: new Date(),
-            xpAwarded: xpGained
-          },
-          totalXPEarned: xpGained,
-          firstCompletedDate: new Date(),
-          lastDailyXPDate: new Date(),
-          dailyXPCount: 1
-        },
-        {
-          upsert: true,
-          new: true
-        }
-      );
-    } else {
-      // Update existing progress without awarding XP
-      await UserProgress.findByIdAndUpdate(existingProgress._id, {
-        score: Math.max(existingProgress.score || 0, score), // Keep best score
-        timeSpent: existingProgress.timeSpent + timeSpent,
-        lastAccessed: new Date(),
-        attempts: (existingProgress.attempts || 0) + 1,
-        $push: {
-          'data.attempts': {
-            score,
-            correctAnswers,
-            totalQuestions,
-            timeSpent,
-            timestamp: new Date()
-          }
-        }
-      });
     }
+
+    // Always create a progress record for achievements tracking (even if no XP awarded)
+    await UserProgress.create({
+      userId,
+      contentId: quizId,
+      contentType: 'quiz',
+      completed: true,
+      score,
+      timeSpent,
+      lastAccessed: new Date(),
+      attempts: 1,
+      data: {
+        quizType: 'random',
+        correctAnswers,
+        totalQuestions,
+        completionDate: new Date(),
+        xpAwarded: xpGained
+      },
+      totalXPEarned: xpGained,
+      firstCompletedDate: new Date()
+    });
 
     return NextResponse.json({
       success: true,
@@ -131,8 +117,8 @@ export async function POST(request: NextRequest) {
       newLevel,
       newAchievements,
       message: xpAwarded
-        ? `Congratulations! You earned ${xpGained} XP for completing the random quiz!`
-        : 'Quiz completed! You already earned XP for random quiz today.'
+        ? `Congratulations! You earned ${xpGained} XP for completing a random quiz!`
+        : 'Quiz completed! You already earned XP for a random quiz today, but this attempt counts toward achievements.'
     });
 
   } catch (error) {
