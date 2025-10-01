@@ -261,6 +261,15 @@ export default function SectionsPage() {
 
   const visibleSections = getVisibleSections();
 
+  // Calculate collected XP from completed sections
+  const collectedXP = visibleSections.reduce((total, section) => {
+    const progress = getSectionProgress(section.id);
+    if (progress?.completed) {
+      return total + section.totalXP;
+    }
+    return total;
+  }, 0);
+
   return (
     <div className="min-h-screen">
       {/* Modern Banner */}
@@ -316,9 +325,9 @@ export default function SectionsPage() {
                 <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20 text-center">
                   <div className="flex items-center justify-center space-x-2 mb-1">
                     <Zap className="w-4 h-4 text-white" />
-                    <span className="text-white/70 font-medium text-xs">Available XP</span>
+                    <span className="text-white/70 font-medium text-xs">Collected XP</span>
                   </div>
-                  <div className="text-xl font-bold text-white">{topicData.totalXP}</div>
+                  <div className="text-xl font-bold text-white">{collectedXP} / {topicData.totalXP}</div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
