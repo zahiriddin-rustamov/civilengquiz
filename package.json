@@ -6,7 +6,8 @@
     "dev": "next dev --turbo",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "populate-db": "tsx scripts/populate-db.ts"
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.9.1",

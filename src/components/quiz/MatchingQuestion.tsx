@@ -78,6 +78,7 @@ export function MatchingQuestion({
   const checkAnswers = (): Record<string, boolean> => {
     const results: Record<string, boolean> = {};
     question.pairs.forEach(pair => {
+      // Check if the user matched the left item (pair.id) to the correct right item (also pair.id)
       results[pair.id] = matches[pair.id] === pair.id;
     });
     return results;
@@ -94,6 +95,22 @@ export function MatchingQuestion({
     onAnswer(question.id, matches, allCorrect, allCorrect ? question.points : 0);
   };
 
+  // Color palette for different matches
+  const matchColors = [
+    { border: 'border-blue-300', bg: 'bg-gradient-to-r from-blue-50 to-cyan-50' },
+    { border: 'border-purple-300', bg: 'bg-gradient-to-r from-purple-50 to-pink-50' },
+    { border: 'border-amber-300', bg: 'bg-gradient-to-r from-amber-50 to-yellow-50' },
+    { border: 'border-teal-300', bg: 'bg-gradient-to-r from-teal-50 to-emerald-50' },
+    { border: 'border-rose-300', bg: 'bg-gradient-to-r from-rose-50 to-red-50' },
+    { border: 'border-indigo-300', bg: 'bg-gradient-to-r from-indigo-50 to-violet-50' },
+  ];
+
+  // Get color index for a match
+  const getMatchColorIndex = (leftId: string) => {
+    const matchIndex = Object.keys(matches).indexOf(leftId);
+    return matchIndex >= 0 ? matchIndex % matchColors.length : 0;
+  };
+
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'Beginner': return 'from-green-500 to-emerald-600';
@@ -106,16 +123,20 @@ export function MatchingQuestion({
   const getLeftItemStyle = (leftId: string) => {
     const isSelected = selectedLeft === leftId;
     const isMatched = matches[leftId];
-    
+
     if (!hasAnswered) {
-      if (isSelected) return 'border-indigo-400 bg-gradient-to-r from-indigo-50 to-purple-50 shadow-lg';
-      if (isMatched) return 'border-green-300 bg-gradient-to-r from-green-50 to-emerald-50';
+      if (isSelected) return 'border-indigo-500 bg-gradient-to-r from-indigo-100 to-purple-100 shadow-lg ring-2 ring-indigo-300';
+      if (isMatched) {
+        const colorIndex = getMatchColorIndex(leftId);
+        const colors = matchColors[colorIndex];
+        return `${colors.border} ${colors.bg} shadow-md`;
+      }
       return 'border-gray-200 hover:border-indigo-300 hover:shadow-md';
     }
 
     // Show results
     const isCorrect = matchResults[leftId];
-    return isCorrect 
+    return isCorrect
       ? 'border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 shadow-lg'
       : 'border-red-400 bg-gradient-to-r from-red-50 to-pink-50 shadow-lg';
   };
@@ -123,16 +144,20 @@ export function MatchingQuestion({
   const getRightItemStyle = (rightId: string) => {
     const isMatched = Object.values(matches).includes(rightId);
     const matchingLeftId = Object.keys(matches).find(key => matches[key] === rightId);
-    
+
     if (!hasAnswered) {
-      if (isMatched) return 'border-green-300 bg-gradient-to-r from-green-50 to-emerald-50';
+      if (isMatched && matchingLeftId) {
+        const colorIndex = getMatchColorIndex(matchingLeftId);
+        const colors = matchColors[colorIndex];
+        return `${colors.border} ${colors.bg} shadow-md`;
+      }
       return 'border-gray-200 hover:border-indigo-300 hover:shadow-md';
     }
 
     // Show results
     if (matchingLeftId) {
       const isCorrect = matchResults[matchingLeftId];
-      return isCorrect 
+      return isCorrect
         ? 'border-green-400 bg-gradient-to-r from-green-50 to-emerald-50 shadow-lg'
         : 'border-red-400 bg-gradient-to-r from-red-50 to-pink-50 shadow-lg';
     }
