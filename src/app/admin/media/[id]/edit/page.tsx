@@ -192,7 +192,7 @@ export default function EditMediaPage() {
 
   const fetchSubjects = async () => {
     try {
-      const response = await fetch('/api/subjects');
+      const response = await fetch('/api/subjects?includeEmpty=true');
       if (response.ok) {
         const data = await response.json();
         setSubjects(data);

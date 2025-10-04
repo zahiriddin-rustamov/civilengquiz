@@ -63,7 +63,7 @@ export default function ReorderTopicsPage() {
 
       // Fetch subjects and topics
       const [subjectsResponse, topicsResponse] = await Promise.all([
-        fetch('/api/subjects'),
+        fetch('/api/subjects?includeEmpty=true'),
         fetch('/api/topics')
       ]);
 

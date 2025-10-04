@@ -48,7 +48,7 @@ export default function ReorderSubjectsPage() {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/subjects');
+      const response = await fetch('/api/subjects?includeEmpty=true');
       if (!response.ok) {
         throw new Error('Failed to fetch subjects');
       }

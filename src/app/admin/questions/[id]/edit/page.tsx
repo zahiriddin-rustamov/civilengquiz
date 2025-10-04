@@ -212,7 +212,7 @@ export default function EditQuestionPage() {
 
   const fetchSubjects = async () => {
     try {
-      const response = await fetch('/api/subjects');
+      const response = await fetch('/api/subjects?includeEmpty=true');
       if (response.ok) {
         const data = await response.json();
         setSubjects(data);
@@ -224,7 +224,7 @@ export default function EditQuestionPage() {
 
   const fetchSubjectByName = async (subjectName: string) => {
     try {
-      const response = await fetch('/api/subjects');
+      const response = await fetch('/api/subjects?includeEmpty=true');
       if (response.ok) {
         const subjects = await response.json();
         const subject = subjects.find((s: ISubject) => s.name === subjectName);

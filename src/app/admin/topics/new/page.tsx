@@ -49,7 +49,7 @@ export default function NewTopicPage() {
   const fetchSubjects = async () => {
     try {
       setSubjectsLoading(true);
-      const response = await fetch('/api/subjects');
+      const response = await fetch('/api/subjects?includeEmpty=true');
       if (response.ok) {
         const data = await response.json();
         setSubjects(data);

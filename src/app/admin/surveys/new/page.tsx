@@ -141,7 +141,7 @@ export default function NewSurveyPage() {
       setIsLoadingData(true);
 
       // Fetch subjects
-      const subjectsResponse = await fetch('/api/subjects');
+      const subjectsResponse = await fetch('/api/subjects?includeEmpty=true');
       if (subjectsResponse.ok) {
         const subjectsData = await subjectsResponse.json();
         setSubjects(subjectsData);
