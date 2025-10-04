@@ -6,9 +6,13 @@ import { Subject, Topic, Question, Flashcard, Media } from '@/models/database';
 import connectToDatabase from '@/lib/mongoose';
 
 // GET /api/subjects - Get all subjects with content counts and totals
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();
+
+    // Check if we should include empty subjects (for admin)
+    const { searchParams } = new URL(request.url);
+    const includeEmpty = searchParams.get('includeEmpty') === 'true';
 
     const subjects = await Subject.find({})
       .sort({ order: 1 })
@@ -70,10 +74,12 @@ export async function GET() {
       })
     );
 
-    // Filter out subjects with no topics
-    const subjectsWithTopics = subjectsWithData.filter(s => s.topicCount > 0);
+    // Filter out subjects with no topics (unless includeEmpty is true for admin)
+    const filteredSubjects = includeEmpty
+      ? subjectsWithData
+      : subjectsWithData.filter(s => s.topicCount > 0);
 
-    return NextResponse.json(subjectsWithTopics);
+    return NextResponse.json(filteredSubjects);
   } catch (error) {
     console.error('Error fetching subjects:', error);
     return NextResponse.json(
