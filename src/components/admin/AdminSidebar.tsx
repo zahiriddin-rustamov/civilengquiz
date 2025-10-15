@@ -12,7 +12,8 @@ import {
   MessageSquare,
   Users,
   BarChart3,
-  Settings
+  Settings,
+  Database
 } from 'lucide-react';
 
 interface NavigationItem {
@@ -44,6 +45,12 @@ const navigation: NavigationItem[] = [
     name: 'Analytics',
     href: '/admin/analytics',
     icon: BarChart3,
+    disabled: false,
+  },
+  {
+    name: 'Backup & Restore',
+    href: '/admin/backup',
+    icon: Database,
     disabled: false,
   },
   {

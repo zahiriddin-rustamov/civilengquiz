@@ -89,7 +89,4 @@ CRITICAL here means something that can break the entire platform or cause data l
 
 Context: We have several subjects, inside each subject, there are several topics. Within each topic, there can be questions (several sections), flashcards and media (long videos and shorts). The site is for Bachelor degree students where they will do quizzes and improve their knowledge basically.
 
-In the Questions Sections, we have this settings where we can set the sections in the questions to unlock based on certain criteria like completion, getting above certain score. But currently, even when I complete the section, it unlocks the next section but when I go inside the unlocked section, it says Section Locked
-Complete "Fundamentals" section first
-
-Find out why this is happening. Check all relevant files.
+I need you to analyze how we store the questions (sections), flashcards and media (both). Basically all of the content including subjects, topics and everything. Then I need you to think of a way to implement a back up mechanism where the admin can back up all the data in a JSON file and also be able to restore from that JSON file, OR store to DB. Analyze all relevant files.
