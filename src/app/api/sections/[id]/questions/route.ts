@@ -50,44 +50,64 @@ export async function GET(
       requireCompletion: false
     };
 
+    // First, check if the current section is already completed
+    // If so, keep it unlocked regardless of other conditions
+    const currentSectionProgress = await UserProgress.findOne({
+      userId,
+      contentId: section._id.toString(),
+      contentType: 'section'
+    });
+
+    const isCurrentSectionCompleted = currentSectionProgress && currentSectionProgress.completed;
+
     if (sectionSettings.unlockConditions === 'sequential') {
-      // Check if previous sections are completed
-      const previousSections = await QuestionSection.find({
-        topicId: section.topicId,
-        order: { $lt: section.order }
-      }).sort({ order: 1 });
+      // If current section is already completed, keep it unlocked
+      if (isCurrentSectionCompleted) {
+        hasAccess = true;
+      } else {
+        // Check if previous sections are completed
+        const previousSections = await QuestionSection.find({
+          topicId: section.topicId,
+          order: { $lt: section.order }
+        }).sort({ order: 1 });
 
-      for (const prevSection of previousSections) {
-        const sectionProgress = await UserProgress.findOne({
-          userId,
-          contentId: prevSection._id,
-          contentType: 'section'
-        });
+        for (const prevSection of previousSections) {
+          const sectionProgress = await UserProgress.findOne({
+            userId,
+            contentId: prevSection._id.toString(),
+            contentType: 'section'
+          });
 
-        if (!sectionProgress || !sectionProgress.completed) {
-          hasAccess = false;
-          unlockMessage = `Complete "${prevSection.name}" section first`;
-          break;
+          if (!sectionProgress || !sectionProgress.completed) {
+            hasAccess = false;
+            unlockMessage = `Complete "${prevSection.name}" section first`;
+            break;
+          }
         }
       }
     } else if (sectionSettings.unlockConditions === 'score-based') {
-      // Check if previous section meets score requirement
-      const previousSection = await QuestionSection.findOne({
-        topicId: section.topicId,
-        order: section.order - 1
-      });
-
-      if (previousSection) {
-        const sectionProgress = await UserProgress.findOne({
-          userId,
-          contentId: previousSection._id,
-          contentType: 'section'
+      // If current section is already completed, keep it unlocked
+      if (isCurrentSectionCompleted) {
+        hasAccess = true;
+      } else {
+        // Check if previous section meets score requirement
+        const previousSection = await QuestionSection.findOne({
+          topicId: section.topicId,
+          order: section.order - 1
         });
 
-        const requiredScore = sectionSettings.requiredScore || 70;
-        if (!sectionProgress || (sectionProgress.score || 0) < requiredScore) {
-          hasAccess = false;
-          unlockMessage = `Score at least ${requiredScore}% in "${previousSection.name}" to unlock this section`;
+        if (previousSection) {
+          const sectionProgress = await UserProgress.findOne({
+            userId,
+            contentId: previousSection._id.toString(),
+            contentType: 'section'
+          });
+
+          const requiredScore = sectionSettings.requiredScore || 70;
+          if (!sectionProgress || (sectionProgress.score || 0) < requiredScore) {
+            hasAccess = false;
+            unlockMessage = `Score at least ${requiredScore}% in "${previousSection.name}" to unlock this section`;
+          }
         }
       }
     }
@@ -111,7 +131,7 @@ export async function GET(
     // Get user's progress on this section
     const sectionProgress = await UserProgress.findOne({
       userId,
-      contentId: section._id,
+      contentId: section._id.toString(),
       contentType: 'section'
     });
 

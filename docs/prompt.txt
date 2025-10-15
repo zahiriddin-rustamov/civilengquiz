@@ -76,3 +76,20 @@ I need to implement the Leaderboard for students (so we can link it in the Navba
 Context: We have several subjects, inside each subject, there are several topics. Within each topic, there can be questions (several sections), flashcards and media (long videos and shorts). The site is for Bachelor degree students where they will do quizzes and improve their knowledge basically.
 
 Do you see in the admin side of things, we have unimplemented /admin/users (User Management) page. What do you suggest we should implement/include in that page. Analyze all relevant files thoroughly and provide a plan.
+
+===
+
+Context: We have several subjects, inside each subject, there are several topics. Within each topic, there can be questions (several sections), flashcards and media (long videos and shorts). The site is for Bachelor degree students where they will do quizzes and improve their knowledge basically.
+
+I need you to thoroughly analyze the platform and see if you can find any CRITICAL bugs, issues or improvements that can be done to improve the overall user experience for both admin and students. Check all relevant files.
+
+CRITICAL here means something that can break the entire platform or cause data loss or incorrect data saving/loading. Or something that can cause security issues. Or something that can cause major user experience issues.
+
+===
+
+Context: We have several subjects, inside each subject, there are several topics. Within each topic, there can be questions (several sections), flashcards and media (long videos and shorts). The site is for Bachelor degree students where they will do quizzes and improve their knowledge basically.
+
+In the Questions Sections, we have this settings where we can set the sections in the questions to unlock based on certain criteria like completion, getting above certain score. But currently, even when I complete the section, it unlocks the next section but when I go inside the unlocked section, it says Section Locked
+Complete "Fundamentals" section first
+
+Find out why this is happening. Check all relevant files.
