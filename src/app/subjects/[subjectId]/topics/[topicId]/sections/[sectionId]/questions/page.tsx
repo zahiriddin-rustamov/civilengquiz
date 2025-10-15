@@ -615,13 +615,15 @@ export default function SectionQuestionsPage() {
           </div>
         </div>
 
-        {/* Question */}
-        <div className="mb-8">
-          {renderQuestion(currentQuestion)}
+        {/* Question - Fixed min-height to prevent navigation jumping */}
+        <div className="mb-8 min-h-[600px] flex flex-col">
+          <div className="flex-1">
+            {renderQuestion(currentQuestion)}
+          </div>
         </div>
 
-        {/* Navigation */}
-        <div className="flex justify-between items-center">
+        {/* Navigation - Fixed position */}
+        <div className="flex justify-between items-center sticky bottom-4 bg-gradient-to-br from-indigo-50 via-purple-50 to-cyan-50 py-4 -mx-4 px-4 rounded-lg border-t border-gray-200">
           <Button
             onClick={handlePreviousQuestion}
             disabled={currentQuestionIndex === 0}
