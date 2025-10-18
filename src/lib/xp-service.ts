@@ -255,23 +255,25 @@ export class XPService {
             p => p.topicId?.toString() === topic._id.toString() && p.completed
           ).length;
 
-          // Consider topic completed if 80% or more items are done
-          if (completedTopicItems / totalTopicItems >= 0.8) {
+          // Consider topic completed if 100% of items are done
+          if (completedTopicItems === totalTopicItems) {
             subjectTopicsCompleted++;
             topicsCompleted++;
           }
         }
       }
 
-      // Consider subject completed if 80% or more topics are done
-      if (topics.length > 0 && subjectTopicsCompleted / topics.length >= 0.8) {
+      // Consider subject completed if 100% of topics are done
+      if (topics.length > 0 && subjectTopicsCompleted === topics.length) {
         subjectsCompleted++;
       }
     }
 
-    // Calculate study days (unique days with activity)
+    // Calculate study days (unique days with completed content)
     const uniqueDates = new Set(
-      progressRecords.map(p => p.lastAccessed.toISOString().split('T')[0])
+      progressRecords
+        .filter(p => p.completed) // Only count days with actual completions
+        .map(p => p.lastAccessed.toISOString().split('T')[0])
     );
     const studyDays = uniqueDates.size;
 
@@ -345,16 +347,17 @@ export class XPService {
 
     switch (contentType) {
       case 'question':
-        baseXP = score || 0; // XP equals the score earned
+        // Questions give 20% of score as XP (0-20 XP range)
+        baseXP = Math.round((score || 0) * 0.2);
         break;
       case 'flashcard':
-        baseXP = 20; // Base XP for flashcard
+        baseXP = 10; // Base XP for flashcard
         if (additionalData?.masteryLevel === 'Mastered') {
-          baseXP += 10; // Bonus for mastering
+          baseXP += 5; // Bonus for mastering (15 total)
         }
         break;
       case 'media':
-        baseXP = 50; // Base XP for media completion
+        baseXP = 25; // Base XP for media completion
         break;
       case 'section':
         baseXP = 100; // Base XP for section completion bonus
@@ -379,13 +382,13 @@ export class XPService {
 
     switch (type) {
       case 'section':
-        bonusXP = 100; // Bonus for completing all questions in a section
+        bonusXP = 150; // XP for completing all questions in a section (only XP source for questions)
         break;
       case 'flashcard-topic':
-        bonusXP = 150; // Bonus for studying all flashcards in a topic
+        bonusXP = 150; // XP for studying all flashcards in a topic (only XP source for flashcards)
         break;
       case 'media-topic':
-        bonusXP = 200; // Bonus for watching all media in a topic
+        bonusXP = 200; // XP for watching all media in a topic (only XP source for media)
         break;
     }
 

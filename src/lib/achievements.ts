@@ -31,7 +31,7 @@ export interface UserStats {
 }
 
 export const ACHIEVEMENTS: Achievement[] = [
-  // Common Achievements (Bronze tier)
+  // Common Achievements (Bronze tier) - 50-100 XP
   {
     id: 'first_steps',
     name: 'First Steps',
@@ -84,10 +84,19 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '⬆️',
     rarity: 'common',
     condition: (stats) => stats.level >= 5,
-    xpReward: 150
+    xpReward: 100
+  },
+  {
+    id: 'consistent_learner',
+    name: 'Consistent Learner',
+    description: 'Study for 5 different days',
+    icon: '📅',
+    rarity: 'common',
+    condition: (stats) => stats.studyDays >= 5,
+    xpReward: 75
   },
 
-  // Rare Achievements (Silver tier)
+  // Rare Achievements (Silver tier) - 150-300 XP
   {
     id: 'streak_starter',
     name: 'Streak Starter',
@@ -95,7 +104,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🔥',
     rarity: 'rare',
     condition: (stats) => stats.currentStreak >= 3,
-    xpReward: 200
+    xpReward: 150
   },
   {
     id: 'dedicated_learner',
@@ -104,7 +113,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '💪',
     rarity: 'rare',
     condition: (stats) => stats.totalQuizzesCompleted >= 50,
-    xpReward: 300
+    xpReward: 250
   },
   {
     id: 'high_achiever',
@@ -113,7 +122,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🎖️',
     rarity: 'rare',
     condition: (stats) => stats.averageScore >= 80,
-    xpReward: 250
+    xpReward: 200
   },
   {
     id: 'topic_master',
@@ -122,7 +131,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🏆',
     rarity: 'rare',
     condition: (stats) => stats.topicsCompleted >= 5,
-    xpReward: 400
+    xpReward: 300
   },
   {
     id: 'section_regular',
@@ -131,25 +140,25 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '📚',
     rarity: 'rare',
     condition: (stats) => stats.totalSectionsCompleted >= 10,
-    xpReward: 200
+    xpReward: 150
   },
   {
     id: 'multiple_choice_master',
     name: 'Multiple Choice Master',
-    description: 'Answer 50 multiple choice questions correctly',
+    description: 'Answer 50 multiple choice questions correctly (70%+)',
     icon: '✓',
     rarity: 'rare',
     condition: (stats) => stats.multipleChoiceCorrect >= 50,
-    xpReward: 250
+    xpReward: 200
   },
   {
     id: 'true_false_expert',
     name: 'True/False Expert',
-    description: 'Answer 50 true/false questions correctly',
+    description: 'Answer 50 true/false questions correctly (70%+)',
     icon: '⚖️',
     rarity: 'rare',
     condition: (stats) => stats.trueFalseCorrect >= 50,
-    xpReward: 200
+    xpReward: 150
   },
   {
     id: 'flashcard_adept',
@@ -158,10 +167,19 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🧠',
     rarity: 'rare',
     condition: (stats) => stats.totalFlashcardsCompleted >= 100,
-    xpReward: 300
+    xpReward: 250
+  },
+  {
+    id: 'week_warrior',
+    name: 'Week Warrior',
+    description: 'Study for 7 different days',
+    icon: '🗓️',
+    rarity: 'rare',
+    condition: (stats) => stats.studyDays >= 7,
+    xpReward: 200
   },
 
-  // Epic Achievements (Gold tier)
+  // Epic Achievements (Gold tier) - 250-700 XP
   {
     id: 'streak_master',
     name: 'Streak Master',
@@ -169,16 +187,16 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🔥',
     rarity: 'epic',
     condition: (stats) => stats.currentStreak >= 7,
-    xpReward: 500
+    xpReward: 400
   },
   {
     id: 'quiz_champion',
     name: 'Quiz Champion',
-    description: 'Score 90%+ on 10 quizzes',
+    description: 'Score 90%+ on 10 questions',
     icon: '👑',
     rarity: 'epic',
     condition: (stats) => stats.perfectScores >= 10,
-    xpReward: 600
+    xpReward: 500
   },
   {
     id: 'subject_conqueror',
@@ -187,7 +205,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🏅',
     rarity: 'epic',
     condition: (stats) => stats.subjectsCompleted >= 1,
-    xpReward: 800
+    xpReward: 600
   },
   {
     id: 'knowledge_master',
@@ -196,7 +214,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🎓',
     rarity: 'epic',
     condition: (stats) => stats.level >= 15,
-    xpReward: 750
+    xpReward: 400
   },
   {
     id: 'section_expert',
@@ -205,34 +223,34 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🏆',
     rarity: 'epic',
     condition: (stats) => stats.totalSectionsCompleted >= 50,
-    xpReward: 500
+    xpReward: 400
   },
   {
     id: 'fill_master',
     name: 'Fill-in Master',
-    description: 'Answer 25 fill-in-blank questions correctly',
+    description: 'Answer 25 fill-in-blank questions correctly (70%+)',
     icon: '📝',
     rarity: 'epic',
     condition: (stats) => stats.fillInBlankCorrect >= 25,
-    xpReward: 300
+    xpReward: 250
   },
   {
     id: 'numerical_genius',
     name: 'Numerical Genius',
-    description: 'Answer 25 numerical questions correctly',
+    description: 'Answer 25 numerical questions correctly (70%+)',
     icon: '🔢',
     rarity: 'epic',
     condition: (stats) => stats.numericalCorrect >= 25,
-    xpReward: 400
+    xpReward: 300
   },
   {
     id: 'matching_pro',
     name: 'Matching Pro',
-    description: 'Answer 25 matching questions correctly',
+    description: 'Answer 25 matching questions correctly (70%+)',
     icon: '🔗',
     rarity: 'epic',
     condition: (stats) => stats.matchingCorrect >= 25,
-    xpReward: 300
+    xpReward: 250
   },
   {
     id: 'versatile_learner',
@@ -246,7 +264,7 @@ export const ACHIEVEMENTS: Achievement[] = [
       stats.fillInBlankCorrect >= 10 &&
       stats.numericalCorrect >= 10 &&
       stats.matchingCorrect >= 10,
-    xpReward: 600
+    xpReward: 500
   },
   {
     id: 'perfectionist',
@@ -255,10 +273,19 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '💎',
     rarity: 'epic',
     condition: (stats) => stats.averageScore >= 95,
-    xpReward: 1000
+    xpReward: 700
+  },
+  {
+    id: 'month_scholar',
+    name: 'Month Scholar',
+    description: 'Study for 15 different days',
+    icon: '📖',
+    rarity: 'epic',
+    condition: (stats) => stats.studyDays >= 15,
+    xpReward: 400
   },
 
-  // Legendary Achievements (Platinum tier)
+  // Legendary Achievements (Platinum tier) - 800-1500 XP
   {
     id: 'unstoppable_streak',
     name: 'Unstoppable',
@@ -266,7 +293,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '⚡',
     rarity: 'legendary',
     condition: (stats) => stats.currentStreak >= 30,
-    xpReward: 2000
+    xpReward: 1200
   },
   {
     id: 'engineering_legend',
@@ -274,8 +301,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Complete all subjects',
     icon: '🌟',
     rarity: 'legendary',
-    condition: (stats) => stats.subjectsCompleted >= 3, // Assuming 3 subjects for now
-    xpReward: 3000
+    condition: (stats) => stats.subjectsCompleted >= 3,
+    xpReward: 1500
   },
   {
     id: 'quiz_grandmaster',
@@ -284,43 +311,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '🏆',
     rarity: 'legendary',
     condition: (stats) => stats.totalQuizzesCompleted >= 200,
-    xpReward: 2500
-  },
-  {
-    id: 'concrete_specialist',
-    name: 'Concrete Specialist',
-    description: 'Complete all Concrete Technology content',
-    icon: '🏗️',
-    rarity: 'legendary',
-    condition: (stats) => {
-      // This will be updated by backend to check specific subject completion
-      return stats.subjectsCompleted >= 1;
-    },
-    xpReward: 800
-  },
-  {
-    id: 'environmental_guardian',
-    name: 'Environmental Guardian',
-    description: 'Complete all Environmental Engineering content',
-    icon: '🌍',
-    rarity: 'legendary',
-    condition: (stats) => {
-      // This will be updated by backend to check specific subject completion
-      return stats.subjectsCompleted >= 2;
-    },
-    xpReward: 800
-  },
-  {
-    id: 'water_resources_expert',
-    name: 'Water Resources Expert',
-    description: 'Complete all Water Resources Engineering content',
-    icon: '💧',
-    rarity: 'legendary',
-    condition: (stats) => {
-      // This will be updated by backend to check specific subject completion
-      return stats.subjectsCompleted >= 3;
-    },
-    xpReward: 800
+    xpReward: 1200
   },
   {
     id: 'knowledge_deity',
@@ -329,7 +320,25 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: '👑',
     rarity: 'legendary',
     condition: (stats) => stats.level >= 50,
-    xpReward: 5000
+    xpReward: 1000
+  },
+  {
+    id: 'perfect_scholar',
+    name: 'Perfect Scholar',
+    description: 'Score 90%+ on 25 questions',
+    icon: '💯',
+    rarity: 'legendary',
+    condition: (stats) => stats.perfectScores >= 25,
+    xpReward: 1000
+  },
+  {
+    id: 'marathon_learner',
+    name: 'Marathon Learner',
+    description: 'Study for 30 different days',
+    icon: '🏃',
+    rarity: 'legendary',
+    condition: (stats) => stats.studyDays >= 30,
+    xpReward: 800
   }
 ];
 

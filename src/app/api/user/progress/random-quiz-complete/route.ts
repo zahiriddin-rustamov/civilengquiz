@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import connectToDatabase from '@/lib/mongoose';
 import { User, UserProgress } from '@/models/database';
+import { XPService } from '@/lib/xp-service';
 
 // POST /api/user/progress/random-quiz-complete - Award XP for completing random quiz
 export async function POST(request: NextRequest) {
@@ -66,26 +67,11 @@ export async function POST(request: NextRequest) {
       xpGained = 10; // 10 XP for first random quiz of the day
       xpAwarded = true;
 
-      // Get current user data
-      const user = await User.findById(userId);
-      if (!user) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
-
-      const oldLevel = user.level;
-      const newTotalXP = user.totalXP + xpGained;
-
-      // Calculate new level (every 100 XP = 1 level)
-      const calculatedLevel = Math.floor(newTotalXP / 100) + 1;
-      leveledUp = calculatedLevel > oldLevel;
-      newLevel = calculatedLevel;
-
-      // Update user XP and level
-      await User.findByIdAndUpdate(userId, {
-        totalXP: newTotalXP,
-        level: calculatedLevel,
-        lastActiveDate: new Date()
-      });
+      // Use XPService to update user XP (handles streaks, achievements, level-ups)
+      const xpResult = await XPService.updateUserXP(userId, xpGained);
+      leveledUp = xpResult.leveledUp;
+      newLevel = xpResult.newLevel;
+      newAchievements = xpResult.newAchievements;
     }
 
     // Always create a progress record for achievements tracking (even if no XP awarded)
@@ -109,15 +95,21 @@ export async function POST(request: NextRequest) {
       firstCompletedDate: new Date()
     });
 
+    // Calculate achievement XP for message
+    const achievementXP = newAchievements.reduce((sum, a) => sum + a.xpReward, 0);
+    const totalXPEarned = xpGained + achievementXP;
+
     return NextResponse.json({
       success: true,
       xpAwarded,
-      xpGained,
+      xpGained: totalXPEarned,
       leveledUp,
       newLevel,
       newAchievements,
       message: xpAwarded
-        ? `Congratulations! You earned ${xpGained} XP for completing a random quiz!`
+        ? `Congratulations! You earned ${totalXPEarned} XP for completing a random quiz!${
+            achievementXP > 0 ? ` (+${achievementXP} from achievements!)` : ''
+          }`
         : 'Quiz completed! You already earned XP for a random quiz today, but this attempt counts toward achievements.'
     });
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import connectToDatabase from '@/lib/mongoose';
-import { UserProgress, Question, Flashcard, Media } from '@/models/database';
+import { User, UserProgress, Question, Flashcard, Media } from '@/models/database';
 import { XPService } from '@/lib/xp-service';
 import { initializeUserGamingFields } from '@/lib/user-migration';
 
@@ -61,7 +61,13 @@ async function checkSectionCompletion(userId: string, sectionId: string) {
   const allQuestions = await Question.find({ sectionId }).select('_id');
   const questionIds = allQuestions.map(q => q._id.toString());
 
-  if (questionIds.length === 0) return false;
+  console.log(`[XP DEBUG] Total questions in section: ${questionIds.length}`);
+  console.log(`[XP DEBUG] Question IDs:`, questionIds);
+
+  if (questionIds.length === 0) {
+    console.log(`[XP DEBUG] No questions found in section`);
+    return false;
+  }
 
   // Check if all questions are completed
   const completedQuestions = await UserProgress.find({
@@ -71,6 +77,9 @@ async function checkSectionCompletion(userId: string, sectionId: string) {
     contentId: { $in: questionIds },
     completed: true
   });
+
+  console.log(`[XP DEBUG] Completed questions: ${completedQuestions.length}`);
+  console.log(`[XP DEBUG] Completed question IDs:`, completedQuestions.map(q => q.contentId.toString()));
 
   return completedQuestions.length === questionIds.length;
 }
@@ -151,39 +160,22 @@ export async function POST(request: NextRequest) {
     let isDailyXP = false;
     let isFirstTime = false;
 
-    // Determine XP to award based on completion status and timing
-    // Only award XP for first-time completion or daily XP
-    if (body.completed && currentScore && currentScore > 0) {
+    // NO XP FOR INDIVIDUAL CONTENT - Only award XP for section/topic completion bonuses
+    // Track if this is first-time completion for completion bonus eligibility
+    if (body.completed) {
       if (!existingProgress || !existingProgress.completed || !existingProgress.firstCompletedDate) {
-        // First-time completion - award full XP
         isFirstTime = true;
-        xpEarnedThisTime = XPService.calculateContentXP(
-          body.contentType,
-          currentScore,
-          body.data?.difficulty,
-          body.data
-        );
-
-        console.log(`[XP] First-time completion for ${body.contentType} ${body.contentId}: ${xpEarnedThisTime} XP`);
-
+        console.log(`[XP] First-time completion for ${body.contentType} ${body.contentId} (no individual XP, only completion bonuses)`);
       } else if (XPService.isDailyXPEligible(existingProgress.firstCompletedDate, existingProgress.lastDailyXPDate)) {
-        // Daily XP - award 50% XP
         isDailyXP = true;
-        xpEarnedThisTime = XPService.calculateDailyXP(
-          body.contentType,
-          currentScore,
-          body.data?.difficulty,
-          body.data
-        );
-
-        console.log(`[XP] Daily XP for ${body.contentType} ${body.contentId}: ${xpEarnedThisTime} XP`);
-
+        console.log(`[XP] Daily completion for ${body.contentType} ${body.contentId} (no individual XP, only completion bonuses)`);
       } else {
-        // Same day repeat or already got daily XP today - no XP
-        xpEarnedThisTime = 0;
         console.log(`[XP] No XP for ${body.contentType} ${body.contentId} - already completed today`);
       }
     }
+
+    // Individual content does NOT award XP
+    xpEarnedThisTime = 0;
 
     // Prepare attempt history entry
     const attemptEntry = {
@@ -286,61 +278,70 @@ export async function POST(request: NextRequest) {
     );
 
 
-    // Award XP if earned
-    if (xpEarnedThisTime > 0) {
-      xpResult = await XPService.updateUserXP(userId, xpEarnedThisTime);
-    }
-
     // Check for completion bonuses (only for first-time completions)
+    console.log(`[XP DEBUG] Checking completion bonuses - isFirstTime: ${isFirstTime}, body.completed: ${body.completed}, contentType: ${body.contentType}`);
+
     if (isFirstTime && body.completed) {
       let bonusAwarded = false;
 
       // Check section completion bonus for questions
       if (body.contentType === 'question' && body.sectionId) {
+        console.log(`[XP DEBUG] Checking section completion for sectionId: ${body.sectionId}`);
         const sectionCompleted = await checkSectionCompletion(userId, body.sectionId);
+        console.log(`[XP DEBUG] Section completed: ${sectionCompleted}`);
 
         if (sectionCompleted) {
-          // Check if we already awarded section completion bonus
-          const sectionProgress = await UserProgress.findOne({
+          // Award section completion bonus (using atomic operation to prevent race condition)
+          completionBonusXP = XPService.calculateCompletionBonus('section', body.data?.difficulty);
+
+          // Calculate average score from completed questions in this section
+          const sectionQuestionProgress = await UserProgress.find({
             userId,
-            contentId: body.sectionId,
-            contentType: 'section',
+            sectionId: body.sectionId,
+            contentType: 'question',
             completed: true
           });
 
-          if (!sectionProgress) {
-            // Award section completion bonus
-            completionBonusXP = XPService.calculateCompletionBonus('section', body.data?.difficulty);
-            console.log(`[XP] Section completion bonus for ${body.sectionId}: ${completionBonusXP} XP`);
+          const averageScore = sectionQuestionProgress.length > 0
+            ? Math.round(sectionQuestionProgress.reduce((sum, p) => sum + (p.bestScore || p.score || 0), 0) / sectionQuestionProgress.length)
+            : 100;
 
-            // Calculate average score from completed questions in this section
-            const sectionQuestionProgress = await UserProgress.find({
-              userId,
-              sectionId: body.sectionId,
-              contentType: 'question',
-              completed: true
-            });
-
-            const averageScore = sectionQuestionProgress.length > 0
-              ? Math.round(sectionQuestionProgress.reduce((sum, p) => sum + (p.bestScore || p.score || 0), 0) / sectionQuestionProgress.length)
-              : 100;
-
-            // Save section completion record
-            await UserProgress.create({
+          // Use findOneAndUpdate with upsert to atomically create section completion record
+          const sectionProgress = await UserProgress.findOneAndUpdate(
+            {
               userId,
               contentId: body.sectionId,
-              contentType: 'section',
-              topicId: body.topicId,
-              subjectId: body.subjectId,
-              sectionId: body.sectionId,
-              completed: true,
-              score: averageScore,
-              timeSpent: 0,
-              firstCompletedDate: now,
-              totalXPEarned: completionBonusXP
-            });
+              contentType: 'section'
+            },
+            {
+              $setOnInsert: {
+                userId,
+                contentId: body.sectionId,
+                contentType: 'section',
+                topicId: body.topicId,
+                subjectId: body.subjectId,
+                sectionId: body.sectionId,
+                completed: true,
+                score: averageScore,
+                timeSpent: 0,
+                firstCompletedDate: now,
+                totalXPEarned: completionBonusXP,
+                attempts: 0
+              }
+            },
+            {
+              upsert: true,
+              new: false // Return the old document to check if it was just created
+            }
+          );
 
+          // Only award XP if this was a new completion (document didn't exist before)
+          if (!sectionProgress) {
+            console.log(`[XP] Section completion bonus for ${body.sectionId}: ${completionBonusXP} XP`);
             bonusAwarded = true;
+          } else {
+            // Section completion bonus was already awarded
+            completionBonusXP = 0;
           }
         }
       }
@@ -350,36 +351,46 @@ export async function POST(request: NextRequest) {
         const topicCompleted = await checkTopicCompletion(userId, body.topicId, 'flashcard');
 
         if (topicCompleted) {
-          // Check if we already awarded topic flashcard completion bonus
+          // Award topic flashcard completion bonus (using atomic operation to prevent race condition)
+          completionBonusXP = XPService.calculateCompletionBonus('flashcard-topic', body.data?.difficulty);
           const topicBonusKey = `flashcard-topic-${body.topicId}`;
-          const topicBonusProgress = await UserProgress.findOne({
-            userId,
-            contentId: topicBonusKey,
-            contentType: 'flashcard',
-            data: { isTopicBonus: true }
-          });
 
-          if (!topicBonusProgress) {
-            // Award topic flashcard completion bonus
-            completionBonusXP = XPService.calculateCompletionBonus('flashcard-topic', body.data?.difficulty);
-            console.log(`[XP] Flashcard topic completion bonus for topic ${body.topicId}: ${completionBonusXP} XP`);
-
-            // Save topic completion bonus record
-            await UserProgress.create({
+          // Use findOneAndUpdate with upsert to atomically create topic completion record
+          const topicBonusProgress = await UserProgress.findOneAndUpdate(
+            {
               userId,
               contentId: topicBonusKey,
-              contentType: 'flashcard',
-              topicId: body.topicId,
-              subjectId: body.subjectId,
-              completed: true,
-              score: 100,
-              timeSpent: 0,
-              firstCompletedDate: now,
-              totalXPEarned: completionBonusXP,
-              data: { isTopicBonus: true }
-            });
+              contentType: 'flashcard'
+            },
+            {
+              $setOnInsert: {
+                userId,
+                contentId: topicBonusKey,
+                contentType: 'flashcard',
+                topicId: body.topicId,
+                subjectId: body.subjectId,
+                completed: true,
+                score: 100,
+                timeSpent: 0,
+                firstCompletedDate: now,
+                totalXPEarned: completionBonusXP,
+                data: { isTopicBonus: true },
+                attempts: 0
+              }
+            },
+            {
+              upsert: true,
+              new: false // Return the old document to check if it was just created
+            }
+          );
 
+          // Only award XP if this was a new completion (document didn't exist before)
+          if (!topicBonusProgress) {
+            console.log(`[XP] Flashcard topic completion bonus for topic ${body.topicId}: ${completionBonusXP} XP`);
             bonusAwarded = true;
+          } else {
+            // Topic completion bonus was already awarded
+            completionBonusXP = 0;
           }
         }
       }
@@ -389,46 +400,54 @@ export async function POST(request: NextRequest) {
         const topicCompleted = await checkTopicCompletion(userId, body.topicId, 'media');
 
         if (topicCompleted) {
-          // Check if we already awarded topic media completion bonus
+          // Award topic media completion bonus (using atomic operation to prevent race condition)
+          completionBonusXP = XPService.calculateCompletionBonus('media-topic', body.data?.difficulty);
           const topicBonusKey = `media-topic-${body.topicId}`;
-          const topicBonusProgress = await UserProgress.findOne({
-            userId,
-            contentId: topicBonusKey,
-            contentType: 'media',
-            data: { isTopicBonus: true }
-          });
 
-          if (!topicBonusProgress) {
-            // Award topic media completion bonus
-            completionBonusXP = XPService.calculateCompletionBonus('media-topic', body.data?.difficulty);
-            console.log(`[XP] Media topic completion bonus for topic ${body.topicId}: ${completionBonusXP} XP`);
-
-            // Save topic completion bonus record
-            await UserProgress.create({
+          // Use findOneAndUpdate with upsert to atomically create topic completion record
+          const topicBonusProgress = await UserProgress.findOneAndUpdate(
+            {
               userId,
               contentId: topicBonusKey,
-              contentType: 'media',
-              topicId: body.topicId,
-              subjectId: body.subjectId,
-              completed: true,
-              score: 100,
-              timeSpent: 0,
-              firstCompletedDate: now,
-              totalXPEarned: completionBonusXP,
-              data: { isTopicBonus: true }
-            });
+              contentType: 'media'
+            },
+            {
+              $setOnInsert: {
+                userId,
+                contentId: topicBonusKey,
+                contentType: 'media',
+                topicId: body.topicId,
+                subjectId: body.subjectId,
+                completed: true,
+                score: 100,
+                timeSpent: 0,
+                firstCompletedDate: now,
+                totalXPEarned: completionBonusXP,
+                data: { isTopicBonus: true },
+                attempts: 0
+              }
+            },
+            {
+              upsert: true,
+              new: false // Return the old document to check if it was just created
+            }
+          );
 
+          // Only award XP if this was a new completion (document didn't exist before)
+          if (!topicBonusProgress) {
+            console.log(`[XP] Media topic completion bonus for topic ${body.topicId}: ${completionBonusXP} XP`);
             bonusAwarded = true;
+          } else {
+            // Topic completion bonus was already awarded
+            completionBonusXP = 0;
           }
         }
       }
 
       // Award completion bonus XP
       if (bonusAwarded && completionBonusXP > 0) {
-        const bonusResult = await XPService.updateUserXP(userId, completionBonusXP);
-        if (bonusResult.leveledUp && !xpResult?.leveledUp) {
-          xpResult = bonusResult;
-        }
+        xpResult = await XPService.updateUserXP(userId, completionBonusXP);
+        console.log(`[XP] Awarded ${completionBonusXP} XP. User now at level ${xpResult.newLevel} with ${xpResult.totalXP} total XP`);
       }
     }
 
@@ -436,28 +455,36 @@ export async function POST(request: NextRequest) {
     const totalXPThisTime = xpEarnedThisTime + completionBonusXP;
     const achievementXP = xpResult?.newAchievements?.reduce((sum, a) => sum + a.xpReward, 0) || 0;
 
+    // Get user's current level if no XP was awarded (for proper response)
+    let currentUserLevel = 1;
+    if (!xpResult) {
+      const user = await User.findById(userId).select('level').lean();
+      currentUserLevel = user?.level || 1;
+    }
+
     // Build response message
     let message = 'Progress updated successfully.';
-    if (isFirstTime) {
-      message += ` First-time completion! Earned ${xpEarnedThisTime} XP.`;
-    } else if (isDailyXP) {
-      message += ` Daily practice! Earned ${xpEarnedThisTime} XP (50% of original).`;
-    } else if (body.completed) {
-      message += ' Already completed today - no additional XP.';
-    }
 
     if (completionBonusXP > 0) {
       if (body.contentType === 'question') {
-        message += ` Section complete! Bonus ${completionBonusXP} XP!`;
+        message = ` Section complete! Earned ${completionBonusXP} XP!`;
       } else if (body.contentType === 'flashcard') {
-        message += ` All flashcards studied! Bonus ${completionBonusXP} XP!`;
+        message = ` All flashcards studied! Earned ${completionBonusXP} XP!`;
       } else if (body.contentType === 'media') {
-        message += ` All media viewed! Bonus ${completionBonusXP} XP!`;
+        message = ` All media viewed! Earned ${completionBonusXP} XP!`;
       }
-    }
 
-    if (xpResult?.leveledUp) {
-      message += ` Level up to ${xpResult.newLevel}!`;
+      if (achievementXP > 0) {
+        message += ` (+${achievementXP} from achievements!)`;
+      }
+
+      if (xpResult?.leveledUp) {
+        message += ` Level up to ${xpResult.newLevel}!`;
+      }
+    } else if (isFirstTime) {
+      message = 'Great progress! Complete the full section/topic to earn XP.';
+    } else if (body.completed) {
+      message = 'Already completed - no additional XP.';
     }
 
     return NextResponse.json({
@@ -470,7 +497,7 @@ export async function POST(request: NextRequest) {
       isDailyXP,
       isFirstTime,
       leveledUp: xpResult?.leveledUp || false,
-      newLevel: xpResult?.newLevel || 1,
+      newLevel: xpResult?.newLevel || currentUserLevel,
       newAchievements: xpResult?.newAchievements || [],
       message
     });

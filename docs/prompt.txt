@@ -90,3 +90,9 @@ CRITICAL here means something that can break the entire platform or cause data l
 Context: We have several subjects, inside each subject, there are several topics. Within each topic, there can be questions (several sections), flashcards and media (long videos and shorts). The site is for Bachelor degree students where they will do quizzes and improve their knowledge basically.
 
 I need you to analyze how we store the questions (sections), flashcards and media (both). Basically all of the content including subjects, topics and everything. Then I need you to think of a way to implement a back up mechanism where the admin can back up all the data in a JSON file and also be able to restore from that JSON file, OR store to DB. Analyze all relevant files.
+
+===
+
+Context: We have several subjects, inside each subject, there are several topics. Within each topic, there can be questions (several sections), flashcards and media (long videos and shorts). The site is for Bachelor degree students where they will do quizzes and improve their knowledge basically.
+
+I plan to share the platform with some people for them to test and give me feebdack. Before that, what I need you to do is to validate the achievements system and the XP rewarding. This happens in many places so check all relevant files. You need to ensure they are correctly implemented, being rewarded correctly and not beng rewarded incorrectly. Also check whether the values make sense, we don't want to make it too easy to level up or too hard. Check all relevant files.
